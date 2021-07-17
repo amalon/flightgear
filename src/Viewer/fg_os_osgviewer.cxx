@@ -52,6 +52,7 @@
 #include "renderer.hxx"
 #include "CameraGroup.hxx"
 #include "FGEventHandler.hxx"
+#include "VRManager.hxx"
 #include "WindowBuilder.hxx"
 #include "WindowSystemAdapter.hxx"
 #include <Main/sentryIntegration.hxx>
@@ -328,6 +329,13 @@ void fgOSResetProperties()
     fgTie("/sim/rendering/osg-displaysettings/double-buffer", displaySettings, &DisplaySettings::getDoubleBuffer, &DisplaySettings::setDoubleBuffer );
     fgTie("/sim/rendering/osg-displaysettings/depth-buffer", displaySettings, &DisplaySettings::getDepthBuffer, &DisplaySettings::setDepthBuffer );
     fgTie("/sim/rendering/osg-displaysettings/rgb", displaySettings, &DisplaySettings::getRGB, &DisplaySettings::setRGB );
+
+#ifdef ENABLE_OSGXR
+    fgSetBool("/sim/vr/built", true);
+    VRManager::instance()->resetProperties();
+#else
+    fgSetBool("/sim/vr/built", false);
+#endif
 }
 
 
@@ -389,6 +397,10 @@ int fgOSMainLoop()
             }
         }
         globals->get_renderer()->update();
+#ifdef ENABLE_OSGXR
+        // FIXME better place for this?
+        VRManager::instance()->update();
+#endif
         viewer_base->frame( globals->get_sim_time_sec() );
     }
 
@@ -437,6 +449,9 @@ void fgOSCloseWindow()
             viewer_base->stopThreading();
         }
     }
+#ifdef ENABLE_OSGXR
+    VRManager::instance()->destroyAndWait();
+#endif
     FGScenery::resetPagerSingleton();
     flightgear::addSentryBreadcrumb("fgOSCloseWindow, clearing camera group", "info");
     flightgear::CameraGroup::setDefault(NULL);
