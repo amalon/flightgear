@@ -44,6 +44,10 @@
 #include <osgViewer/Viewer>
 #include <osgViewer/GraphicsWindow>
 
+#ifdef ENABLE_OSGXR
+#include <osgXR/osgXR>
+#endif
+
 #include <Scenery/scenery.hxx>
 #include <Main/fg_os.hxx>
 #include <Main/fg_props.hxx>
@@ -295,6 +299,14 @@ void fgOSOpenWindow(bool stencil)
         // The viewer won't start without some root.
         viewer->setSceneData(new osg::Group);
         globals->get_renderer()->setView(viewer.get());
+
+#ifdef ENABLE_OSGXR
+        // Set up OpenXR
+        osgXR::setupViewerDefaults(viewer, "FlightGear",
+                                   FLIGHTGEAR_MAJOR_VERSION << 16 |
+                                   FLIGHTGEAR_MINOR_VERSION << 8 |
+                                   FLIGHTGEAR_PATCH_VERSION);
+#endif
     }
 }
 SGPropertyNode* simHost = 0, *simFrameCount, *simTotalHostTime, *simFrameResetCount, *frameWait;
