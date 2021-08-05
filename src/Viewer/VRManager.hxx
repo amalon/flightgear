@@ -88,6 +88,9 @@ class VRManager : public osgXR::Manager
         void doCreateView(osgXR::View *xrView) override;
         void doDestroyView(osgXR::View *xrView) override;
 
+        void onRunning() override;
+        void onStopped() override;
+
         void preReloadCompositor(CameraGroup *cgroup, CameraInfo *info);
         void postReloadCompositor(CameraGroup *cgroup, CameraInfo *info);
 
