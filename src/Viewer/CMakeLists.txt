@@ -34,6 +34,7 @@ set(HEADERS
 if (ENABLE_OSGXR)
 	list(APPEND SOURCES
 		VRManager.cxx
+		VRMirror.cxx
 		)
 endif()
 

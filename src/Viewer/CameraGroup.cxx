@@ -1038,6 +1038,13 @@ void CameraGroup::buildDefaultGroup(osgViewer::View* viewer)
             masterCamera = cgroupNode->getChild("camera", cameras.size(), true);
             setValue(masterCamera->getNode("window/name", true),
                      windowBuilder->getDefaultWindowName());
+            /*
+             * Use modified compositor by default for the VR mirror.
+             * FIXME this is an ugly hack, that requires a mostly duplicated
+             * compositor pipeline with conditional passes.
+             */
+            setValue(masterCamera->getNode("compositor", true),
+                     "Compositor/vr-mirror");
         }
         SGPropertyNode* nameNode = masterCamera->getNode("window/name");
         if (nameNode)
