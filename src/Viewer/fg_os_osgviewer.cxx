@@ -44,10 +44,6 @@
 #include <osgViewer/Viewer>
 #include <osgViewer/GraphicsWindow>
 
-#ifdef ENABLE_OSGXR
-#include <osgXR/osgXR>
-#endif
-
 #include <Scenery/scenery.hxx>
 #include <Main/fg_os.hxx>
 #include <Main/fg_props.hxx>
@@ -56,6 +52,7 @@
 #include "renderer.hxx"
 #include "CameraGroup.hxx"
 #include "FGEventHandler.hxx"
+#include "VRManager.hxx"
 #include "WindowBuilder.hxx"
 #include "WindowSystemAdapter.hxx"
 #include <Main/sentryIntegration.hxx>
@@ -299,14 +296,6 @@ void fgOSOpenWindow(bool stencil)
         // The viewer won't start without some root.
         viewer->setSceneData(new osg::Group);
         globals->get_renderer()->setView(viewer.get());
-
-#ifdef ENABLE_OSGXR
-        // Set up OpenXR
-        osgXR::setupViewerDefaults(viewer, "FlightGear",
-                                   FLIGHTGEAR_MAJOR_VERSION << 16 |
-                                   FLIGHTGEAR_MINOR_VERSION << 8 |
-                                   FLIGHTGEAR_PATCH_VERSION);
-#endif
     }
 }
 SGPropertyNode* simHost = 0, *simFrameCount, *simTotalHostTime, *simFrameResetCount, *frameWait;
@@ -340,6 +329,13 @@ void fgOSResetProperties()
     fgTie("/sim/rendering/osg-displaysettings/double-buffer", displaySettings, &DisplaySettings::getDoubleBuffer, &DisplaySettings::setDoubleBuffer );
     fgTie("/sim/rendering/osg-displaysettings/depth-buffer", displaySettings, &DisplaySettings::getDepthBuffer, &DisplaySettings::setDepthBuffer );
     fgTie("/sim/rendering/osg-displaysettings/rgb", displaySettings, &DisplaySettings::getRGB, &DisplaySettings::setRGB );
+
+#ifdef ENABLE_OSGXR
+    fgSetBool("/sim/vr/built", true);
+    VRManager::instance()->resetProperties();
+#else
+    fgSetBool("/sim/vr/built", false);
+#endif
 }
 
 
