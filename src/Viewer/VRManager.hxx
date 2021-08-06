@@ -76,6 +76,9 @@ class VRManager : public osgXR::Manager
         bool getEnabled() const;
         void setEnabled(bool enabled);
 
+        bool getMirrorEnabled() const;
+        void setMirrorEnabled(bool mirrorEnabled);
+
         const char * getMirrorMode() const;
         void setMirrorMode(const char * mode);
 
@@ -93,6 +96,7 @@ class VRManager : public osgXR::Manager
 
     protected:
         bool _enabled;
+        bool _mirrorEnabled;
 
         typedef std::map<osgXR::View *, osg::ref_ptr<CameraInfo>> XRViewToCamInfo;
         XRViewToCamInfo _camInfos;
