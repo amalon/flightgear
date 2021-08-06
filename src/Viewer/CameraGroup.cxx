@@ -33,6 +33,7 @@
 #include <simgear/scene/material/EffectCullVisitor.hxx>
 #include <simgear/scene/util/RenderConstants.hxx>
 #include <simgear/scene/util/SGReaderWriterOptions.hxx>
+#include <simgear/scene/tgdb/userdata.hxx>
 #include <simgear/scene/viewer/Compositor.hxx>
 #include <simgear/scene/viewer/CompositorUtil.hxx>
 
@@ -685,14 +686,32 @@ CameraInfo* CameraGroup::buildCamera(SGPropertyNode* cameraNode)
         viewportNode->getDoubleValue("width", window->gc->getTraits()->width),
         viewportNode->getDoubleValue("height",window->gc->getTraits()->height));
 
-    std::string compositor_path = cameraNode->getStringValue("compositor", "");
-    if (compositor_path.empty()) {
+    // Make a list of conditional compositors
+    auto compositors = cameraNode->getChildren("compositor");
+    for (auto pNode: compositors) {
+        // The path can either be in a <path> tag, or directly in <compositor>
+        std::string path = pNode->getStringValue("path", "");
+        if (path.empty())
+            path = pNode->getStringValue();
+        const SGPropertyNode *p_condition = pNode->getChild("condition");
+        if (p_condition) {
+            SGCondition *condition = sgReadCondition(getPropertyRoot(), p_condition);
+            info->compositor_paths.push_back({condition, path});
+            // Stop on an unconditional compositor
+            if (!condition)
+                break;
+        } else {
+            if (!path.empty())
+                info->compositor_paths.push_back({nullptr, path});
+            // Stop on an unconditional compositor
+            break;
+        }
+    }
+
+    std::string compositor_path = info->chooseCompositor();
+    if (compositor_path.empty())
         compositor_path = fgGetString("/sim/rendering/default-compositor",
                                       "Compositor/default");
-    } else {
-        // Store the custom path in case we need to reload later
-        info->compositor_path = compositor_path;
-    }
 
     osg::ref_ptr<SGReaderWriterOptions> options =
         SGReaderWriterOptions::fromPath(globals->get_fg_root());
@@ -988,9 +1007,10 @@ void reloadCompositors(CameraGroup *cgroup)
         // Force deletion
         info->compositor.reset(nullptr);
         // Then replace it with a new instance
-        std::string compositor_path = info->compositor_path.empty() ?
-            fgGetString("/sim/rendering/default-compositor", "Compositor/default") :
-            info->compositor_path;
+        std::string compositor_path = info->chooseCompositor();
+        if (compositor_path.empty())
+            compositor_path = fgGetString("/sim/rendering/default-compositor",
+                                          "Compositor/default");
         info->compositor.reset(Compositor::create(cgroup->_viewer,
                                                   gc,
                                                   viewport,
