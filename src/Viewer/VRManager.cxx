@@ -30,7 +30,6 @@ namespace flightgear
 
 VRManager::VRManager() :
     _enabled(false),
-    _mirrorEnabled(true),
     _reloadCompositorCallback(new ReloadCompositorCallback(this))
 {
     uint32_t fgVersion = (FLIGHTGEAR_MAJOR_VERSION << 16 |
@@ -61,8 +60,6 @@ void VRManager::resetProperties()
           static_cast<osgXR::Manager*>(this), &osgXR::Manager::getSystemName );
     fgTie("/sim/vr/enabled",
           this, &VRManager::getEnabled, &VRManager::setEnabled );
-    fgTie("/sim/vr/mirror-enabled",
-          this, &VRManager::getMirrorEnabled, &VRManager::setMirrorEnabled );
     fgTie("/sim/vr/mirror-mode",
           this, &VRManager::getMirrorMode, &VRManager::setMirrorMode );
     fgTie("/sim/vr/mode",
@@ -92,16 +89,6 @@ void VRManager::setEnabled(bool enabled)
         // FIXME uninit
         //_enabled = false;
     }
-}
-
-bool VRManager::getMirrorEnabled() const
-{
-    return _mirrorEnabled;
-}
-
-void VRManager::setMirrorEnabled(bool mirrorEnabled)
-{
-    _mirrorEnabled = mirrorEnabled;
 }
 
 const char * VRManager::getMirrorMode() const

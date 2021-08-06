@@ -76,9 +76,6 @@ class VRManager : public osgXR::Manager
         bool getEnabled() const;
         void setEnabled(bool enabled);
 
-        bool getMirrorEnabled() const;
-        void setMirrorEnabled(bool mirrorEnabled);
-
         const char * getMirrorMode() const;
         void setMirrorMode(const char * mode);
 
