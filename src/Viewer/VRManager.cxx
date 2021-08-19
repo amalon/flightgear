@@ -29,7 +29,6 @@ namespace flightgear
 {
 
 VRManager::VRManager() :
-    _enabled(false),
     _reloadCompositorCallback(new ReloadCompositorCallback(this))
 {
     uint32_t fgVersion = (FLIGHTGEAR_MAJOR_VERSION << 16 |
@@ -37,6 +36,13 @@ VRManager::VRManager() :
                           FLIGHTGEAR_PATCH_VERSION);
     _settings->setApp("FlightGear", fgVersion);
     _settings->preferEnvBlendMode(osgXR::Settings::OPAQUE);
+
+    // Hook into viewer, but don't enable VR just yet
+    osgViewer::View *view = globals->get_renderer()->getView();
+    if (view) {
+        setViewer(globals->get_renderer()->getViewerBase());
+        view->apply(this);
+    }
 }
 
 VRManager *VRManager::instance()
@@ -47,48 +53,57 @@ VRManager *VRManager::instance()
 
 void VRManager::resetProperties()
 {
-    fgTie("/sim/vr/present",
-          _settings.get(), &osgXR::Settings::present );
     fgTie("/sim/vr/openxr/layers/validation",
-          _settings.get(), &osgXR::Settings::hasValidationLayer );
+          static_cast<osgXR::Manager*>(this), &osgXR::Manager::hasValidationLayer );
     fgTie("/sim/vr/openxr/extensions/depth-info",
-          _settings.get(), &osgXR::Settings::hasDepthInfoExtension );
+          static_cast<osgXR::Manager*>(this), &osgXR::Manager::hasDepthInfoExtension );
     fgTie("/sim/vr/openxr/runtime/name",
-          _settings.get(), &osgXR::Settings::runtimeName );
-
+          static_cast<osgXR::Manager*>(this), &osgXR::Manager::getRuntimeName );
     fgTie("/sim/vr/openxr/system/name",
           static_cast<osgXR::Manager*>(this), &osgXR::Manager::getSystemName );
+
+    fgTie("/sim/vr/state-string",
+          static_cast<osgXR::Manager*>(this), &osgXR::Manager::getStateString );
+    fgTie("/sim/vr/present",
+          static_cast<osgXR::Manager*>(this), &osgXR::Manager::getPresent );
+    fgTie("/sim/vr/running",
+          static_cast<osgXR::Manager*>(this), &osgXR::Manager::isRunning );
     fgTie("/sim/vr/enabled",
-          this, &VRManager::getEnabled, &VRManager::setEnabled );
-    fgTie("/sim/vr/mirror-mode",
-          this, &VRManager::getMirrorMode, &VRManager::setMirrorMode );
-    fgTie("/sim/vr/mode",
-          this, &VRManager::getVRMode, &VRManager::setVRMode );
-    fgTie("/sim/vr/swapchain-mode",
-          this, &VRManager::getSwapchainMode, &VRManager::setSwapchainMode );
+          static_cast<osgXR::Manager*>(this), &osgXR::Manager::getEnabled,
+                                              &osgXR::Manager::setEnabled );
+
+    fgTie("/sim/vr/depth-info",        this,  &VRManager::getDepthInfo,
+                                              &VRManager::setDepthInfo );
+    fgTie("/sim/vr/mirror-mode",       this,  &VRManager::getMirrorMode,
+                                              &VRManager::setMirrorMode );
+    fgTie("/sim/vr/mode",              this,  &VRManager::getVRMode,
+                                              &VRManager::setVRMode );
+    fgTie("/sim/vr/swapchain-mode",    this,  &VRManager::getSwapchainMode,
+                                              &VRManager::setSwapchainMode );
+    fgTie("/sim/vr/validation-layer",  this,  &VRManager::getValidationLayer,
+                                              &VRManager::setValidationLayer );
 }
 
-bool VRManager::getEnabled() const
+bool VRManager::getValidationLayer() const
 {
-    return _enabled;
+    return _settings->getValidationLayer();
 }
 
-void VRManager::setEnabled(bool enabled)
+void VRManager::setValidationLayer(bool validationLayer)
 {
-    if (_enabled == enabled)
-        return;
-    if (enabled) {
-        osgViewer::View *view = globals->get_renderer()->getView();
-        if (view) {
-            setViewer(globals->get_renderer()->getViewerBase());
-            view->apply(this);
-            if (_settings->present())
-                _enabled = true;
-        }
-    } else {
-        // FIXME uninit
-        //_enabled = false;
-    }
+    _settings->setValidationLayer(validationLayer);
+    syncSettings();
+}
+
+bool VRManager::getDepthInfo() const
+{
+    return _settings->getDepthInfo();
+}
+
+void VRManager::setDepthInfo(bool depthInfo)
+{
+    _settings->setDepthInfo(depthInfo);
+    syncSettings();
 }
 
 const char * VRManager::getMirrorMode() const
@@ -166,6 +181,7 @@ void VRManager::setVRMode(const char * mode)
     }
 
     _settings->setVRMode(vrMode);
+    syncSettings();
 }
 
 const char * VRManager::getSwapchainMode() const
@@ -196,10 +212,14 @@ void VRManager::setSwapchainMode(const char * mode)
     }
 
     _settings->setSwapchainMode(swapchainMode);
+    syncSettings();
 }
 
 void VRManager::doCreateView(osgXR::View *xrView)
 {
+    // Restarted in osgXR::Manager::update()
+    _viewer->stopThreading();
+
     // Construct a property tree for the camera
     SGPropertyNode_ptr camNode = new SGPropertyNode;
     WindowBuilder *windowBuilder = WindowBuilder::getWindowBuilder();
@@ -222,13 +242,38 @@ void VRManager::doCreateView(osgXR::View *xrView)
 
 void VRManager::doDestroyView(osgXR::View *xrView)
 {
+    // Restarted in osgXR::Manager::update()
+    _viewer->stopThreading();
+
+    CameraGroup *cgroup = CameraGroup::getDefault();
     auto it = _camInfos.find(xrView);
     if (it != _camInfos.end()) {
         osg::ref_ptr<CameraInfo> info = (*it).second;
         _camInfos.erase(it);
 
-        CameraGroup *cgroup = CameraGroup::getDefault();
+        auto it2 = _xrViews.find(info.get());
+        if (it2 != _xrViews.end())
+            _xrViews.erase(it2);
+
         cgroup->removeCamera(info.get());
+    }
+}
+
+void VRManager::onRunning()
+{
+    // Reload compositors to trigger switch to mirror of VR
+    CameraGroup *cgroup = CameraGroup::getDefault();
+    reloadCompositors(cgroup);
+}
+
+void VRManager::onStopped()
+{
+    // As long as we're not in the process of destroying FlightGear, reload
+    // compositors to trigger switch away from mirror of VR
+    if (!isDestroying())
+    {
+        CameraGroup *cgroup = CameraGroup::getDefault();
+        reloadCompositors(cgroup);
     }
 }
 

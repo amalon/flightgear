@@ -73,8 +73,13 @@ class VRManager : public osgXR::Manager
 
         void resetProperties();
 
-        bool getEnabled() const;
-        void setEnabled(bool enabled);
+        // Settings
+
+        bool getValidationLayer() const;
+        void setValidationLayer(bool validationLayer);
+
+        bool getDepthInfo() const;
+        void setDepthInfo(bool depthInfo);
 
         const char * getMirrorMode() const;
         void setMirrorMode(const char * mode);
@@ -85,15 +90,18 @@ class VRManager : public osgXR::Manager
         const char * getSwapchainMode() const;
         void setSwapchainMode(const char * mode);
 
-        virtual void doCreateView(osgXR::View *xrView);
-        virtual void doDestroyView(osgXR::View *xrView);
+        // osgXR::Manager overrides
+
+        void doCreateView(osgXR::View *xrView) override;
+        void doDestroyView(osgXR::View *xrView) override;
+
+        void onRunning() override;
+        void onStopped() override;
 
         void preReloadCompositor(CameraGroup *cgroup, CameraInfo *info);
         void postReloadCompositor(CameraGroup *cgroup, CameraInfo *info);
 
     protected:
-        bool _enabled;
-        bool _mirrorEnabled;
 
         typedef std::map<osgXR::View *, osg::ref_ptr<CameraInfo>> XRViewToCamInfo;
         XRViewToCamInfo _camInfos;

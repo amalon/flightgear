@@ -397,6 +397,10 @@ int fgOSMainLoop()
             }
         }
         globals->get_renderer()->update();
+#ifdef ENABLE_OSGXR
+        // FIXME better place for this?
+        VRManager::instance()->update();
+#endif
         viewer_base->frame( globals->get_sim_time_sec() );
     }
 
@@ -445,6 +449,9 @@ void fgOSCloseWindow()
             viewer_base->stopThreading();
         }
     }
+#ifdef ENABLE_OSGXR
+    VRManager::instance()->destroyAndWait();
+#endif
     FGScenery::resetPagerSingleton();
     flightgear::addSentryBreadcrumb("fgOSCloseWindow, clearing camera group", "info");
     flightgear::CameraGroup::setDefault(NULL);

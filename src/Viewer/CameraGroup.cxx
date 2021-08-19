@@ -1062,7 +1062,7 @@ void CameraGroup::buildDefaultGroup(osgViewer::View* viewer)
             setValue(masterCamera->getNode("compositor/path", true),
                      "Compositor/vr-mirror");
             SGPropertyNode *andCondition = masterCamera->getNode("compositor/condition/and", true);
-            andCondition->addChild("property")->setStringValue("/sim/vr/enabled");
+            andCondition->addChild("property")->setStringValue("/sim/vr/running");
             andCondition->addChild("property")->setStringValue("/sim/vr/mirror-enabled");
         }
         SGPropertyNode* nameNode = masterCamera->getNode("window/name");
