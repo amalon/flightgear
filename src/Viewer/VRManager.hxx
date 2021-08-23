@@ -32,12 +32,8 @@
 
 #include <map>
 
-#endif
-
 namespace flightgear
 {
-
-#ifdef ENABLE_OSGXR
 
 class VRManager : public osgXR::Manager
 {
@@ -112,10 +108,8 @@ class VRManager : public osgXR::Manager
         osg::ref_ptr<ReloadCompositorCallback> _reloadCompositorCallback;
 };
 
-#endif // ENABLE_OSGXR
-
-void VRResetProperties();
-
 }
+
+#endif // ENABLE_OSGXR
 
 #endif
