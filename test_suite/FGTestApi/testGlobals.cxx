@@ -1,6 +1,7 @@
 #include "config.h"
 
 #include "test_suite/dataStore.hxx"
+#include <ctime>
 
 #include "TestDataLogger.hxx"
 #include "testGlobals.hxx"
@@ -15,11 +16,13 @@
 #include <Main/options.hxx>
 #include <Main/util.hxx>
 #include <Main/FGInterpolator.hxx>
+#include <Main/locale.hxx>
 
 #include <Time/TimeManager.hxx>
 
 #include <simgear/structure/event_mgr.hxx>
 #include <simgear/timing/timestamp.hxx>
+#include <simgear/timing/sg_time.hxx>
 #include <simgear/math/sg_geodesy.hxx>
 #include <simgear/props/props_io.hxx>
 
@@ -66,8 +69,8 @@ void initTestGlobals(const std::string& testName)
 
     fgSetDefaults();
 
-    std::unique_ptr<TimeManager> t;
-    t.reset(new TimeManager);
+    auto t = globals->add_new_subsystem<TimeManager>(SGSubsystemMgr::INIT);
+    t->bind();
     t->init(); // establish mag-var data
 
     /**
@@ -77,6 +80,9 @@ void initTestGlobals(const std::string& testName)
      * destroyed via the subsystem manager.
      */
     globals->add_subsystem("events", globals->get_event_mgr(), SGSubsystemMgr::DISPLAY);
+    
+    // necessary to avoid asserts: mark FGLocale as initialized
+    globals->get_locale()->selectLanguage({});
 }
     
 bool logPositionToKML(const std::string& testName)
@@ -106,6 +112,33 @@ bool logPositionToKML(const std::string& testName)
     return true;
 }
     
+bool logLinestringsToKML(const std::string& testName)
+{
+    // clear any previous state
+    if (global_loggingToKML) {
+        global_kmlStream.close();
+        global_lineStringOpen = false;
+    }
+    
+    SGPath p = SGPath::desktop() / (testName + ".kml");
+    global_kmlStream.open(p);
+    if (!global_kmlStream.is_open()) {
+        SG_LOG(SG_GENERAL, SG_WARN, "unable to open:" << p);
+        return false;
+    }
+    
+    // pre-amble
+    global_kmlStream << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+        "<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n"
+        "<Document>\n";
+    // need more precision for doubles when specifying lat/lon, see
+    // https://xkcd.com/2170/  :)
+    global_kmlStream.precision(12);
+    
+    global_loggingToKML = false;
+    return true;
+}
+
 void initStandardNasal(bool withCanvas)
 {
     fgInitAllowedPaths();
@@ -249,6 +282,16 @@ void setPosition(const SGGeod& g)
     globals->get_props()->setDoubleValue("position/longitude-deg", g.getLongitudeDeg());
     globals->get_props()->setDoubleValue("position/altitude-ft", g.getElevationFt());
 }
+
+const SGGeod getPosition()
+{
+    return SGGeod::fromDegFt(    
+    globals->get_props()->getDoubleValue("position/latitude-deg"),
+    globals->get_props()->getDoubleValue("position/longitude-deg"),
+    globals->get_props()->getDoubleValue("position/altitude-ft"));
+}
+    
+
     
 void setPositionAndStabilise(const SGGeod& g)
 {
@@ -270,8 +313,11 @@ void runForTime(double t)
     const int logInterval = 0.5 * tickHz;
     int nextLog = 0;
 
+    long startTime = globals->get_time_params()->get_cur_time();
+
     for (int t = 0; t < ticks; ++t) {
         globals->inc_sim_time_sec(tickDuration);
+        globals->get_time_params()->update(globals->get_view_position(), startTime, t * tickDuration);
         globals->get_subsystem_mgr()->update(tickDuration);
 
         if (nextLog == 0) {
@@ -326,6 +372,15 @@ bool runForTimeWithCheck(double t, RunCheck check)
     }
     
     return false;
+}
+
+void adjustSimulationWorldTime(time_t desiredUnixTime)
+{
+    int timeOffset = desiredUnixTime - time(nullptr);
+    globals->get_props()->setIntValue("/sim/time/cur-time-override", 0);
+    globals->get_props()->setIntValue("/sim/time/warp", timeOffset);
+
+    globals->get_subsystem<TimeManager>()->update(0.0);
 }
 
 void writeFlightPlanToKML(flightgear::FlightPlanRef fp)
@@ -403,7 +458,7 @@ void shutdownTestGlobals()
     delete globals;
     globals = nullptr;
     
-    if (global_loggingToKML) {
+    if (global_kmlStream) {
         if (global_lineStringOpen) {
             endCurrentLineString();
         }

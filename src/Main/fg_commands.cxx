@@ -376,7 +376,7 @@ do_view_cycle (const SGPropertyNode * arg, SGPropertyNode * root)
 static bool
 do_view_push (const SGPropertyNode * arg, SGPropertyNode * root)
 {
-  SG_LOG(SG_GENERAL, SG_ALERT, "do_view_push() called");
+  SG_LOG(SG_GENERAL, SG_DEBUG, "do_view_push() called");
   globals->get_viewmgr()->view_push();
   return true;
 }
@@ -388,7 +388,7 @@ do_view_push (const SGPropertyNode * arg, SGPropertyNode * root)
 static bool
 do_view_clone (const SGPropertyNode * arg, SGPropertyNode * root)
 {
-  SG_LOG(SG_GENERAL, SG_ALERT, "do_view_clone() called");
+  SG_LOG(SG_GENERAL, SG_DEBUG, "do_view_clone() called");
   globals->get_viewmgr()->clone_current_view(arg);
   return true;
 }
@@ -400,7 +400,7 @@ do_view_clone (const SGPropertyNode * arg, SGPropertyNode * root)
 static bool
 do_view_last_pair (const SGPropertyNode * arg, SGPropertyNode * root)
 {
-  SG_LOG(SG_GENERAL, SG_ALERT, "do_view_last_pair() called");
+  SG_LOG(SG_GENERAL, SG_DEBUG, "do_view_last_pair() called");
   globals->get_viewmgr()->clone_last_pair(arg);
   return true;
 }
@@ -412,7 +412,7 @@ do_view_last_pair (const SGPropertyNode * arg, SGPropertyNode * root)
 static bool
 do_view_last_pair_double (const SGPropertyNode * arg, SGPropertyNode * root)
 {
-  SG_LOG(SG_GENERAL, SG_ALERT, "do_view_last_pair_double() called");
+  SG_LOG(SG_GENERAL, SG_DEBUG, "do_view_last_pair_double() called");
   globals->get_viewmgr()->clone_last_pair_double(arg);
   return true;
 }
@@ -830,7 +830,7 @@ do_load_xml_to_proptree(const SGPropertyNode * arg, SGPropertyNode * root)
             if (!quiet) {
                 SG_LOG(SG_IO, SG_INFO, "loadxml: failed to find airport data for " << file << " at ICAO:" << icao);
                 simgear::reportFailure(simgear::LoadFailure::NotFound, simgear::ErrorCode::XMLLoadCommand,
-                                       "loadxml: no airprot data file for:" + icao, file);
+                                       "loadxml: no airport data file for:" + icao, file);
             }
           return false;
         }
@@ -856,9 +856,6 @@ do_load_xml_to_proptree(const SGPropertyNode * arg, SGPropertyNode * root)
     else
         targetnode = const_cast<SGPropertyNode *>(arg)->getNode("data", true);
 
-    // don't report Sentry errors for Nasal-loaded XML, since it makes
-    // for very noisy reports
-    flightgear::SentryXMLErrorSupression xmls;
     try {
         readProperties(validated_path, targetnode, true);
     } catch (const sg_exception &e) {

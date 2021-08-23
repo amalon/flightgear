@@ -100,6 +100,13 @@ FGScheduledFlight::FGScheduledFlight(const FGScheduledFlight &other)
   available         = other.available;
 }
 
+/**
+ * @param cs The callsign
+ * @param fr The flightrules 
+ * @param depPrt The departure ICAO
+ * @param arrPrt The arrival ICAO
+ */ 
+
 FGScheduledFlight::FGScheduledFlight(const string& cs,
 		   const string& fr,
 		   const string& depPrt,
@@ -137,7 +144,14 @@ FGScheduledFlight::FGScheduledFlight(const string& cs,
       SG_LOG( SG_AI, SG_ALERT, "Unknown repeat period in flight plan "
                                     "of flight '" << cs << "': " << rep );
     }
-
+  if (!repeatPeriod) {
+      SG_LOG( SG_AI, SG_ALERT, "Zero repeat period in flight plan "
+                                    "of flight '" << cs << "': " << rep );
+      available = false;
+      return;
+  }
+  
+  
   // What we still need to do is preprocess the departure and
   // arrival times. 
   departureTime = processTimeString(deptime);
@@ -158,47 +172,48 @@ FGScheduledFlight:: ~FGScheduledFlight()
 
 time_t FGScheduledFlight::processTimeString(const string& theTime)
 {
-  int weekday;
-  int timeOffsetInDays;
-  int targetHour;
-  int targetMinute;
-  int targetSecond;
+    int timeOffsetInDays = 0;
+    int targetHour;
+    int targetMinute;
+    int targetSecond;
 
-  tm targetTimeDate;
-  SGTime* currTimeDate = globals->get_time_params();
- 
-  string timeCopy = theTime;
+    tm targetTimeDate;
+    SGTime* currTimeDate = globals->get_time_params();
+
+    string timeCopy = theTime;
 
 
-  // okay first split theTime string into
-  // weekday, hour, minute, second;
-  // Check if a week day is specified 
-  if (timeCopy.find("/",0) != string::npos)
-    {
-      weekday          = atoi(timeCopy.substr(0,1).c_str());
-      timeOffsetInDays = weekday - currTimeDate->getGmt()->tm_wday;
-      timeCopy = timeCopy.substr(2,timeCopy.length());
+    // okay first split theTime string into
+    // weekday, hour, minute, second;
+    // Check if a week day is specified
+    const auto daySeperatorPos = timeCopy.find("/", 0);
+    if (daySeperatorPos != string::npos) {
+        const int weekday = std::stoi(timeCopy.substr(0, daySeperatorPos));
+        timeOffsetInDays = weekday - currTimeDate->getGmt()->tm_wday;
+        timeCopy = theTime.substr(daySeperatorPos + 1);
     }
-  else 
-    {
-      timeOffsetInDays = 0;
-    }
-  // TODO: verify status of each token.
-  targetHour   = atoi(timeCopy.substr(0,2).c_str());
-  targetMinute = atoi(timeCopy.substr(3,5).c_str());
-  targetSecond = atoi(timeCopy.substr(6,8).c_str());
-  targetTimeDate.tm_year  = currTimeDate->getGmt()->tm_year;
-  targetTimeDate.tm_mon   = currTimeDate->getGmt()->tm_mon;
-  targetTimeDate.tm_mday  = currTimeDate->getGmt()->tm_mday;
-  targetTimeDate.tm_hour  = targetHour;
-  targetTimeDate.tm_min   = targetMinute;
-  targetTimeDate.tm_sec   = targetSecond;
 
-  time_t processedTime = sgTimeGetGMT(&targetTimeDate);
-  processedTime += timeOffsetInDays*24*60*60;
-  if (processedTime < currTimeDate->get_cur_time())
-    {
-      processedTime += repeatPeriod;
+    const auto timeTokens = simgear::strutils::split(timeCopy, ":");
+    if (timeTokens.size() != 3) {
+        SG_LOG(SG_AI, SG_DEV_WARN, "FGScheduledFlight: Timestring too short. " << theTime << " Defaulted to now");
+        return currTimeDate->get_cur_time();
+    }
+
+
+    targetHour = std::stoi(timeTokens.at(0));
+    targetMinute = std::stoi(timeTokens.at(1));
+    targetSecond = std::stoi(timeTokens.at(2));
+    targetTimeDate.tm_year = currTimeDate->getGmt()->tm_year;
+    targetTimeDate.tm_mon = currTimeDate->getGmt()->tm_mon;
+    targetTimeDate.tm_mday = currTimeDate->getGmt()->tm_mday;
+    targetTimeDate.tm_hour = targetHour;
+    targetTimeDate.tm_min = targetMinute;
+    targetTimeDate.tm_sec = targetSecond;
+
+    time_t processedTime = sgTimeGetGMT(&targetTimeDate);
+    processedTime += timeOffsetInDays * 24 * 60 * 60;
+    if (processedTime < currTimeDate->get_cur_time()) {
+        processedTime += repeatPeriod;
     }
   //tm *temp = currTimeDate->getGmt();
   //char buffer[512];
@@ -214,26 +229,26 @@ void FGScheduledFlight::update()
   arrivalTime  += repeatPeriod;
 }
 
+/**
+ * //FIXME Doesn't have to be an iteration / when sitting at departure why adjust based on arrival
+ */ 
+
 void FGScheduledFlight::adjustTime(time_t now)
 {
-  //cerr << "1: Adjusting schedule please wait: " << now 
-  //   << " " << arrivalTime << " " << arrivalTime+repeatPeriod << endl;
-  // Make sure that the arrival time is in between 
-  // the current time and the next repeat period.
-  while ((arrivalTime < now) || (arrivalTime > now+repeatPeriod))
-    {
-      if (arrivalTime < now)
-	{
-	  departureTime += repeatPeriod;
-	  arrivalTime   += repeatPeriod;
-	}
-      else if (arrivalTime > now+repeatPeriod)
-	{
-	  departureTime -= repeatPeriod;
-	  arrivalTime   -= repeatPeriod;
-	}
-      //      cerr << "2: Adjusting schedule please wait: " << now 
-      //   << " " << arrivalTime << " " << arrivalTime+repeatPeriod << endl;
+    // Make sure that the arrival time is in between
+    // the current time and the next repeat period.
+    while ((arrivalTime < now) || (arrivalTime > now + repeatPeriod)) {
+        if (arrivalTime < now) {
+            departureTime += repeatPeriod;
+            arrivalTime += repeatPeriod;
+            SG_LOG(SG_AI, SG_BULK, "Adjusted schedule forward : " << callsign << " " << now << " " << departureTime << " " << arrivalTime);
+        } else if (arrivalTime > now + repeatPeriod) {
+            departureTime -= repeatPeriod;
+            arrivalTime -= repeatPeriod;
+            SG_LOG(SG_AI, SG_BULK, "Adjusted schedule backward : " << callsign << " " << now << " " << departureTime << " " << arrivalTime);
+        } else {
+            SG_LOG(SG_AI, SG_BULK, "Not Adjusted schedule : " << now);
+        }
     }
 }
 

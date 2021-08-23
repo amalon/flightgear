@@ -68,6 +68,7 @@
 #include <simgear/scene/model/particles.hxx>
 #include <simgear/scene/tgdb/TreeBin.hxx>
 #include <simgear/scene/tgdb/userdata.hxx>
+#include <simgear/scene/tgdb/VPBTechnique.hxx>
 #include <simgear/scene/tsync/terrasync.hxx>
 
 #include <simgear/package/Root.hxx>
@@ -155,6 +156,7 @@
 #include "util.hxx"
 #include "AircraftDirVisitorBase.hxx"
 #include <Main/sentryIntegration.hxx>
+#include <Main/ErrorReporter.hxx>
 
 #if defined(SG_MAC)
 #include <GUI/CocoaHelpers.h> // for Mac impl of platformDefaultDataPath()
@@ -194,6 +196,11 @@ public:
   FindAndCacheAircraft(SGPropertyNode* autoSave)
   {
     _cache = autoSave->getNode("sim/startup/path-cache", true);
+  }
+
+  void setDidUseLauncher(bool didUseLauncher)
+  {
+      _didUseLauncher = didUseLauncher;
   }
   
   /**
@@ -290,15 +297,22 @@ public:
       SG_LOG(SG_GENERAL, SG_ALERT, "\tin paths:" << SGPath::join(globals->get_aircraft_paths(), ";"));
 
       std::string notFoundMessage;
+      // don't report failures where the launcher was not used, to Sentry,
+      // since they are nearly all configuration problems.
+      bool reportToSentry = _didUseLauncher;
+
       if (globals->get_aircraft_paths().empty()) {
           notFoundMessage = "The requested aircraft (" + aircraft + ") could not be found. No aircraft paths are configured.";
+          reportToSentry = false; // no need to log these
       } else {
           notFoundMessage = "The requested aircraft (" + aircraft + ") could not be found in any of the search paths.";
       }
 
       flightgear::fatalMessageBoxWithoutExit(
           "Aircraft not found",
-          notFoundMessage);
+          notFoundMessage,
+          {},
+          reportToSentry);
       return false;
     }
     
@@ -311,7 +325,6 @@ public:
 
 
     try {
-        flightgear::SentryXMLErrorSupression xs;
         readProperties(_foundPath, globals->get_props());
     } catch ( const sg_exception &e ) {
       SG_LOG(SG_INPUT, SG_ALERT,
@@ -440,7 +453,8 @@ private:
   
   std::string _searchAircraft;
   SGPath _foundPath;
-  SGPropertyNode* _cache;
+  SGPropertyNode* _cache = nullptr;
+  bool _didUseLauncher = false;
 };
 
 #ifdef _WIN32
@@ -753,7 +767,7 @@ void fgInitAircraftPaths(bool reinit)
   }
 }
 
-int fgInitAircraft(bool reinit)
+int fgInitAircraft(bool reinit, bool didUseLauncher)
 {
     if (!reinit) {
         auto r = flightgear::Options::sharedInstance()->initAircraft();
@@ -762,6 +776,7 @@ int fgInitAircraft(bool reinit)
     }
     
     FindAndCacheAircraft f(globals->get_props());
+    f.setDidUseLauncher(didUseLauncher);
     const bool haveExplicit = f.haveExplicitAircraft();
 
     SGSharedPtr<Root> pkgRoot(globals->packageRoot());
@@ -1217,6 +1232,20 @@ void fgStartNewReset()
     fgSetBool("/sim/signals/reinit", true);
     fgSetBool("/sim/freeze/master", true);
     
+    // pause the osgDB requests right now, but more may appear; we will
+    // clear and cancel further down once shutdown has occured
+    FGRenderer* render = globals->get_renderer();
+    auto pager = render->getView()->getDatabasePager();
+    pager->setAcceptNewDatabaseRequests(false);
+    pager->cancel();
+    
+    // extra clear is needed to ensure compile/merge lists are also empty
+    pager->clear();
+    
+    assert(pager->getDataToMergeListSize() == 0);
+    assert(pager->getDataToCompileListSize() == 0);
+
+    
     SGSubsystemMgr* subsystemManger = globals->get_subsystem_mgr();
     // Nasal is added in fgPostInit, ensure it's already shutdown
     // before other subsystems, so Nasal listeners don't fire during shutdown
@@ -1235,7 +1264,10 @@ void fgStartNewReset()
         SGSubsystemGroup* grp = subsystemManger->get_group(static_cast<SGSubsystemMgr::GroupType>(g));
         for (auto nm : grp->member_names()) {
             if ((nm == "time") || (nm == "terrasync") || (nm == "events")
-                || (nm == "lighting") || (nm == FGScenery::staticSubsystemClassId()))
+                || (nm == "lighting") 
+                || (nm == FGScenery::staticSubsystemClassId())
+                || (nm == flightgear::ErrorReporter::staticSubsystemClassId())
+                )
             {
                 continue;
             }
@@ -1255,7 +1287,6 @@ void fgStartNewReset()
     // drop any references to AI objects with TACAN
     flightgear::NavDataCache::instance()->clearDynamicPositioneds();
 
-    FGRenderer* render = globals->get_renderer();
     // needed or we crash in multi-threaded OSG mode
     render->getViewerBase()->stopThreading();
 
@@ -1271,11 +1302,7 @@ void fgStartNewReset()
 
     FGScenery::getPagerSingleton()->clearRequests();
     flightgear::CameraGroup::setDefault(NULL);
-    
-    // don't cancel the pager until after shutdown, since AIModels (and
-    // potentially others) can queue delete requests on the pager.
-    render->getView()->getDatabasePager()->cancel();
-    render->getView()->getDatabasePager()->clear();
+
     
     osgDB::Registry::instance()->clearObjectCache();
     // Pager requests depend on this, so don't clear it until now
@@ -1289,12 +1316,13 @@ void fgStartNewReset()
 
     globals->set_renderer(NULL);
     globals->set_matlib(NULL);
-
+    
     flightgear::unregisterMainLoopProperties();
     FGReplayData::resetStatisticsProperties();
 
     simgear::clearSharedTreeGeometry();
     simgear::clearEffectCache();
+    simgear::VPBTechnique::clearConstraints();
     simgear::SGModelLib::resetPropertyRoot();
     simgear::ParticlesGlobalManager::clear();
     simgear::UniformFactory::instance()->reset();    
@@ -1349,7 +1377,7 @@ void fgStartNewReset()
 
     fgGetNode("/sim")->removeChild("aircraft-dir");
     fgInitAircraftPaths(true);
-    fgInitAircraft(true);
+    fgInitAircraft(true, false /* not from launcher */);
     
     render = new FGRenderer(composite_viewer);
     render->setEventHandler(eventHandler);
@@ -1367,7 +1395,8 @@ void fgStartNewReset()
     sgUserDataInit( globals->get_props() );
 
     if (composite_viewer) {
-        composite_viewer_view->getDatabasePager()->setUpThreads(20, 1);
+        composite_viewer_view->getDatabasePager()->setUpThreads(2, 1);
+        composite_viewer_view->getDatabasePager()->setAcceptNewDatabaseRequests(true);
         flightgear::CameraGroup::buildDefaultGroup(composite_viewer_view);
         composite_viewer_view->setFrameStamp(composite_viewer->getFrameStamp());
         composite_viewer_view->setDatabasePager(FGScenery::getPagerSingleton());
@@ -1378,7 +1407,8 @@ void fgStartNewReset()
         composite_viewer->startThreading();
     }
     else {
-        viewer->getDatabasePager()->setUpThreads(20, 1);
+        viewer->getDatabasePager()->setUpThreads(2, 1);
+        viewer->getDatabasePager()->setAcceptNewDatabaseRequests(true);
         // must do this before preinit for Rembrandthe
         flightgear::CameraGroup::buildDefaultGroup(viewer.get());
         render->preinit();

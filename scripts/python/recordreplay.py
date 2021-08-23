@@ -95,7 +95,7 @@ class Fg:
     self.fg is a FlightGear.FlightGear instance, which uses telnet to
     communicate with Flightgear.
     '''
-    def __init__(self, aircraft, args, env=None, telnet_port=None, telnet_hz=None, out=None):
+    def __init__(self, aircraft, args, env=None, telnet_port=None, telnet_hz=None, out=None, screensaver_suspend=True):
         '''
         aircraft:
             Specified as: --aircraft={aircraft}. This is separate from <args>
@@ -120,6 +120,7 @@ class Fg:
         else:
             args += f' --telnet=_,_,{telnet_hz},_,{telnet_port},_'
         args += f' --prop:/sim/replay/tape-directory={g_tapedir}'
+        args += f' --prop:bool:/sim/startup/screensaver-suspend={"true" if screensaver_suspend else "false"}'
         
         args2 = args.split()
         
@@ -230,7 +231,7 @@ class Fg:
 
 def make_recording(
         fg,
-        continuous=0,
+        continuous=0,   # 2 means continuous with compression.
         extra_properties=0,
         main_view=0,
         length=5,
@@ -244,13 +245,15 @@ def make_recording(
     fg.fg['/sim/replay/record-signals'] = True  # Just in case they are disabled by user.
     if continuous:
         assert not fg.fg['/sim/replay/record-continuous']
+        if continuous == 2:
+            fg.fg['/sim/replay/record-continuous-compression'] = 1
         fg.fg['/sim/replay/record-continuous'] = 1
         t0 = time.time()
         while 1:
             if time.time() > t0 + length:
                 break
-            fg.run_command('run view-step step=1')
             time.sleep(1)
+            fg.run_command('run view-step step=1')
         fg.fg['/sim/replay/record-continuous'] = 0
         path = f'{g_tapedir}/{fg.aircraft}-continuous.fgtape'
         time.sleep(1)
@@ -263,12 +266,25 @@ def make_recording(
         # time, so we sometimes need to sleep a little longer.
         #
         while 1:
-            t = fg.fg['/sim/time/elapsed-sec']
-            log(f'/sim/time/elapsed-sec={t}')
-            if t > length:
+            # Telnet interface seems very slow even if we set telnet_hz to
+            # 100 (for example). We want to make recording have near to the
+            # specified length, so we are cautious about overrunning.
+            #
+            #log(f'a: time.time()-t={time.time()-t}')
+            t_record_begin = fg.fg['sim/replay/record-normal-begin']
+            #log(f'b: time.time()-t={time.time()-t}')
+            t_record_end = fg.fg['sim/replay/record-normal-end']
+            #log(f'c: time.time()-t={time.time()-t}')
+            t_delta = t_record_end - t_record_begin
+            log(f't_record_begin={t_record_begin} t_record_end={t_record_end} t_delta={t_delta}')
+            if t_delta >= length:
                 break
-            time.sleep(length - t + 0.5)
+            ts = max(length - t_delta - 1, 0.2)
+            log(f'd: ts={ts}')
+            time.sleep(ts)
         log(f'/sim/time/elapsed-sec={t}')
+        log(f'/sim/replay/start-time={fg.fg["/sim/replay/start-time"]}')
+        log(f'/sim/replay/end-time={fg.fg["/sim/replay/end-time"]}')
         fg.fg.telnet._putcmd('run save-tape tape-data/starttime= tape-data/stoptime=')
         response = fg.fg.telnet._getresp()
         log(f'response: {response!r}')
@@ -304,10 +320,12 @@ def test_record_replay(
     args += f' --prop:bool:/sim/replay/record-extra-properties={extra_properties}'
     args += f' --prop:bool:/sim/replay/record-main-view={main_view}'
     args += f' --prop:bool:/sim/replay/record-main-window=0'
+    #args += f' --prop:bool:/sim/time/simple-time/enabled=0'
     
     # Start Flightgear.
     fg = Fg(aircraft, f'{fgfs_save} {args}',
             #env='SG_LOG_DELTAS=flightgear/src/Network/props.cxx=4',
+            telnet_hz=100,
             )
     fg.waitfor('/sim/fdm-initialized', 1, timeout=45)
     
@@ -332,26 +350,44 @@ def test_record_replay(
     fg.waitfor('/sim/fdm-initialized', 1, timeout=45)
     fg.waitfor('/sim/replay/replay-state', 1)
     
+    t0 = time.time()
+    
     # Check replay time is ok.
     rtime_begin = fg.fg['/sim/replay/start-time']
     rtime_end = fg.fg['/sim/replay/end-time']
     rtime = rtime_end - rtime_begin
     log(f'rtime={rtime_begin}..{rtime_end}, recording length: {rtime}, length={length}')
-    assert rtime > length-1 and rtime < length+2, \
+    assert rtime > length-1 and rtime <= length+2, \
             f'length={length} rtime_begin={rtime_begin} rtime_end={rtime_end} rtime={rtime}'
     
     num_frames_extra_properties = fg.fg['/sim/replay/continuous-stats-num-frames-extra-properties']
     log(f'num_frames_extra_properties={num_frames_extra_properties}')
     if continuous:
         if main_view:
-            assert num_frames_extra_properties > 1
+            assert num_frames_extra_properties > 1, f'num_frames_extra_properties={num_frames_extra_properties}'
         else:
             assert num_frames_extra_properties == 0
     else:
         assert num_frames_extra_properties in (0, None), \
                 f'num_frames_extra_properties={num_frames_extra_properties}'
     
-    time.sleep(length)
+    fg.run_command('run dialog-show dialog-name=replay')
+    
+    while 1:
+        t = time.time()
+        if t < t0 + length - 1:
+            pass
+            # Disabled because it seems that Flightgear starts replaying before
+            # we see replay-state set to 1 because scenery loading blocks
+            # things.
+            #
+            #assert not fg.fg['/sim/replay/replay-state-eof'], f'Replay has finished too early; lenth={length} t-t0={t-t0}'
+        if t > t0 + length + 1:
+            assert fg.fg['/sim/replay/replay-state-eof'], f'Replay has not finished on time; lenth={length} t-t0={t-t0}'
+            break
+        e = fg.fg['sim/replay/replay-error']
+        assert not e, f'Replay failed: e={e}'
+        time.sleep(1)
     
     fg.close()
     
@@ -676,7 +712,7 @@ if __name__ == '__main__':
     fgfs_old = None
     
     do_test = 'all'
-    continuous_s = [0, 1]
+    continuous_s = [0, 1, 2]    # 2 is continuous with compression.
     extra_properties_s = [0, 1]
     main_view_s = [0, 1]
     multiplayer_s = [0, 1]
@@ -698,19 +734,20 @@ if __name__ == '__main__':
         elif arg == '--carrier':
             do_test = 'carrier'
         elif arg == '--continuous':
-            continuous_s = map(int, next(args).split(','))
+            continuous_s = [int(x) for x in  next(args).split(',')]
+            log(f'continuous_s={continuous_s}')
         elif arg == '--tape-dir':
             g_tapedir = next(args)
         elif arg == '--extra-properties':
-            extra_properties_s = map(int, next(args).split(','))
+            extra_properties_s = [int(x) for x in  next(args).split(',')]
         elif arg == '--it-max':
             it_max = int(next(args))
         elif arg == '--it-min':
             it_min = int(next(args))
         elif arg == '--main-view':
-            main_view_s = map(int, next(args).split(','))
+            main_view_s = [int(x) for x in  next(args).split(',')]
         elif arg == '--multiplayer':
-            multiplayer_s = map(int, next(args).split(','))
+            multiplayer_s = [int(x) for x in  next(args).split(',')]
         elif arg == '-f':
             fgfs = next(args)
         elif arg == '--f-old':
@@ -748,6 +785,7 @@ if __name__ == '__main__':
                                 length=10,
                                 )
             else:
+                log(f'continuous_s={continuous_s}')
                 its_max = len(multiplayer_s) * len(continuous_s) * len(extra_properties_s) * len(main_view_s) * len(fgfs_reverse_s)
                 it = 0
                 for multiplayer in multiplayer_s:

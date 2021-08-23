@@ -25,6 +25,8 @@
 #include <simgear/debug/LogCallback.hxx>
 #include <simgear/debug/logstream.hxx>
 #include <simgear/debug/ErrorReportingCallback.hxx>
+#include <simgear/debug/Reporting.hxx>
+
 #include <simgear/misc/sg_path.hxx>
 #include <simgear/props/props.hxx>
 #include <simgear/structure/commands.hxx>
@@ -61,17 +63,6 @@ auto OSG_messageWhitelist = {
      "Detected particle system using segment(s) with less than 2 vertices"
 };
 
-auto XML_messageWhitelist = {
-    "Cannot open file",
-    "not well-formed (invalid token)",
-    "mismatched tag",
-    "syntax error",
-    "no element found",
-    "Root element name is",
-    "XML or text declaration not at start of entity",
-    "Failed to open file",
-    "unclosed token"};
-
 auto exception_messageWhitelist = {
     "position is invalid, NaNs",    ///< avoid spam when NaNs occur
     "bad AI flight plan",           ///< adjusting logic to avoid this is tricky
@@ -87,7 +78,6 @@ auto exception_messageWhitelist = {
 #if defined(HAVE_SENTRY) && !defined(BUILDING_TESTSUITE)
 
 static bool static_sentryEnabled = false;
-thread_local bool perThread_reportXMLParseErrors = true;
 
 #include <sentry.h>
 
@@ -99,15 +89,6 @@ void sentryTraceSimgearThrow(const std::string& msg, const std::string& origin, 
 {
     if (!static_sentryEnabled)
         return;
-
-// don't report the exceptions raised by easyxml.cxx, if this per-thread
-// flag is set. This avoids a lot of errors when the launcher scans 
-// directories containing many aircraft of unknown origin/quality
-// if the user tries to fly with one, we'll still get an error then,
-// but that's a real failure point (from the user PoV)
-    if (!perThread_reportXMLParseErrors && doesStringMatchPrefixes(msg, XML_messageWhitelist)) {
-        return;
-    }
 
     if (doesStringMatchPrefixes(msg, exception_messageWhitelist)) {
         return;
@@ -221,17 +202,19 @@ void sentrySimgearReportCallback(const string& msg, const string& more, bool isF
 
 void sentryReportBadAlloc()
 {
-    sentry_value_t sentryMessage = sentry_value_new_object();
-    sentry_value_set_by_key(sentryMessage, "type", sentry_value_new_string("Fatal Error"));
-    sentry_value_set_by_key(sentryMessage, "formatted", sentry_value_new_string("bad allocation"));
+    if (simgear::ReportBadAllocGuard::isSet()) {
+        sentry_value_t sentryMessage = sentry_value_new_object();
+        sentry_value_set_by_key(sentryMessage, "type", sentry_value_new_string("Fatal Error"));
+        sentry_value_set_by_key(sentryMessage, "formatted", sentry_value_new_string("bad allocation"));
 
-    sentry_value_t event = sentry_value_new_event();
-    sentry_value_set_by_key(event, "message", sentryMessage);
+        sentry_value_t event = sentry_value_new_event();
+        sentry_value_set_by_key(event, "message", sentryMessage);
 
-    sentry_event_value_add_stacktrace(event, nullptr, 0);
-    sentry_capture_event(event);
+        sentry_event_value_add_stacktrace(event, nullptr, 0);
+        sentry_capture_event(event);
+    }
 
-    std::set_new_handler(nullptr);
+    throw std::bad_alloc(); // allow normal processing
 }
 
 } // namespace
@@ -492,11 +475,6 @@ void  sentryReportFatalError(const std::string& msg, const std::string& more)
     sentry_capture_event(event);
 }
 
-void sentryThreadReportXMLErrors(bool report)
-{
-    perThread_reportXMLParseErrors = report;
-}
-
 void sentryReportUserError(const std::string& aggregate, const std::string& details)
 {
     if (!static_sentryEnabled)
@@ -567,10 +545,6 @@ void sentryReportFatalError(const std::string&, const std::string&)
 {
 }
 
-void sentryThreadReportXMLErrors(bool)
-{
-}
-
 void sentryReportUserError(const std::string&, const std::string&)
 {
 }
@@ -590,16 +564,6 @@ void addSentryTag(const std::string& tag, const std::string& value)
         return;
     
     addSentryTag(tag.c_str(), value.c_str());
-}
-
-SentryXMLErrorSupression::SentryXMLErrorSupression()
-{
-    sentryThreadReportXMLErrors(false);
-}
-
-SentryXMLErrorSupression::~SentryXMLErrorSupression()
-{
-    sentryThreadReportXMLErrors(true);
 }
 
 } // of namespace flightgear

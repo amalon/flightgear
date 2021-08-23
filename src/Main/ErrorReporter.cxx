@@ -217,6 +217,14 @@ public:
 
     string _terrasyncPathPrefix;
     string _fgdataPathPrefix;
+    string _aircraftDirectoryName;
+
+    /**
+        @brief hueristic to identify relative paths as origination from the main aircraft as opposed
+                to something else. This is based on containing the aircraft directory name.
+     */
+    bool isMainAircraftPath(const std::string& path) const;
+
     /**
         structure representing one or more errors, aggregated together
      */
@@ -248,7 +256,7 @@ public:
 
     void collectError(simgear::LoadFailure type, simgear::ErrorCode code, const std::string& details, const sg_location& location)
     {
-        ErrorOcurrence occurrence{code, type, details, location, time(nullptr)};
+        ErrorOcurrence occurrence{code, type, details, location, time(nullptr), string_list(), ErrorContext()};
 
         // snapshot the top of the context stacks into our occurence data
         for (const auto& c : thread_errorContextStack) {
@@ -358,7 +366,7 @@ public:
         assert(it != _aggregated.end());
         _activeReportIndex = static_cast<int>(std::distance(_aggregated.begin(), it));
         _displayNode->setBoolValue("index", _activeReportIndex);
-        _displayNode->setBoolValue("have-next", _activeReportIndex < (_aggregated.size() - 1));
+        _displayNode->setBoolValue("have-next", _activeReportIndex < (int) _aggregated.size() - 1);
         _displayNode->setBoolValue("have-previous", _activeReportIndex > 0);
     }
 
@@ -417,7 +425,7 @@ auto ErrorReporter::ErrorReporterPrivate::getAggregateForOccurence(const ErrorRe
         return getAggregate(Aggregation::TerraSync, {});
     }
 
-    if (oc.hasContextKey("terrain-stg")) {
+    if (oc.hasContextKey("terrain-stg") || oc.hasContextKey("btg")) {
         // determine if it's custom scenery, TerraSync or FGData
 
         // bucket is no use here, we need to check the BTG/XML/STG path etc.
@@ -425,21 +433,24 @@ auto ErrorReporter::ErrorReporterPrivate::getAggregateForOccurence(const ErrorRe
         // STG references a model, XML or texture in FGData or TerraSync
         // incorrectly, we attribute the error to the scenery, which is
         // likely what we want/expect
-        const auto stgPath = oc.getContextValue("terrain-stg");
-
-        if (simgear::strutils::starts_with(stgPath, _fgdataPathPrefix)) {
-            return getAggregate(Aggregation::FGData, {});
-        } else if (simgear::strutils::starts_with(stgPath, _terrasyncPathPrefix)) {
-            return getAggregate(Aggregation::TerraSync, {});
-        }
+        auto path = oc.hasContextKey("terrain-stg") ? oc.getContextValue("terrain-stg") : oc.getContextValue("btg");
 
         // custom scenery, find out the prefix
         for (const auto& sceneryPath : globals->get_fg_scenery()) {
             const auto pathStr = sceneryPath.utf8Str();
-            if (simgear::strutils::starts_with(stgPath, pathStr)) {
+            if (simgear::strutils::starts_with(path, pathStr)) {
                 return getAggregate(Aggregation::CustomScenery, pathStr);
             }
         }
+
+        // try generic paths
+        if (simgear::strutils::starts_with(path, _fgdataPathPrefix)) {
+            return getAggregate(Aggregation::FGData, {});
+        } else if (simgear::strutils::starts_with(path, _terrasyncPathPrefix)) {
+            return getAggregate(Aggregation::TerraSync, {});
+        }
+
+        
 
         // shouldn't ever happen
         return getAggregate(Aggregation::CustomScenery, {});
@@ -454,11 +465,21 @@ auto ErrorReporter::ErrorReporterPrivate::getAggregateForOccurence(const ErrorRe
         return getAggregate(Aggregation::InputDevice, oc.getContextValue("input-device"));
     }
 
+    // start guessing :)
+    // from this point on we're using less reliable inferences about where the
+    // error came from, trying to avoid 'unknown'
+    if (isMainAircraftPath(oc.origin.asString())) {
+        const auto fullId = fgGetString("/sim/aircraft-id");
+        if (fullId != fgGetString("/sim/aircraft")) {
+            return getAggregate(Aggregation::MainAircraft, fullId);
+        }
+
+        return getAggregate(Aggregation::HangarAircraft, fullId);
+    }
+
     // GUI dialog errors often have no context
     if (oc.code == simgear::ErrorCode::GUIDialog) {
-        // TODO: check if it's an aircraft dialog and use MainAicraft
         // check if it's an add-on and use that
-
         return getAggregate(Aggregation::FGData);
     }
 
@@ -680,6 +701,13 @@ bool ErrorReporter::ErrorReporterPrivate::AggregateReport::addOccurence(const Er
     return true;
 }
 
+bool ErrorReporter::ErrorReporterPrivate::isMainAircraftPath(const std::string& path) const
+{
+    const auto pos = path.find(_aircraftDirectoryName);
+    return pos != std::string::npos;
+}
+
+
 ////////////////////////////////////////////
 
 ErrorReporter::ErrorReporter() : d(new ErrorReporterPrivate)
@@ -768,8 +796,10 @@ void ErrorReporter::init()
         SG_LOG(SG_GENERAL, SG_INFO, "Error reporting disabled");
         simgear::setFailureCallback(simgear::FailureCallback());
         simgear::setErrorContextCallback(simgear::ContextCallback());
-        sglog().removeCallback(d->_logCallback.get());
-        d->_logCallbackRegistered = false;
+        if (d->_logCallbackRegistered) {
+            sglog().removeCallback(d->_logCallback.get());
+            d->_logCallbackRegistered = false;
+        }
         return;
     }
 
@@ -780,6 +810,9 @@ void ErrorReporter::init()
     // cache these values here
     d->_fgdataPathPrefix = globals->get_fg_root().utf8Str();
     d->_terrasyncPathPrefix = globals->get_terrasync_dir().utf8Str();
+
+    const auto aircraftPath = SGPath::fromUtf8(fgGetString("/sim/aircraft-dir"));
+    d->_aircraftDirectoryName = aircraftPath.file();
 }
 
 void ErrorReporter::update(double dt)
@@ -885,8 +918,14 @@ void ErrorReporter::shutdown()
         globals->get_commands()->removeCommand("dismiss-error-report");
         globals->get_commands()->removeCommand("save-error-report-data");
         globals->get_commands()->removeCommand("show-error-report");
-        sglog().removeCallback(d->_logCallback.get());
-        d->_logCallbackRegistered = false;
+
+// during a reset we don't want to touch the log callback; it was added in
+// preinit, which does not get repeated on a reset
+        const bool inReset = fgGetBool("/sim/signals/reinit", false);
+        if (!inReset) {
+            sglog().removeCallback(d->_logCallback.get());
+            d->_logCallbackRegistered = false;
+        }
     }
 }
 

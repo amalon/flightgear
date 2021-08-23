@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include "test_routeManager.hxx"
 
 #include <memory>
@@ -867,6 +869,36 @@ void RouteManagerTests::testsSelectNavaid()
     CPPUNIT_ASSERT_EQUAL(wp2->source()->name(), string{"BRYANSK NDB"});
 }
 
+void RouteManagerTests::testsSelectWaypoint()
+{
+    // another part of the issue at
+    // https://sourceforge.net/p/flightgear/codetickets/2372/
+
+    auto rm = globals->get_subsystem<FGRouteMgr>();
+
+    FlightPlanRef f = new FlightPlan;
+    rm->setFlightPlan(f);
+
+    auto rmNode = globals->get_props()->getNode("autopilot/route-manager", true);
+    rmNode->setStringValue("input", "70N,015E");
+    rmNode->setStringValue("input", "55N,015E");
+    rmNode->setStringValue("input", "@INSERT1:OSS");
+    rmNode->setStringValue("input", "@INSERT2:BOR");
+
+    auto leg = f->legAtIndex(1);
+    auto wp1 = leg->waypoint();
+    CPPUNIT_ASSERT_EQUAL(wp1->ident(), string{"OSS"});
+    CPPUNIT_ASSERT_EQUAL(wp1->source()->name(), string{"OSTERSUND VOR-DME"});
+
+    //   CPPUNIT_ASSERT_DOUBLES_EQUAL(227, leg->courseDeg(), 0.5);
+    //  CPPUNIT_ASSERT_DOUBLES_EQUAL(59, leg->distanceNm(), 0.5);
+
+    leg = f->legAtIndex(2);
+    auto wp2 = leg->waypoint();
+    CPPUNIT_ASSERT_EQUAL(wp2->ident(), string{"BOR"});
+    CPPUNIT_ASSERT_EQUAL(wp2->source()->name(), string{"BORLANGE VOR-DME"});
+}
+
 void RouteManagerTests::testCommandAPI()
 {
     auto rm = globals->get_subsystem<FGRouteMgr>();
@@ -920,3 +952,29 @@ void RouteManagerTests::testCommandAPI()
     auto d = SGGeodesy::distanceNm(waldaVOR->geod(), waldaWpt->position());
     CPPUNIT_ASSERT_DOUBLES_EQUAL(10.0, d, 0.1);
 }
+
+void RouteManagerTests::testRMBug2616()
+{
+    auto edty = FGAirport::findByIdent("EDTY"s);
+    edty->testSuiteInjectProceduresXML(SGPath::fromUtf8(FG_TEST_SUITE_DATA) / "EDTY.procedures.xml");
+
+    auto ils28Approach = edty->findApproachWithIdent("ILS28"s);
+    CPPUNIT_ASSERT(ils28Approach);
+    
+    auto rm = globals->get_subsystem<FGRouteMgr>();
+    auto f = rm->flightPlan();
+    f->clearLegs();
+    
+    auto edds = FGAirport::findByIdent("EDDS");
+    f->setDeparture(edds->getRunwayByIdent("25"));
+    f->setDestination(edty->getRunwayByIdent("28"));
+    f->setApproach(ils28Approach);
+    
+      CPPUNIT_ASSERT(f->destinationRunway()->ident() == "28"s);
+      CPPUNIT_ASSERT(f->approach()->ident() == "ILS28"s);
+
+
+    rm->activate();
+    CPPUNIT_ASSERT(f->isActive());
+}
+

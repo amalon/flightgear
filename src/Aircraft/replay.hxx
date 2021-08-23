@@ -231,6 +231,9 @@ private:
     SGPropertyNode_ptr speed_up;
     SGPropertyNode_ptr replay_multiplayer;
     SGPropertyNode_ptr recovery_period;
+    SGPropertyNode_ptr replay_error;
+    SGPropertyNode_ptr m_record_normal_begin;   // Time of first in-memory recorded frame.
+    SGPropertyNode_ptr m_record_normal_end;
     
     SGPropertyNode_ptr  m_sim_startup_xpos;
     SGPropertyNode_ptr  m_sim_startup_ypos;
@@ -274,6 +277,8 @@ private:
     // For writing uncompressed fgtape file.
     SGPropertyNode_ptr  m_continuous_out_config;
     std::ofstream       m_continuous_out;
+    int                 m_continuous_out_compression;
+    int                 m_continuous_in_compression;
     
     SGPropertyNode_ptr  m_simple_time_enabled;
 };

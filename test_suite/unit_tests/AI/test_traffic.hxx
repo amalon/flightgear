@@ -28,16 +28,22 @@
 
 class SGGeod;
 
+class FGAIAircraft;
+
 // The flight plan unit tests.
 class TrafficTests : public CppUnit::TestFixture
 {
     // Set up the test suite.
     CPPUNIT_TEST_SUITE(TrafficTests);
-    CPPUNIT_TEST(testTrafficManager);
     CPPUNIT_TEST(testPushback);
+    CPPUNIT_TEST(testPushbackCargo);
+    CPPUNIT_TEST(testChangeRunway);
+    CPPUNIT_TEST(testPushforward);
+    CPPUNIT_TEST(testPushforwardSpeedy);
+    CPPUNIT_TEST(testPushforwardParkYBBN);
+    CPPUNIT_TEST(testPushforwardParkYBBNRepeatGa);
+    CPPUNIT_TEST(testPushforwardParkYBBNRepeatGate);
     CPPUNIT_TEST_SUITE_END();
-
-
 public:
     // Set up function for each test.
     void setUp();
@@ -45,7 +51,18 @@ public:
     // Clean up after each test.
     void tearDown();
 
-    // The tests.
-    void testTrafficManager();
+    // Pushback Tests
     void testPushback();
+    void testPushbackCargo();
+    void testChangeRunway();
+    //GA Tests with forward push
+    void testPushforward();
+    void testPushforwardSpeedy();
+    void testPushforwardParkYBBN();
+    void testPushforwardParkYBBNRepeatGa();
+    void testPushforwardParkYBBNRepeatGate();
+private:
+    long currentWorldTime;
+    std::string getTimeString(int timeOffset);
+    FGAIAircraft * flyAI(SGSharedPtr<FGAIAircraft> aiAircraft, std::string fName);
 };

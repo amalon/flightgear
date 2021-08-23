@@ -21,6 +21,7 @@
 #endif
 
 #include <iterator>
+#include <algorithm>
 
 #include <simgear/constants.h>
 #include <simgear/debug/logstream.hxx>
@@ -357,6 +358,29 @@ FGAIWaypoint* FGAIFlightPlan::getNextWaypoint( void ) const
     }
 }
 
+int FGAIFlightPlan::getNextTurnAngle( void ) const
+{
+    if (wpt_iterator == waypoints.end())
+        return 0;
+    if (wpt_iterator+1 == waypoints.end())
+        return 0;
+    if (wpt_iterator+2 == waypoints.end())
+        return 0;
+    FGAIWaypoint* currentWP = *(wpt_iterator);
+    FGAIWaypoint* nextWP = *(wpt_iterator + 1);
+    FGAIWaypoint* afterNextWP = *(wpt_iterator + 2);
+    int currentBearing = this->getBearing(currentWP, nextWP);
+    int nextBearing = this->getBearing(nextWP, afterNextWP);
+
+    int turnAngle = nextBearing - currentBearing;
+    if (turnAngle>180) {
+      turnAngle -= 180;
+    }
+
+    return turnAngle;
+}
+
+
 void FGAIFlightPlan::IncrementWaypoint(bool eraseWaypoints )
 {
     if (empty())
@@ -375,8 +399,9 @@ void FGAIFlightPlan::IncrementWaypoint(bool eraseWaypoints )
             wpt_iterator++;
         }
     }
-    else
-        wpt_iterator++;
+    else {
+      wpt_iterator++;
+    }
 }
 
 void FGAIFlightPlan::DecrementWaypoint()
@@ -411,6 +436,7 @@ void FGAIFlightPlan::setLeadDistance(double speed, double bearing,
   // At a turn rate of 30 degrees per second, it takes 12 seconds to do a full 360 degree turn
   // So, to get an estimate of the turn radius, calculate the cicumference of the circle
   // we travel on. Get the turn radius by dividing by PI (*2).
+  // FIXME Why when going backwards? No fabs
   if (speed < 0.5) {
         lead_distance = 0.5;
         return;
@@ -505,11 +531,21 @@ void FGAIFlightPlan::addWaypoint(FGAIWaypoint* wpt)
 
 void FGAIFlightPlan::pushBackWaypoint(FGAIWaypoint *wpt)
 {
+    const size_t pos = std::distance(waypoints.cbegin(), wpt_iterator);
+    
+    if (!waypoints.empty()) {
+      const double dist = SGGeodesy::distanceM( waypoints.back()->getPos(), wpt->getPos());
+      if ( dist < 0.5 ) {
+        SG_LOG(SG_AI, SG_DEV_ALERT, "Double WP : \t" << wpt->getName() << " not added ");
+      }
+    }
+
+    waypoints.push_back(wpt);
+    SG_LOG(SG_AI, SG_BULK, "Added WP : \t" << wpt->getName() << "\t" << wpt->getPos() << "\t" << wpt->getSpeed());
+
   // std::vector::push_back invalidates waypoints
   //  so we should restore wpt_iterator after push_back
   //  (or it could be an index in the vector)
-  size_t pos = wpt_iterator - waypoints.begin();
-  waypoints.push_back(wpt);
   wpt_iterator = waypoints.begin() + pos;
 }
 

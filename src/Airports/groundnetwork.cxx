@@ -213,6 +213,9 @@ void FGGroundNetwork::init()
         segment->oppositeDirection = opp;
         opp->oppositeDirection = segment;
       }
+
+      // establish node -> segment end cache
+      m_segmentsEndingAtNodeMap.insert(NodeFromSegmentMap::value_type{segment->getEnd(), segment});
     }
 
     networkInitialized = true;
@@ -282,8 +285,27 @@ FGTaxiNodeRef FGGroundNetwork::findNearestNodeOnRunway(const SGGeod & aGeod, FGR
     for (it = m_nodes.begin(); it != m_nodes.end(); ++it) {
         if (!(*it)->getIsOnRunway())
             continue;
-
         double localDistanceSqr = distSqr(cartPos, (*it)->cart());
+        if (aRunway) {
+            double headingTowardsExit = SGGeodesy::courseDeg(aGeod, (*it)->geod());
+            double diff = fabs(aRunway->headingDeg() - headingTowardsExit);
+            if (diff > 10) {
+                // Only ahead
+                continue;
+            }
+            FGTaxiNodeVector exitSegments = findSegmentsFrom((*it));
+            // Only ends
+            if (exitSegments.size() != 1) {
+                continue;
+            }
+            double exitHeading = SGGeodesy::courseDeg((*it)->geod(),
+                                                      (exitSegments.back())->geod());
+            diff = fabs(aRunway->headingDeg() - exitHeading);
+            if (diff > 10) {
+                // Only exits going in our direction
+                continue;
+            }
+        }
         if (localDistanceSqr < d) {
             d = localDistanceSqr;
             result = *it;
@@ -384,7 +406,7 @@ FGTaxiRoute FGGroundNetwork::findShortestRoute(FGTaxiNode* start, FGTaxiNode* en
             break;
         }
 
-        for (auto target : segmentsFrom(best)) {
+        for (auto target : findSegmentsFrom(best)) {
             double edgeLength = dist(best->cart(), target->cart());
             double alt = searchData[best].score + edgeLength + edgePenalty(target);
             if (alt < searchData[target].score) {    // Relax (u,v)
@@ -426,9 +448,8 @@ FGTaxiRoute FGGroundNetwork::findShortestRoute(FGTaxiNode* start, FGTaxiNode* en
 
 void FGGroundNetwork::unblockAllSegments(time_t now)
 {
-    FGTaxiSegmentVector::iterator tsi;
-    for ( tsi = segments.begin(); tsi != segments.end(); tsi++) {
-        (*tsi)->unblock(now);
+    for (auto& seg : segments) {
+        seg->unblock(now);
     }
 }
 
@@ -437,13 +458,13 @@ void FGGroundNetwork::blockSegmentsEndingAt(FGTaxiSegment *seg, int blockId, tim
     if (!seg)
         throw sg_exception("Passed invalid segment");
 
-    const FGTaxiNode *node = seg->endNode;
-    FGTaxiSegmentVector::iterator tsi;
-    for ( tsi = segments.begin(); tsi != segments.end(); tsi++) {
-        FGTaxiSegment* otherSegment = *tsi;
-        if ((otherSegment->endNode == node) && (otherSegment != seg)) {
-            otherSegment->block(blockId, blockTime, now);
-        }
+    const auto range = m_segmentsEndingAtNodeMap.equal_range(seg->getEnd());
+    for (auto it = range.first; it != range.second; ++it) {
+        // our inbound segment will be included, so skip it
+        if (it->second == seg)
+            continue;
+
+        it->second->block(blockId, blockTime, now);
     }
 }
 
@@ -508,7 +529,7 @@ void FGGroundNetwork::addParking(const FGParkingRef &park)
     }
 }
 
-FGTaxiNodeVector FGGroundNetwork::segmentsFrom(const FGTaxiNodeRef &from) const
+FGTaxiNodeVector FGGroundNetwork::findSegmentsFrom(const FGTaxiNodeRef &from) const
 {
     FGTaxiNodeVector result;
     FGTaxiSegmentVector::const_iterator it;
@@ -520,6 +541,30 @@ FGTaxiNodeVector FGGroundNetwork::segmentsFrom(const FGTaxiNodeRef &from) const
 
     return result;
 }
+
+FGTaxiSegment* FGGroundNetwork::findSegmentByHeading(const FGTaxiNode* from, const double heading) const {
+    if (from == 0) {
+        return NULL;
+    }
+
+    FGTaxiSegment* best = nullptr;
+
+  // completely boring linear search of segments. Can be improved if/when
+  // this ever becomes a hot-spot
+    for (auto seg : segments) {
+        if (seg->startNode != from) {
+            continue;
+        }
+
+        if( !best || fabs(best->getHeading()-heading) > fabs(seg->getHeading()-heading)) {
+            best = seg;
+        }
+    }
+
+    return best; // not found
+}
+
+
 
 const intVec& FGGroundNetwork::getTowerFrequencies() const
 {
