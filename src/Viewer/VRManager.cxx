@@ -42,11 +42,13 @@ VRManager::VRManager() :
     _propValidationLayer("/sim/vr/validation-layer"),
     _propMode("/sim/vr/mode"),
     _propSwapchainMode("/sim/vr/swapchain-mode"),
+    _propMirrorMode("/sim/vr/mirror-mode"),
     _listenerEnabled(this, &osgXR::Manager::setEnabled),
     _listenerDepthInfo(this, &VRManager::setDepthInfo),
     _listenerValidationLayer(this, &VRManager::setValidationLayer),
     _listenerMode(this, &VRManager::setVRMode),
-    _listenerSwapchainMode(this, &VRManager::setSwapchainMode)
+    _listenerSwapchainMode(this, &VRManager::setSwapchainMode),
+    _listenerMirrorMode(this, &VRManager::setMirrorMode)
 {
     uint32_t fgVersion = (FLIGHTGEAR_MAJOR_VERSION << 16 |
                           FLIGHTGEAR_MINOR_VERSION << 8 |
@@ -68,6 +70,7 @@ VRManager::VRManager() :
     _propValidationLayer.node(true)->addChangeListener(&_listenerValidationLayer, true);
     _propMode.node(true)->addChangeListener(&_listenerMode, true);
     _propSwapchainMode.node(true)->addChangeListener(&_listenerSwapchainMode, true);
+    _propMirrorMode.node(true)->addChangeListener(&_listenerMirrorMode, true);
 }
 
 VRManager *VRManager::instance()
@@ -146,6 +149,28 @@ void VRManager::setSwapchainMode(const char * mode)
 
     _settings->setSwapchainMode(swapchainMode);
     syncSettings();
+}
+
+void VRManager::setMirrorMode(const char * mode)
+{
+    osgXR::MirrorSettings::MirrorMode mirrorMode = osgXR::MirrorSettings::MIRROR_AUTOMATIC;
+    int viewIndex = -1;
+
+    if (strcmp(mode, "AUTOMATIC") == 0) {
+        mirrorMode = osgXR::MirrorSettings::MIRROR_AUTOMATIC;
+    } else if (strcmp(mode, "NONE") == 0) {
+        mirrorMode = osgXR::MirrorSettings::MIRROR_NONE;
+    } else if (strcmp(mode, "LEFT") == 0) {
+        mirrorMode = osgXR::MirrorSettings::MIRROR_SINGLE;
+        viewIndex = 0;
+    } else if (strcmp(mode, "RIGHT") == 0) {
+        mirrorMode = osgXR::MirrorSettings::MIRROR_SINGLE;
+        viewIndex = 1;
+    } else if (strcmp(mode, "LEFT_RIGHT") == 0) {
+        mirrorMode = osgXR::MirrorSettings::MIRROR_LEFT_RIGHT;
+    }
+
+    _settings->getMirrorSettings().setMirror(mirrorMode, viewIndex);
 }
 
 void VRManager::update()

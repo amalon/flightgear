@@ -79,6 +79,7 @@ class VRManager : public osgXR::Manager
 
         void setVRMode(const char * mode);
         void setSwapchainMode(const char * mode);
+        void setMirrorMode(const char * mode);
 
         // osgXR::Manager overrides
 
@@ -116,6 +117,7 @@ class VRManager : public osgXR::Manager
         SGPropObjBool _propValidationLayer;
         SGPropObjString _propMode;
         SGPropObjString _propSwapchainMode;
+        SGPropObjString _propMirrorMode;
 
         // Property listeners
 
@@ -149,6 +151,7 @@ class VRManager : public osgXR::Manager
         ListenerBool _listenerValidationLayer;
         ListenerString _listenerMode;
         ListenerString _listenerSwapchainMode;
+        ListenerString _listenerMirrorMode;
 };
 
 }
