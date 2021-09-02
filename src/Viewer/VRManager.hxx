@@ -77,9 +77,9 @@ class VRManager : public osgXR::Manager
         void setValidationLayer(bool validationLayer);
         void setDepthInfo(bool depthInfo);
 
-        void setMirrorMode(const char * mode);
         void setVRMode(const char * mode);
         void setSwapchainMode(const char * mode);
+        void setMirrorMode(const char * mode);
 
         // osgXR::Manager overrides
 

@@ -119,28 +119,6 @@ void VRManager::setDepthInfo(bool depthInfo)
     syncSettings();
 }
 
-void VRManager::setMirrorMode(const char * mode)
-{
-    osgXR::MirrorSettings::MirrorMode mirrorMode = osgXR::MirrorSettings::MIRROR_AUTOMATIC;
-    int viewIndex = -1;
-
-    if (strcmp(mode, "AUTOMATIC") == 0) {
-        mirrorMode = osgXR::MirrorSettings::MIRROR_AUTOMATIC;
-    } else if (strcmp(mode, "NONE") == 0) {
-        mirrorMode = osgXR::MirrorSettings::MIRROR_NONE;
-    } else if (strcmp(mode, "LEFT") == 0) {
-        mirrorMode = osgXR::MirrorSettings::MIRROR_SINGLE;
-        viewIndex = 0;
-    } else if (strcmp(mode, "RIGHT") == 0) {
-        mirrorMode = osgXR::MirrorSettings::MIRROR_SINGLE;
-        viewIndex = 1;
-    } else if (strcmp(mode, "LEFT_RIGHT") == 0) {
-        mirrorMode = osgXR::MirrorSettings::MIRROR_LEFT_RIGHT;
-    }
-
-    _settings->getMirrorSettings().setMirror(mirrorMode, viewIndex);
-}
-
 void VRManager::setVRMode(const char * mode)
 {
     osgXR::Settings::VRMode vrMode = osgXR::Settings::VRMODE_AUTOMATIC;
@@ -171,6 +149,28 @@ void VRManager::setSwapchainMode(const char * mode)
 
     _settings->setSwapchainMode(swapchainMode);
     syncSettings();
+}
+
+void VRManager::setMirrorMode(const char * mode)
+{
+    osgXR::MirrorSettings::MirrorMode mirrorMode = osgXR::MirrorSettings::MIRROR_AUTOMATIC;
+    int viewIndex = -1;
+
+    if (strcmp(mode, "AUTOMATIC") == 0) {
+        mirrorMode = osgXR::MirrorSettings::MIRROR_AUTOMATIC;
+    } else if (strcmp(mode, "NONE") == 0) {
+        mirrorMode = osgXR::MirrorSettings::MIRROR_NONE;
+    } else if (strcmp(mode, "LEFT") == 0) {
+        mirrorMode = osgXR::MirrorSettings::MIRROR_SINGLE;
+        viewIndex = 0;
+    } else if (strcmp(mode, "RIGHT") == 0) {
+        mirrorMode = osgXR::MirrorSettings::MIRROR_SINGLE;
+        viewIndex = 1;
+    } else if (strcmp(mode, "LEFT_RIGHT") == 0) {
+        mirrorMode = osgXR::MirrorSettings::MIRROR_LEFT_RIGHT;
+    }
+
+    _settings->getMirrorSettings().setMirror(mirrorMode, viewIndex);
 }
 
 void VRManager::update()
