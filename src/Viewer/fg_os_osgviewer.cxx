@@ -397,7 +397,6 @@ int fgOSMainLoop()
         }
         globals->get_renderer()->update();
 #ifdef ENABLE_OSGXR
-        // FIXME better place for this?
         VRManager::instance()->update();
 #endif
         viewer_base->frame( globals->get_sim_time_sec() );
