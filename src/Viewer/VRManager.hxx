@@ -26,6 +26,7 @@
 
 #include <osgXR/Manager>
 
+#include <simgear/props/propertyObject.hxx>
 #include <simgear/scene/viewer/CompositorPass.hxx>
 
 #include "CameraGroup.hxx"
@@ -67,26 +68,22 @@ class VRManager : public osgXR::Manager
 
         static VRManager *instance();
 
-        void resetProperties();
+        void syncProperties();
+        void syncReadOnlyProperties();
+        void syncSettingProperties();
 
         // Settings
 
-        bool getValidationLayer() const;
         void setValidationLayer(bool validationLayer);
-
-        bool getDepthInfo() const;
         void setDepthInfo(bool depthInfo);
 
-        const char * getMirrorMode() const;
         void setMirrorMode(const char * mode);
-
-        const char * getVRMode() const;
         void setVRMode(const char * mode);
-
-        const char * getSwapchainMode() const;
         void setSwapchainMode(const char * mode);
 
         // osgXR::Manager overrides
+
+        void update() override;
 
         void doCreateView(osgXR::View *xrView) override;
         void doDestroyView(osgXR::View *xrView) override;
@@ -106,6 +103,58 @@ class VRManager : public osgXR::Manager
         CamInfoToXRView _xrViews;
 
         osg::ref_ptr<ReloadCompositorCallback> _reloadCompositorCallback;
+
+        // Properties
+
+        SGPropObjBool _propXrLayersValidation;
+        SGPropObjBool _propXrExtensionsDepthInfo;
+        SGPropObjString _propXrRuntimeName;
+        SGPropObjString _propXrSystemName;
+
+        SGPropObjString _propStateString;
+        SGPropObjBool _propPresent;
+        SGPropObjBool _propRunning;
+
+        SGPropObjBool _propEnabled;
+        SGPropObjBool _propDepthInfo;
+        SGPropObjBool _propValidationLayer;
+        SGPropObjString _propMode;
+        SGPropObjString _propSwapchainMode;
+        SGPropObjString _propMirrorMode;
+
+        // Property listeners
+
+        template <typename T>
+        class Listener : public SGPropertyChangeListener
+        {
+            public:
+                typedef void (VRManager::*SetterFn)(T v);
+
+                Listener(VRManager *manager, SetterFn setter) :
+                    _manager(manager),
+                    _setter(setter)
+                {
+                }
+
+                void valueChanged(SGPropertyNode *node) override
+                {
+                    (_manager->*_setter)(node->template getValue<T>());
+                }
+
+            protected:
+
+                VRManager *_manager;
+                SetterFn _setter;
+        };
+        typedef Listener<bool> ListenerBool;
+        typedef Listener<const char *> ListenerString;
+
+        ListenerBool _listenerEnabled;
+        ListenerBool _listenerDepthInfo;
+        ListenerBool _listenerValidationLayer;
+        ListenerString _listenerMode;
+        ListenerString _listenerSwapchainMode;
+        ListenerString _listenerMirrorMode;
 };
 
 }

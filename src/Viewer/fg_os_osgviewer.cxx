@@ -332,7 +332,6 @@ void fgOSResetProperties()
 
 #ifdef ENABLE_OSGXR
     fgSetBool("/sim/vr/built", true);
-    VRManager::instance()->resetProperties();
 #else
     fgSetBool("/sim/vr/built", false);
 #endif
