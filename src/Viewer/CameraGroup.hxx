@@ -17,7 +17,6 @@
 #ifndef CAMERAGROUP_HXX
 #define CAMERAGROUP_HXX 1
 
-#include <list>
 #include <map>
 #include <string>
 #include <vector>
@@ -33,7 +32,6 @@
 #include <osgUtil/RenderBin>
 #include <osgViewer/View>
 
-#include <simgear/props/condition.hxx>
 #include <simgear/scene/viewer/Compositor.hxx>
 
 namespace osg
@@ -118,37 +116,11 @@ struct CameraInfo : public osg::Referenced
     /** The Compositor used to manage the pipeline of this camera.
      */
     std::unique_ptr<simgear::compositor::Compositor> compositor;
-
-    /** A conditional compositor path. The compositor path should be chosen if
-     * the condition is met.
+    /** Compositor path. Used to recreate the pipeline when reloading.
+     * If the path is empty, it means that this camera isn't using a custom
+     * Compositor path and should use the default one.
      */
-    struct ConditionalCompositor {
-        /** Property condition that should be met for this compositor.
-         */
-        SGConditionRef condition;
-        /** Compositor path. If the path is empty, it means that this camera
-         * isn't using a custom Compositor path and should use the default one.
-         */
-        std::string compositor_path;
-    };
-    /** Conditional compositor paths. Used to recreate the pipeline when
-     * reloading. These are tested in sequence and the compositor path
-     * of the first successful condition is used.
-     */
-    std::list<struct ConditionalCompositor> compositor_paths;
-
-    /** Choose a compositor path based on their conditions. Choose a compositor
-     * path from the list of compositor paths based on their property
-     * conditions.
-     * @return A compositor path, or empty string if the default should be used.
-     */
-    std::string chooseCompositor() const
-    {
-        for (auto &compositor: compositor_paths)
-            if (!compositor.condition || compositor.condition->test())
-                return compositor.compositor_path;
-        return "";
-    }
+    std::string compositor_path;
 
     struct ReloadCompositorCallback : public virtual osg::Referenced
     {
