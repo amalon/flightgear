@@ -74,6 +74,8 @@ class VRManager : public osgXR::Manager
 
         // Settings
 
+        bool getUseMirror() const;
+
         void setValidationLayer(bool validationLayer);
         void setDepthInfo(bool depthInfo);
 
@@ -120,6 +122,7 @@ class VRManager : public osgXR::Manager
         SGPropObjBool _propValidationLayer;
         SGPropObjString _propMode;
         SGPropObjString _propSwapchainMode;
+        SGPropObjBool _propMirrorEnabled;
         SGPropObjString _propMirrorMode;
 
         // Property listeners

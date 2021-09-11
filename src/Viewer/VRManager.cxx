@@ -42,6 +42,7 @@ VRManager::VRManager() :
     _propValidationLayer("/sim/vr/validation-layer"),
     _propMode("/sim/vr/mode"),
     _propSwapchainMode("/sim/vr/swapchain-mode"),
+    _propMirrorEnabled("/sim/vr/mirror-enabled"),
     _propMirrorMode("/sim/vr/mirror-mode"),
     _listenerEnabled(this, &osgXR::Manager::setEnabled),
     _listenerDepthInfo(this, &VRManager::setDepthInfo),
@@ -71,6 +72,9 @@ VRManager::VRManager() :
     _propMode.node(true)->addChangeListener(&_listenerMode, true);
     _propSwapchainMode.node(true)->addChangeListener(&_listenerSwapchainMode, true);
     _propMirrorMode.node(true)->addChangeListener(&_listenerMirrorMode, true);
+
+    // No need for a change listener, but it should still be resolvable
+    _propMirrorEnabled.node(true);
 }
 
 VRManager *VRManager::instance()
@@ -105,6 +109,11 @@ void VRManager::syncSettingProperties()
     bool enabled = getEnabled();
     if (_propEnabled != enabled)
         _propEnabled = enabled;
+}
+
+bool VRManager::getUseMirror() const
+{
+    return _propMirrorEnabled && isRunning();
 }
 
 void VRManager::setValidationLayer(bool validationLayer)
