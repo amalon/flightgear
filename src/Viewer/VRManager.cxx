@@ -225,9 +225,6 @@ void VRManager::doDestroyView(osgXR::View *xrView)
 
 void VRManager::onRunning()
 {
-    // Compositor reload may depend on properties being updated
-    syncProperties();
-
     // Reload compositors to trigger switch to mirror of VR
     CameraGroup *cgroup = CameraGroup::getDefault();
     reloadCompositors(cgroup);
@@ -239,9 +236,6 @@ void VRManager::onStopped()
     // compositors to trigger switch away from mirror of VR
     if (!isDestroying())
     {
-        // Compositor reload may depend on properties being updated
-        syncProperties();
-
         CameraGroup *cgroup = CameraGroup::getDefault();
         reloadCompositors(cgroup);
     }

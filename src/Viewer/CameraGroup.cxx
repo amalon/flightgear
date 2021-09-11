@@ -1041,12 +1041,6 @@ void CameraGroup::buildDefaultGroup(osgViewer::View* viewer)
             masterCamera = cgroupNode->getChild("camera", cameras.size(), true);
             setValue(masterCamera->getNode("window/name", true),
                      windowBuilder->getDefaultWindowName());
-            // Use VR mirror compositor when VR is enabled.
-            setValue(masterCamera->getNode("compositor/path", true),
-                     "Compositor/vr-mirror");
-            SGPropertyNode *andCondition = masterCamera->getNode("compositor/condition/and", true);
-            andCondition->addChild("property")->setStringValue("/sim/vr/running");
-            andCondition->addChild("property")->setStringValue("/sim/vr/mirror-enabled");
         }
         SGPropertyNode* nameNode = masterCamera->getNode("window/name");
         if (nameNode)
