@@ -78,6 +78,7 @@ class VRManager : public osgXR::Manager
 
         void setValidationLayer(bool validationLayer);
         void setDepthInfo(bool depthInfo);
+        void setVisibilityMask(bool visibilityMask);
 
         void setVRMode(const char * mode);
         void setSwapchainMode(const char * mode);
@@ -110,6 +111,7 @@ class VRManager : public osgXR::Manager
 
         SGPropObjBool _propXrLayersValidation;
         SGPropObjBool _propXrExtensionsDepthInfo;
+        SGPropObjBool _propXrExtensionsVisibilityMask;
         SGPropObjString _propXrRuntimeName;
         SGPropObjString _propXrSystemName;
 
@@ -119,6 +121,7 @@ class VRManager : public osgXR::Manager
 
         SGPropObjBool _propEnabled;
         SGPropObjBool _propDepthInfo;
+        SGPropObjBool _propVisibilityMask;
         SGPropObjBool _propValidationLayer;
         SGPropObjString _propMode;
         SGPropObjString _propSwapchainMode;
@@ -154,6 +157,7 @@ class VRManager : public osgXR::Manager
 
         ListenerBool _listenerEnabled;
         ListenerBool _listenerDepthInfo;
+        ListenerBool _listenerVisibilityMask;
         ListenerBool _listenerValidationLayer;
         ListenerString _listenerMode;
         ListenerString _listenerSwapchainMode;

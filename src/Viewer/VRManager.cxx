@@ -20,6 +20,7 @@
 
 #include <osgXR/Settings>
 
+#include <simgear/scene/util/RenderConstants.hxx>
 #include <simgear/scene/viewer/CompositorPass.hxx>
 
 #include <Main/fg_props.hxx>
@@ -32,6 +33,7 @@ VRManager::VRManager() :
     _reloadCompositorCallback(new ReloadCompositorCallback(this)),
     _propXrLayersValidation("/sim/vr/openxr/layers/validation"),
     _propXrExtensionsDepthInfo("/sim/vr/openxr/extensions/depth-info"),
+    _propXrExtensionsVisibilityMask("/sim/vr/openxr/extensions/visibility-mask"),
     _propXrRuntimeName("/sim/vr/openxr/runtime/name"),
     _propXrSystemName("/sim/vr/openxr/system/name"),
     _propStateString("/sim/vr/state-string"),
@@ -39,6 +41,7 @@ VRManager::VRManager() :
     _propRunning("/sim/vr/running"),
     _propEnabled("/sim/vr/enabled"),
     _propDepthInfo("/sim/vr/depth-info"),
+    _propVisibilityMask("/sim/vr/visibility-mask"),
     _propValidationLayer("/sim/vr/validation-layer"),
     _propMode("/sim/vr/mode"),
     _propSwapchainMode("/sim/vr/swapchain-mode"),
@@ -46,6 +49,7 @@ VRManager::VRManager() :
     _propMirrorMode("/sim/vr/mirror-mode"),
     _listenerEnabled(this, &osgXR::Manager::setEnabled),
     _listenerDepthInfo(this, &VRManager::setDepthInfo),
+    _listenerVisibilityMask(this, &VRManager::setVisibilityMask),
     _listenerValidationLayer(this, &VRManager::setValidationLayer),
     _listenerMode(this, &VRManager::setVRMode),
     _listenerSwapchainMode(this, &VRManager::setSwapchainMode),
@@ -56,6 +60,10 @@ VRManager::VRManager() :
                           FLIGHTGEAR_PATCH_VERSION);
     _settings->setApp("FlightGear", fgVersion);
     _settings->preferEnvBlendMode(osgXR::Settings::OPAQUE);
+
+    // Inform osgXR what node masks to use
+    setVisibilityMaskNodeMasks(simgear::NodeMask::LEFT_BIT,
+                               simgear::NodeMask::RIGHT_BIT);
 
     // Hook into viewer, but don't enable VR just yet
     osgViewer::View *view = globals->get_renderer()->getView();
@@ -68,6 +76,7 @@ VRManager::VRManager() :
 
     _propEnabled.node(true)->addChangeListener(&_listenerEnabled, true);
     _propDepthInfo.node(true)->addChangeListener(&_listenerDepthInfo, true);
+    _propVisibilityMask.node(true)->addChangeListener(&_listenerVisibilityMask, true);
     _propValidationLayer.node(true)->addChangeListener(&_listenerValidationLayer, true);
     _propMode.node(true)->addChangeListener(&_listenerMode, true);
     _propSwapchainMode.node(true)->addChangeListener(&_listenerSwapchainMode, true);
@@ -96,6 +105,7 @@ void VRManager::syncReadOnlyProperties()
 {
     _propXrLayersValidation = hasValidationLayer();
     _propXrExtensionsDepthInfo = hasDepthInfoExtension();
+    _propXrExtensionsVisibilityMask = hasVisibilityMaskExtension();
     _propXrRuntimeName = getRuntimeName();
     _propXrSystemName = getSystemName();
 
@@ -125,6 +135,12 @@ void VRManager::setValidationLayer(bool validationLayer)
 void VRManager::setDepthInfo(bool depthInfo)
 {
     _settings->setDepthInfo(depthInfo);
+    syncSettings();
+}
+
+void VRManager::setVisibilityMask(bool visibilityMask)
+{
+    _settings->setVisibilityMask(visibilityMask);
     syncSettings();
 }
 

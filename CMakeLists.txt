@@ -152,7 +152,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR
         set(SYSTEM_HTS_ENGINE_DEFAULT 1)
     endif()
 
-    find_package(osgXR 0.3)
+    find_package(osgXR 0.4)
     if (osgXR_FOUND)
         set(ENABLE_OSGXR_DEFAULT 1)
     endif()
