@@ -125,6 +125,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR
     find_package(X11 REQUIRED)
 
     set(USE_DBUS_DEFAULT 1)
+    set(ENABLE_VR_DEFAULT 1)
 
     find_package(UDev QUIET)
     if(UDEV_FOUND)
@@ -151,11 +152,6 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR
     if(HTS_ENGINE_FOUND)
         set(SYSTEM_HTS_ENGINE_DEFAULT 1)
     endif()
-
-    find_package(osgXR 0.3.3)
-    if (osgXR_FOUND)
-        set(ENABLE_OSGXR_DEFAULT 1)
-    endif()
 endif()
 
 # FlightGear build options
@@ -171,12 +167,12 @@ option(ENABLE_RTI        "Set to ON to build FlightGear with RTI support" OFF)
 option(SYSTEM_SQLITE     "Set to ON to build FlightGear with the system's SQLite3 library" OFF)
 option(ENABLE_IAX        "Set to ON to build FlightGear with IAXClient/fgcom built-in (default)" ON)
 option(USE_DBUS          "Set to ON to build FlightGear with DBus screensaver interaction (default on Linux)" ${USE_DBUS_DEFAULT})
+option(ENABLE_VR         "Set to ON to build Flightgear with VR support" ${ENABLE_VR_DEFAULT})
 option(SYSTEM_SPEEX      "Set to ON to build IAXClient with the system's speex and speexdsp library" ${SYSTEM_SPEEX_DEFAULT})
 option(SYSTEM_GSM        "Set to ON to build IAXClient with the system's GSM library" ${SYSTEM_GSM_DEFAULT})
 option(SYSTEM_FLITE      "Set to ON to build Flightgear with the system's Flite library" ${SYSTEM_FLITE_DEFAULT})
 option(SYSTEM_HTS_ENGINE "Set to ON to build Flightgear with the system's HTS Engine library" ${SYSTEM_HTS_ENGINE_DEFAULT})
 option(SYSTEM_CPPUNIT    "Set to ON to build Flightgear with the system's CppUnit library")
-option(ENABLE_OSGXR      "Set to ON to build Flightgear with OpenXR support via the osgXR library" ${ENABLE_OSGXR_DEFAULT})
 
 # additional utilities
 option(ENABLE_FGELEV     "Set to ON to build the fgelev application (default)" ON)
@@ -296,6 +292,22 @@ endif (SYSTEM_SQLITE)
 if (USE_DBUS)
     find_package(DBus)
 endif (USE_DBUS)
+
+##############################################################################
+## VR setup
+if (ENABLE_VR)
+    find_package(osgXR 0.3.3)
+    if (osgXR_FOUND)
+        message(STATUS "VR support enabled")
+        set(ENABLE_OSGXR 1)
+    else()
+        message(STATUS "VR support disabled, compatible osgXR library not found")
+        set(ENABLE_OSGXR 0)
+    endif()
+else()
+    message(STATUS "VR support disabled")
+    set(ENABLE_OSGXR 0)
+endif()
 
 ##############################################################################
 ## Qt5 setup setup
