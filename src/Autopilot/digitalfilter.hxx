@@ -52,10 +52,6 @@ protected:
                             SGPropertyNode& prop_root );
     virtual void update( bool firstTime, double dt);
 
-    InputValueList _Tf;
-    InputValueList _samples;
-    InputValueList _rateOfChange;
-    InputValueList _gain;
     InitializeTo _initializeTo;
 
 public:

@@ -54,6 +54,14 @@ YASim::~YASim()
     _gearProps.clear();
 }
 
+void YASim::property_associations(
+        void* ref,
+        void (*fn)(void* ref, const std::string& from, const std::string& to)
+        )
+{
+    return _fdm->property_associations(ref, fn);
+}
+
 void YASim::report()
 {
     Airplane* a = _fdm->getAirplane();

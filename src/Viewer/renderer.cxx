@@ -94,6 +94,7 @@
 #include <Scenery/redout.hxx>
 #include <GUI/new_gui.hxx>
 #include <GUI/gui.h>
+#include <GUI/Highlight.hxx>
 
 #include <Instrumentation/HUD/HUD.hxx>
 #include <Environment/precipitation_mgr.hxx>
@@ -755,6 +756,7 @@ FGRenderer::setupView( void )
 }
 
 // Update all Visuals (redraws anything graphics related)
+// Called every frame.
 void
 FGRenderer::update( ) {
     if (!_position_finalized || !_scenery_loaded->getBoolValue())
@@ -994,6 +996,12 @@ PickList FGRenderer::pick(const osg::Vec2& windowPos)
 
     if (!computeIntersections(CameraGroup::getDefault(), windowPos, intersections))
         return result;
+    
+    // We attempt to highlight nodes until Highlight::highlight_nodes()
+    // succeeds and returns +ve, or highlighting is disabled and it returns -1.
+    Highlight* highlight = globals->get_subsystem<Highlight>();
+    int higlight_num_props = 0;
+    
     for (Intersections::iterator hit = intersections.begin(),
              e = intersections.end();
          hit != e;
@@ -1002,6 +1010,9 @@ PickList FGRenderer::pick(const osg::Vec2& windowPos)
         osg::NodePath::const_reverse_iterator npi;
 
         for (npi = np.rbegin(); npi != np.rend(); ++npi) {
+            if (!higlight_num_props) {
+                higlight_num_props = highlight->highlight_nodes(*npi);
+            }
             SGSceneUserData* ud = SGSceneUserData::getSceneUserData(*npi);
             if (!ud || (ud->getNumPickCallbacks() == 0))
                 continue;

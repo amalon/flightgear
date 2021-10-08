@@ -15,6 +15,7 @@
 
 #include <simgear/structure/exception.hxx>
 #include <simgear/misc/sg_path.hxx>
+#include <simgear/scene/model/animation.hxx>
 #include <simgear/scene/model/placement.hxx>
 #include <simgear/scene/util/SGNodeMasks.hxx>
 #include <simgear/scene/model/modellib.hxx>
@@ -26,6 +27,7 @@
 #include <Viewer/view.hxx>
 #include <Scenery/scenery.hxx>
 #include <Sound/fg_fx.hxx>
+#include <GUI/Highlight.hxx>
 
 #include "acmodel.hxx"
 
@@ -65,6 +67,80 @@ FGAircraftModel::~FGAircraftModel ()
   _fx = 0;
   shutdown();
 }
+
+
+// Gathers information about all animated nodes and the properties that they
+// depend on, and registers with Highlight::add_property_node().
+//
+struct VisitorHighlight : osg::NodeVisitor
+{
+    VisitorHighlight()
+    {
+        m_highlight = globals->get_subsystem<Highlight>();
+        setTraversalMode(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN);
+    }
+    std::string spaces()
+    {
+        return std::string(m_level*4, ' ');
+    }
+    virtual void apply(osg::Node& node)
+    {
+        SG_LOG(SG_GENERAL, SG_DEBUG, spaces() << "node: " << node.libraryName() << "::" << node.className());
+        m_level += 1;
+        traverse(node);
+        m_level -= 1;
+    }
+    virtual void apply(osg::Group& group)
+    {
+        // Parent nodes of <group> are animated by properties in
+        // <m_highlight_names>, so register the association between <group> and
+        // these properties.
+        SG_LOG(SG_GENERAL, SG_DEBUG, spaces() << "group: " << group.libraryName() << "::" << group.className());
+        for (auto name: m_highlight_names)
+        {
+            m_highlight->add_property_node(name, &group);
+        }
+        m_level += 1;
+        traverse(group);
+        m_level -= 1;
+    }
+    virtual void apply( osg::Transform& node )
+    {
+        SG_LOG(SG_GENERAL, SG_DEBUG, spaces() << "transform: "
+                << node.libraryName() << "::" << node.className()
+                << ": " << typeid(node).name()
+                );
+
+        SGSharedPtr<SGExpressiond const> expression = TransformExpression(&node);
+        int num_added = 0;
+        if (expression) {
+            // All <nodes>'s child nodes will be affected by <expression> so
+            // add all of <expression>'s properties to <m_highlight_names> so
+            // that we can call Highlight::add_property_node() for each child
+            // node.
+            std::set<const SGPropertyNode*> properties;
+            expression->collectDependentProperties(properties);
+            SG_LOG(SG_GENERAL, SG_DEBUG, spaces() << typeid(node).name() << ":");
+            for (auto p: properties) {
+                SG_LOG(SG_GENERAL, SG_DEBUG, spaces() << "        " << p->getPath(true));
+                num_added += 1;
+                m_highlight_names.push_back(p->getPath(true /*simplify*/));
+            }
+        }
+
+        m_level += 1;
+        traverse(node);
+        m_level -= 1;
+
+        // Remove the names we appended to <m_highlight_names> earlier.
+        assert((int) m_highlight_names.size() >= num_added);
+        m_highlight_names.resize(m_highlight_names.size() - num_added);
+    }
+    unsigned int m_level = 0;   // Only used to indent diagnostics.
+    std::vector<std::string> m_highlight_names;
+    Highlight* m_highlight;
+};
+
 
 void
 FGAircraftModel::init ()
@@ -142,6 +218,10 @@ FGAircraftModel::init ()
         node = _interior->getSceneGraph();
         globals->get_scenery()->get_interior_branch()->addChild(node);
     }
+
+    // Register animated nodes and associated properties with Highlight.
+    VisitorHighlight visitor_highlight;
+    visitor_highlight.traverse(*node);
 }
 
 void

@@ -62,6 +62,18 @@ FGFDM::~FGFDM()
     delete _turb;
 }
 
+void FGFDM::property_associations(
+        void* ref,
+        void (*fn)(void* ref, const std::string& from, const std::string& to)
+        )
+{
+    for (auto& a: _property_to_properties) {
+        for (auto& b: a.second) {
+            fn(ref, a.first, b);
+        }
+    }
+}
+
 void FGFDM::iterate(float dt)
 {
     getExternalInput(dt);
@@ -209,11 +221,44 @@ void FGFDM::init()
     _airplane.getModel()->setTurbulence(_turb);
 }
 
+void FGFDM::endElement(const char* name)
+{
+    _xml_depth -= 1;
+}
+
 // Not the worlds safest parser.  But it's short & sweet.
 void FGFDM::startElement(const char* name, const XMLAttributes &a)
 {
+    _xml_depth += 1;
     //XMLAttributes* a = (XMLAttributes*)&atts;
     float v[3] {0,0,0};
+
+    if (_xml_depth < _xml_last_control_depth) {
+        // We use _control_to_input_properties and
+        // _control_to_output_properties to link input/output properties via
+        // their 'control' attributes. For example a vstab might have:
+        //
+        //  <control-input control="FLAP0" axis="/controls/flight/flaps"/>
+        //  <control-output control="FLAP0" prop="/surface-positions/flap-pos-norm"/>
+        //
+        // When parsing <control-input> we associate FLAP0 with
+        // /controls/flight/flaps in _control_to_input_properties. Similarly
+        // when parsing <control-output> we associate FLAPS0 with
+        // /surface-positions/flap-pos-norm in _control_to_output_properties.
+        //
+        // We can then use _control_to_input_properties and
+        // _control_to_output_properties to associate properties
+        // that are associated with the same control - in this case
+        // /controls/flight/flaps and /surface-positions/flap-pos-norm are both
+        // associated with FLAPS0.
+        //
+        // To make this work, we need to clear these maps when we have finished
+        // parsing each container of <control-input> and <control-output>,
+        // which we do here.
+        //
+        _control_to_input_properties.clear();
+        _control_to_output_properties.clear();
+    }
 
     if(!strcmp(name, "airplane")) { parseAirplane(&a); }
     else if(!strcmp(name, "approach") || !strcmp(name, "cruise")) {
@@ -255,8 +300,14 @@ void FGFDM::startElement(const char* name, const XMLAttributes &a)
         ((Thruster*)_currObj)->setDirection(v);
     }
     else if(!strcmp(name, "control-setting")) { parseControlSetting(&a); }
-    else if(!strcmp(name, "control-input")) { parseControlIn(&a); }
-    else if(!strcmp(name, "control-output")) { parseControlOut(&a); }
+    else if(!strcmp(name, "control-input")) {
+        _xml_last_control_depth = _xml_depth;
+        parseControlIn(&a);
+    }
+    else if(!strcmp(name, "control-output")) {
+        _xml_last_control_depth = _xml_depth;
+        parseControlOut(&a);
+    }
     else if(!strcmp(name, "control-speed")) { parseControlSpeed(&a); }
     else {
         SG_LOG(SG_FLIGHT,SG_ALERT,"Unexpected tag '" << name << "' found in YASim aircraft description");
@@ -1201,6 +1252,14 @@ void FGFDM::parseControlIn(const XMLAttributes* a)
         dst1 = attrf(a, "dst1");
     }
     _airplane.addControlInput(a->getValue("axis"), control, _currObj, _wingSection, opt, src0, src1, dst0, dst1);
+    
+    // Detect new associations between properties.
+    std::string control_name = a->getValue("control");
+    std::string in = a->getValue("axis");
+    _control_to_input_properties[control_name].insert(in);
+    for (auto& out: _control_to_output_properties[control_name]) {
+        _property_to_properties[in].insert(out);
+    }
 }
 
 void FGFDM::parseControlOut(const XMLAttributes* a)
@@ -1220,6 +1279,14 @@ void FGFDM::parseControlOut(const XMLAttributes* a)
     p->min = attrf(a, "min", cm->rangeMin(control));
     p->max = attrf(a, "max", cm->rangeMax(control));
     _controlOutputs.add(p);
+    
+    // Detect new associations between properties.
+    std::string control_name = a->getValue("control");
+    std::string out = a->getValue("prop");
+    _control_to_output_properties[control_name].insert(out);
+    for (auto& in: _control_to_input_properties[control_name]) {
+        _property_to_properties[in].insert(out);
+    }
 }
 
 void FGFDM::parseControlSpeed(const XMLAttributes* a)

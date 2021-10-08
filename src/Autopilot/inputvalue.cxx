@@ -225,3 +225,19 @@ double InputValue::get_value() const
     return _abs ? fabs(value) : value;
 }
 
+void InputValue::collectDependentProperties(std::set<const SGPropertyNode*>& props) const
+{
+    if (_property)      props.insert(_property);
+    if (_offset)        _offset->collectDependentProperties(props);
+    if (_scale)         _scale->collectDependentProperties(props);
+    if (_min)           _min->collectDependentProperties(props);
+    if (_max)           _max->collectDependentProperties(props);
+    if (_expression)    _expression->collectDependentProperties(props);
+}
+
+void InputValueList::collectDependentProperties(std::set<const SGPropertyNode*>& props) const
+{
+    for (auto& iv: *this) {
+        iv->collectDependentProperties(props);
+    }
+}

@@ -32,7 +32,9 @@
 
 class PropertyList : public puaList, public SGPropertyChangeListener, public GUI_ID {
 public:
-    PropertyList(int minx, int miny, int maxx, int maxy, SGPropertyNode *);
+    // If <readonly> is true, we don't show . or .. items and don't respond to
+    // mouse clicks or keypresses.
+    PropertyList(int minx, int miny, int maxx, int maxy, SGPropertyNode *root, bool readonly);
     ~PropertyList();
 
     void update (bool restore_slider_pos = false);
@@ -89,6 +91,7 @@ private:
     bool _dot_files;      // . and .. pseudo-dirs currently shown?
     bool _verbose;        // show SGPropertyNode flags
     std::string _return_path;
+    bool _readonly;
 };
 
 

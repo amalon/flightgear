@@ -175,21 +175,21 @@ private:
     int spinCounter;
     /**Kills a flight when it's stuck */
     const int AI_STUCK_LIMIT = 100;
-    int stuckCounter; 
+    int stuckCounter = 0;
     /**
      * Signals a reset to leg 1 at a different airport. 
      * The leg loading happens at a different place than the parking loading.
      * */
-    bool repositioned;
+    bool repositioned = false;
     double prevSpeed;
     double prev_dist_to_go;
 
-    bool holdPos;
+    bool holdPos = false;
 
     const char * _getTransponderCode() const;
 
-    bool needsTaxiClearance;
-    bool _needsGroundElevation;
+    bool needsTaxiClearance = false;
+    bool _needsGroundElevation = true;
     int  takeOffStatus; // 1 = joined departure queue; 2 = Passed DepartureHold waypoint; handover control to tower; 0 = any other state. 
     time_t timeElapsed;
 

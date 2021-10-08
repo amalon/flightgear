@@ -7,6 +7,11 @@
 #include "Airplane.hpp"
 #include "Vector.hpp"
 
+#include <map>
+#include <set>
+#include <string>
+
+
 namespace yasim {
 
 class Wing;
@@ -27,8 +32,14 @@ public:
 
     // XML parsing callback from XMLVisitor
     virtual void startElement(const char* name, const XMLAttributes &atts);
+    virtual void endElement(const char* name);
 
     float getVehicleRadius(void) const { return _vehicle_radius; }
+    
+    void property_associations(
+            void* ref,
+            void (*fn)(void* ref, const std::string& from, const std::string& to)
+            );
 
 private:
     struct EngRec {
@@ -118,6 +129,8 @@ private:
     Airplane::Configuration _airplaneCfg;
     int _nextEngine {0};
     int _wingSection {0};
+    int _xml_depth {0};
+    int _xml_last_control_depth {0};
 
     class FuelProps
     {
@@ -159,6 +172,13 @@ private:
     SGPropertyNode_ptr _aryN;
     SGPropertyNode_ptr _arzN;
     SGPropertyNode_ptr _cg_xmacN;
+
+    // Used on startup when gathering information about associated properties,
+    // e.g. /controls/flight/flaps and /surface-positions/flap-pos-norm.
+    std::map<std::string, std::set<std::string>> _control_to_input_properties;
+    std::map<std::string, std::set<std::string>> _control_to_output_properties;
+    std::map<std::string, std::set<std::string>> _property_to_properties;
+    
 };
 
 }; // namespace yasim

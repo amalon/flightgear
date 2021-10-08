@@ -12,6 +12,7 @@
 
 #include <memory>
 #include <simgear/structure/subsystem_mgr.hxx>    // for SGSubsystem
+#include <simgear/math/SGVec3.hxx>
 
 
 // Don't pull in the headers, since we don't need them here.

@@ -120,3 +120,11 @@ bool AnalogComponent::configure( SGPropertyNode& cfg_node,
 
   return Component::configure(cfg_node, cfg_name, prop_root);
 }
+
+void AnalogComponent::collectDependentProperties(std::set<const SGPropertyNode*>& props) const
+{
+    _valueInput.collectDependentProperties(props);
+    _referenceInput.collectDependentProperties(props);
+    _minInput.collectDependentProperties(props);
+    _maxInput.collectDependentProperties(props);
+}

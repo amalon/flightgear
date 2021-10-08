@@ -92,10 +92,6 @@ FGAIAircraft::FGAIAircraft(FGAISchedule* ref) : /* HOT must be disabled for AI A
     prevSpeed = 0.0;
     prev_dist_to_go = 0.0;
 
-    holdPos = false;
-    needsTaxiClearance = false;
-    _needsGroundElevation = true;
-
     PerformanceDB* perfDB = globals->get_subsystem<PerformanceDB>();
     if (perfDB) {
         _performance = perfDB->getDefaultPerformance();

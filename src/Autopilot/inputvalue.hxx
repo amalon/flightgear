@@ -109,6 +109,7 @@ public:
       return _condition == NULL ? true : _condition->test();
     }
 
+    void collectDependentProperties(std::set<const SGPropertyNode*>& props) const;
 };
 
 /**
@@ -134,6 +135,8 @@ class InputValueList : public std::vector<InputValue_ptr> {
       InputValue_ptr input = get_active();
       return input == NULL ? _def : input->get_value();
     }
+
+    void collectDependentProperties(std::set<const SGPropertyNode*>& props) const;
   private:
 
     double _def;

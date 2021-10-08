@@ -157,18 +157,18 @@ static void sanitize(stdString& s)
 
 
 
-PropertyList::PropertyList(int minx, int miny, int maxx, int maxy, SGPropertyNode *start) :
+PropertyList::PropertyList(int minx, int miny, int maxx, int maxy, SGPropertyNode *start, bool readonly) :
     puaList(minx, miny, maxx, maxy, short(0), 20),
     GUI_ID(FGCLASS_PROPERTYLIST),
     _curr(start),
     _return(0),
     _entries(0),
     _num_entries(0),
-    _verbose(false)
-
+    _verbose(false),
+    _readonly(readonly)
 {
     _list_box->setUserData(this);
-    _list_box->setCallback(handle_select);
+    if (!_readonly) _list_box->setCallback(handle_select);
     _list_box->setValue(0);
     update();
 }
@@ -265,7 +265,7 @@ void PropertyList::update(bool restore_pos)
     _num_entries = (int)_curr->nChildren();
 
     // instantiate string objects and add [.] and [..] for subdirs
-    if (!_curr->getParent()) {
+    if (_readonly || !_curr->getParent()) {
         _entries = new char*[_num_entries + 1];
         pi = 0;
         _dot_files = false;

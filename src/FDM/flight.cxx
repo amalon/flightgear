@@ -233,6 +233,14 @@ FGInterface::common_init ()
     SG_LOG( SG_FLIGHT, SG_INFO, "End common FDM init" );
 }
 
+void FGInterface::property_associations(
+        void* ref,
+        void (*fn)(void* ref, const std::string& from, const std::string& to)
+        )
+{
+    /* Do nothing by default. */
+}
+
 
 /**
  * Bind getters and setters to properties.

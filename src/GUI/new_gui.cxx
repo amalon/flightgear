@@ -39,6 +39,8 @@
 #include "FGFontCache.hxx"
 #include "FGColor.hxx"
 
+#include "Highlight.hxx"
+
 // ignore the word Navaid here, it's a DataCache
 #include <Navaids/NavDataCache.hxx>
 
@@ -62,6 +64,44 @@ NewGUI::~NewGUI ()
 {
     for (_itt_t it = _colors.begin(); it != _colors.end(); ++it)
         delete it->second;
+}
+
+// Recursively finds all nodes called <leaf> and appends the string values of
+// these nodes to <out>.
+//
+static void findAllLeafValues(SGPropertyNode* node, const std::string& leaf, std::vector<std::string>& out)
+{
+    const char* name = node->getName();
+    if (name == leaf) {
+        out.push_back(node->getStringValue());
+    }
+    for (int i=0; i<node->nChildren(); ++i) {
+        findAllLeafValues(node->getChild(i), leaf, out);
+    }
+}
+
+
+/* Registers menu-dialog associations with Highlight::add_menu_dialog(). */
+static void scanMenus()
+{
+    /* We find all nodes called 'dialog-name' in
+    sim/menubar/default/menu[]/item[]. */
+    SGPropertyNode* menubar = globals->get_props()->getNode("sim/menubar/default");
+    assert(menubar);
+    Highlight* highlight = globals->get_subsystem<Highlight>();
+    for (int menu_p=0; menu_p<menubar->nChildren(); ++menu_p) {
+        SGPropertyNode* menu = menubar->getChild(menu_p);
+        if (menu->getNameString() != "menu") continue;
+        for (int item_p=0; item_p<menu->nChildren(); ++item_p) {
+            SGPropertyNode* item = menu->getChild(item_p);
+            if (item->getNameString() != "item") continue;
+            std::vector<std::string> dialog_names;
+            findAllLeafValues(item, "dialog-name", dialog_names);
+            for (auto dialog_name: dialog_names) {
+                highlight->add_menu_dialog(HighlightMenu(menu->getIndex(), item->getIndex()), dialog_name);
+            }
+        }
+    }
 }
 
 void
@@ -96,6 +136,7 @@ NewGUI::init ()
     // Fix for http://code.google.com/p/flightgear-bugs/issues/detail?id=947
     fgGetNode("sim/menubar")->setAttribute(SGPropertyNode::PRESERVE, true);
     _menubar->init();
+    scanMenus();
 }
 
 void
@@ -384,6 +425,7 @@ NewGUI::newDialog (SGPropertyNode* props)
     }
 }
 
+
 void
 NewGUI::readDir (const SGPath& path)
 {
@@ -396,7 +438,37 @@ NewGUI::readDir (const SGPath& path)
 
     flightgear::NavDataCache* cache = flightgear::NavDataCache::instance();
     flightgear::NavDataCache::Transaction txn(cache);
+    Highlight* highlight = globals->get_subsystem<Highlight>();
     for (SGPath xmlPath : dir.children(simgear::Dir::TYPE_FILE, ".xml")) {
+
+      SGPropertyNode_ptr props = new SGPropertyNode;
+      SGPropertyNode *nameprop = nullptr;
+      std::string name;
+
+      /* Always parse the dialog even if cache->isCachedFileModified() says
+      it is cached, so that we can register property-dialog associations with
+      Highlight::add_property_dialog(). */
+      try {
+        readProperties(xmlPath, props);
+      } catch (const sg_exception &) {
+        SG_LOG(SG_INPUT, SG_ALERT, "Error parsing dialog " << xmlPath);
+        props.reset();
+      }
+      if (props) {
+        nameprop = props->getNode("name");
+        if (nameprop) {
+          name = nameprop->getStringValue();
+          // Look for 'property' nodes within the dialog. (could
+          // also look for "dialog-name" to catch things like
+          // dialog-show.)
+          std::vector<std::string> property_paths;
+          findAllLeafValues(props, "property", property_paths);
+          for (auto property_path: property_paths) {
+            highlight->add_property_dialog(property_path, name);
+          }
+        }
+      }
+        
       if (!cache->isCachedFileModified(xmlPath)) {
         // cached, easy
         string name = cache->readStringProperty(xmlPath.utf8Str());
@@ -404,32 +476,27 @@ NewGUI::readDir (const SGPath& path)
         continue;
       }
       
-    // we need to parse the actual XML
-      SGPropertyNode_ptr props = new SGPropertyNode;
-      try {
-        readProperties(xmlPath, props);
-      } catch (const sg_exception &) {
+      // we need to parse the actual XML
+      if (!props) {
         SG_LOG(SG_INPUT, SG_ALERT, "Error parsing dialog " << xmlPath);
         continue;
       }
       
-      SGPropertyNode *nameprop = props->getNode("name");
       if (!nameprop) {
         SG_LOG(SG_INPUT, SG_WARN, "dialog " << xmlPath << " has no name; skipping.");
         continue;
       }
       
-      string name = nameprop->getStringValue();
       _dialog_names[name] = xmlPath;
-    // update cached values
-        if (!cache->isReadOnly()) {
-            cache->stampCacheFile(xmlPath);
-            cache->writeStringProperty(xmlPath.utf8Str(), name);
-        }
+      // update cached values
+      if (!cache->isReadOnly()) {
+        cache->stampCacheFile(xmlPath);
+        cache->writeStringProperty(xmlPath.utf8Str(), name);
+      }
     } // of directory children iteration
   
     txn.commit();
-}
+}
 ////////////////////////////////////////////////////////////////////////
 // Style handling.
 ////////////////////////////////////////////////////////////////////////

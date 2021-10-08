@@ -139,6 +139,12 @@ protected:
 
 public:
     const PeriodicalValue * getPeriodicalValue() const { return _periodical; }
+
+    /**
+     Add to <props> all properties that are used by this component. Similar to
+     SGExpression::collectDependentProperties().
+     */
+    void collectDependentProperties(std::set<const SGPropertyNode*>& props) const;
 };
 
 inline void AnalogComponent::disabled( double dt )

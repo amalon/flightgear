@@ -944,7 +944,10 @@ FGPUIDialog::makeObject(SGPropertyNode* props, int parentWidth, int parentHeight
         return obj;
 
     } else if (type == "property-list") {
-        PropertyList* obj = new PropertyList(x, y, x + width, y + height, globals->get_props());
+        PropertyList* obj = new PropertyList(x, y, x + width, y + height,
+                globals->get_props(),
+                props->getBoolValue("readonly", false)
+                );
         if (presetSize)
             obj->setSize(width, height);
         setupObject(obj, props);

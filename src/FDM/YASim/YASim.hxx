@@ -21,6 +21,11 @@ public:
     // Subsystem identification.
     static const char* staticSubsystemClassId() { return "yasim"; }
 
+    void property_associations(
+            void* ref,
+            void (*fn)(void* ref, const std::string& from, const std::string& to)
+            ) override;
+
 private:
     void report();
     void copyFromYASim();

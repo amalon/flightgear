@@ -26,6 +26,8 @@
 //
 
 #include "digitalfilter.hxx"
+#include <GUI/Highlight.hxx>
+#include <Main/globals.hxx>
 
 #include <deque>
 #include <algorithm>
@@ -52,7 +54,7 @@ class DigitalFilterImplementation:
                             SGPropertyNode& prop_root ) = 0;
 
     void setDigitalFilter( DigitalFilter * digitalFilter ) { _digitalFilter = digitalFilter; }
-
+    virtual void collectDependentProperties(std::set<const SGPropertyNode*>& props) const = 0;
   protected:
     DigitalFilter * _digitalFilter;
 };
@@ -68,6 +70,10 @@ protected:
 public:
   GainFilterImplementation() : _gainInput(1.0) {}
   double compute(  double dt, double input );
+  virtual void collectDependentProperties(std::set<const SGPropertyNode*>& props) const
+  {
+    _gainInput.collectDependentProperties(props);
+  }
 };
 
 class ReciprocalFilterImplementation : public GainFilterImplementation {
@@ -85,6 +91,11 @@ public:
   DerivativeFilterImplementation();
   double compute(  double dt, double input );
   virtual void initialize( double initvalue );
+  virtual void collectDependentProperties(std::set<const SGPropertyNode*>& props) const
+  {
+    GainFilterImplementation::collectDependentProperties(props);
+    _TfInput.collectDependentProperties(props);
+  }
 };
 
 class ExponentialFilterImplementation : public GainFilterImplementation {
@@ -99,6 +110,11 @@ public:
   ExponentialFilterImplementation();
   double compute(  double dt, double input );
   virtual void initialize( double initvalue );
+  virtual void collectDependentProperties(std::set<const SGPropertyNode*>& props) const
+  {
+    GainFilterImplementation::collectDependentProperties(props);
+    _TfInput.collectDependentProperties(props);
+  }
 };
 
 class MovingAverageFilterImplementation : public DigitalFilterImplementation {
@@ -113,6 +129,10 @@ public:
   MovingAverageFilterImplementation();
   double compute(  double dt, double input );
   virtual void initialize( double initvalue );
+  virtual void collectDependentProperties(std::set<const SGPropertyNode*>& props) const
+  {
+    _samplesInput.collectDependentProperties(props);
+  }
 };
 
 class NoiseSpikeFilterImplementation : public DigitalFilterImplementation {
@@ -126,6 +146,10 @@ public:
   NoiseSpikeFilterImplementation();
   double compute(  double dt, double input );
   virtual void initialize( double initvalue );
+  virtual void collectDependentProperties(std::set<const SGPropertyNode*>& props) const
+  {
+    _rateOfChangeInput.collectDependentProperties(props);
+  }
 };
 
 class RateLimitFilterImplementation : public DigitalFilterImplementation {
@@ -140,6 +164,11 @@ public:
   RateLimitFilterImplementation();
   double compute(  double dt, double input );
   virtual void initialize( double initvalue );
+  virtual void collectDependentProperties(std::set<const SGPropertyNode*>& props) const
+  {
+    _rateOfChangeMax.collectDependentProperties(props);
+    _rateOfChangeMin.collectDependentProperties(props);
+  }
 };
 
 class IntegratorFilterImplementation : public GainFilterImplementation {
@@ -156,6 +185,13 @@ public:
   IntegratorFilterImplementation();
   double compute(  double dt, double input );
   virtual void initialize( double initvalue );
+  virtual void collectDependentProperties(std::set<const SGPropertyNode*>& props) const
+  {
+    GainFilterImplementation::collectDependentProperties(props);
+    _TfInput.collectDependentProperties(props);
+    _minInput.collectDependentProperties(props);
+    _maxInput.collectDependentProperties(props);
+  }
 };
 
 // integrates x" + ax' + bx + c = 0
@@ -174,6 +210,13 @@ public:
   DampedOscillationFilterImplementation();
   double compute(  double dt, double input );
   virtual void initialize( double initvalue );
+  virtual void collectDependentProperties(std::set<const SGPropertyNode*>& props) const
+  {
+    GainFilterImplementation::collectDependentProperties(props);
+    _aInput.collectDependentProperties(props);
+    _bInput.collectDependentProperties(props);
+    _cInput.collectDependentProperties(props);
+  }
 };
 
 class HighPassFilterImplementation : public GainFilterImplementation {
@@ -188,6 +231,11 @@ public:
   HighPassFilterImplementation();
   double compute(  double dt, double input );
   virtual void initialize( double initvalue );
+  virtual void collectDependentProperties(std::set<const SGPropertyNode*>& props) const
+  {
+    GainFilterImplementation::collectDependentProperties(props);
+    _TfInput.collectDependentProperties(props);
+  }
 };
 class LeadLagFilterImplementation : public GainFilterImplementation {
 protected:
@@ -202,6 +250,12 @@ public:
   LeadLagFilterImplementation();
   double compute(  double dt, double input );
   virtual void initialize( double initvalue );
+  virtual void collectDependentProperties(std::set<const SGPropertyNode*>& props) const
+  {
+    GainFilterImplementation::collectDependentProperties(props);
+    _TfaInput.collectDependentProperties(props);
+    _TfbInput.collectDependentProperties(props);
+  }
 };
 
 class CoherentNoiseFilterImplementation : public DigitalFilterImplementation
@@ -221,6 +275,10 @@ public:
     CoherentNoiseFilterImplementation();
     double compute(double dt, double input) override;
     void initialize(double initvalue) override;
+  virtual void collectDependentProperties(std::set<const SGPropertyNode*>& props) const
+  {
+    _amplitude.collectDependentProperties(props);
+  }
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -846,20 +904,37 @@ bool DigitalFilter::configure( SGPropertyNode& prop_root,
   {
     SGPropertyNode_ptr child = cfg.getChild(i);
     std::string cname(child->getName());
-
-    if(    !_implementation->configure(*child, cname, prop_root)
-        && !configure(*child, cname, prop_root)
-        && cname != "type"
-        && cname != "params" ) // 'params' is usually used to specify parameters
-                               // in PropertList files.
+    bool ok = false;
+    if (!ok) ok = _implementation->configure(*child, cname, prop_root);
+    if (!ok) ok = configure(*child, cname, prop_root);
+    if (!ok) ok = (cname == "type");
+    if (!ok) ok = (cname == "params");   // 'params' is usually used to specify parameters in PropertList files.
+    if (!ok) {
       SG_LOG
       (
         SG_AUTOPILOT,
-        SG_WARN,
+        SG_ALERT,
         "DigitalFilter: unknown config node: " << cname
       );
+    }
   }
-
+  
+  /* Send information about associations between our input and output
+  properties to Highlight. */
+  std::set<const SGPropertyNode*>    inputs;
+  _implementation->collectDependentProperties(inputs);
+  collectDependentProperties(inputs);
+  
+  Highlight* highlight = globals->get_subsystem<Highlight>();
+  for (auto in: inputs) {
+    for (auto& out: _output_list) {
+        highlight->add_property_property(
+                in->getPath(true /*simplify*/),
+                out->getPath(true /*simplify*/)
+                );
+    }
+  }
+  
   return true;
 }
 

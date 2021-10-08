@@ -22,6 +22,7 @@ set(SOURCES
     PUIFileDialog.cxx
     MouseCursor.cxx
     MessageBox.cxx
+    Highlight.cxx
   )
 
 set(HEADERS
@@ -43,6 +44,7 @@ set(HEADERS
     PUIFileDialog.hxx
     MouseCursor.hxx
     MessageBox.hxx
+    Highlight.hxx
   )
 
 if(WIN32)

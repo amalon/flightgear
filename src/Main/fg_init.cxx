@@ -100,6 +100,7 @@
 #include <Canvas/gui_mgr.hxx>
 #include <Canvas/FGCanvasSystemAdapter.hxx>
 #include <GUI/new_gui.hxx>
+#include <GUI/Highlight.hxx>
 #include <GUI/MessageBox.hxx>
 #include <Input/input.hxx>
 #include <Instrumentation/instrument_mgr.hxx>
@@ -988,6 +989,7 @@ void fgCreateSubsystems(bool duringReset) {
         // Initialize the property interpolator subsystem. Put into the INIT
         // group because the "nasal" subsystem may need it at GENERAL take-down.
         globals->add_subsystem("prop-interpolator", new FGInterpolator, SGSubsystemMgr::INIT);
+        globals->add_new_subsystem<Highlight>(SGSubsystemMgr::INIT);
         globals->add_subsystem("gui", new NewGUI, SGSubsystemMgr::INIT);
     }
 
