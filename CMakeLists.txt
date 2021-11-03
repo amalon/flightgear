@@ -156,7 +156,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR
 endif()
 
 if (ENABLE_VR_DEFAULT)
-    find_package(osgXR 0.3.3 QUIET)
+    find_package(osgXR 0.3.5 QUIET)
     if (osgXR_FOUND)
         set(SYSTEM_OSGXR_DEFAULT 1)
     endif()
