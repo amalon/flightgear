@@ -296,7 +296,7 @@ endif (USE_DBUS)
 ##############################################################################
 ## VR setup
 if (ENABLE_VR)
-    find_package(osgXR 0.3.3)
+    find_package(osgXR 0.3.5)
     if (osgXR_FOUND)
         message(STATUS "VR support enabled")
         set(ENABLE_OSGXR 1)

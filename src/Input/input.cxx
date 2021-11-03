@@ -51,6 +51,10 @@
   #endif
 #endif // of WITH_EVENTINPUT
 
+#if defined(ENABLE_OSGXR)
+  #include "FGVRInput.hxx"
+#endif
+
 ////////////////////////////////////////////////////////////////////////
 // Implementation of FGInput.
 ////////////////////////////////////////////////////////////////////////
@@ -91,6 +95,14 @@ FGInput::FGInput ()
     SG_LOG(SG_INPUT, SG_MANDATORY_INFO, "HID-based event input disabled");
   } else {
     set_subsystem( "input-event-hid", new FGHIDEventInput() );
+  }
+#endif
+
+#if defined(ENABLE_OSGXR)
+  if (fgGetBool("/sim/input/no-vr-input", false)) {
+    SG_LOG(SG_INPUT, SG_MANDATORY_INFO, "VR input disabled");
+  } else {
+    set_subsystem( "input-vr", new FGVRInput() );
   }
 #endif
 }
