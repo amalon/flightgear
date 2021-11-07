@@ -118,7 +118,7 @@ Normal recordings are written as a compressed gzip stream using `simgear::gzCont
 
         * For `extra-properties`, `<data>` is a list of property changes, each one being:
 
-            * `<length:16><path><length:16><value>` - property <path> has changed to `<value>`.
+            * `<length:16><path><length:16><value>` - property `<path>` has changed to `<value>`.
         
             Removal of a property is encoded as `<0:16><length:16><path>`.
 

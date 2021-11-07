@@ -68,7 +68,8 @@ public:
     void init( void );
 
     // Check if the specified "bucket" exists in the cache
-    bool exists( const SGBucket& b ) const;
+    bool exists_stg( const SGBucket& b ) const;
+    bool exists_vpb( const SGBucket& b ) const;
 
     // Return the index of a tile to be dropped from the cache, return -1 if
     // nothing available to be removed.
@@ -88,18 +89,16 @@ public:
 
     // Return a pointer to the specified tile cache entry
     inline TileEntry *get_tile( const long tile_index ) const {
-	const_tile_map_iterator it = tile_cache.find( tile_index );
-	if ( it != tile_cache.end() ) {
-	    return it->second;
-	} else {
-	    return NULL;
-	}
+        const_tile_map_iterator it = tile_cache.find( tile_index );
+        if ( it != tile_cache.end() ) {
+            return it->second;
+        } else {
+            return NULL;
+        }
     }
 
-    // Return a pointer to the specified tile cache entry
-    inline TileEntry *get_tile( const SGBucket& b ) const {
-	return get_tile( b.gen_index() );
-    }
+    STGTileEntry* get_stg_tile( const SGBucket& b ) const;
+    VPBTileEntry* get_vpb_tile( const SGBucket& b ) const;
 
     // Return the cache size
     inline size_t get_size() const { return tile_cache.size(); }
@@ -121,7 +120,8 @@ public:
      * @param b
      * @return success/failure
      */
-    bool insert_tile( TileEntry* e );
+    bool insert_tile( STGTileEntry* e );
+    bool insert_tile( VPBTileEntry* e );
 
     void set_current_time(double val) { current_time = val; }
     double get_current_time() const { return current_time; }

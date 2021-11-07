@@ -385,10 +385,10 @@ int main(int argc, char *argv[])
 				//SGMetar *m = new SGMetar("2004/01/11 01:20\nLOWG 110120Z AUTO VRB01KT 0050 1600N R35/0600 FG M06/M06 Q1019 88//////\n");
 
 				if (verbose) {
-					cerr << G "INPUT: " << m->getData() << "" N << endl;
+					cerr << G "INPUT: " << m->getDataString() << "" N << endl;
 
-					const char *unused = m->getUnusedData();
-					if (*unused)
+					const auto unused = m->getUnparsedData();
+					if (!unused.empty())
 						cerr << R "UNUSED: " << unused << "" N << endl;
 				}
 

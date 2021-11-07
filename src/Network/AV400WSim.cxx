@@ -263,7 +263,7 @@ FGAV400WSimB::FGAV400WSimB() :
 hz2(0.0),
 hz2count(0),
 hz2cycles(0),    
-flight_phase(0xFF),
+flight_phase(-1),
 req_hostid(true),
 req_sbas(false)
 {

@@ -382,7 +382,12 @@ void TimeManager::computeTimeDeltasSimple(double& simDt, double& realDt)
 
 void TimeManager::computeTimeDeltas(double& simDt, double& realDt)
 {
-    if (_simpleTimeEnabled->getBoolValue()) {
+    bool simple_time = _simpleTimeEnabled->getBoolValue();
+    if (simple_time != _simpleTimeEnabledPrev) {
+        _simpleTimeEnabledPrev = simple_time;
+        _firstUpdate = true;
+    }
+    if (simple_time) {
         computeTimeDeltasSimple(simDt, realDt);
         return;
     }

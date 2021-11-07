@@ -311,18 +311,10 @@ public:
 
         if (name == "constraint-gap-m") {
             SGSceneFeatures::instance()->setVPBConstraintGap(f);
-        } else if (name == "lod-range-factor") {
-            SGSceneFeatures::instance()->setVPBRangeFactor(f);
         } else if (name == "sample-ratio") {
             SGSceneFeatures::instance()->setVPBSampleRatio(f);
         } else if (name == "vertical-scale") {
             SGSceneFeatures::instance()->setVPBVerticalScale(f);
-        } else if ((name == "detailed") || (name == "rough-delta") || (name == "bare-delta")) {
-            double range = fgGetNode("/sim/rendering/static-lod/detailed", true)->getDoubleValue() +
-                           fgGetNode("/sim/rendering/static-lod/rough-delta", true)->getDoubleValue() +
-                           fgGetNode("/sim/rendering/static-lod/bare-delta", true)->getDoubleValue();
-
-            SGSceneFeatures::instance()->setVPBMaxRange(range);
         } else {
             SG_LOG(SG_TERRAIN, SG_ALERT, "Unexpected property in listener " << node->getPath());
         }

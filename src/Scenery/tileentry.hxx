@@ -56,10 +56,11 @@ public:
     SGBucket tile_bucket;
     std::string tileFileName;
 
-private:
-
+protected:
     // pointer to ssg range selector for this tile
     osg::ref_ptr<osg::LOD> _node;
+
+private:
     // Reference to DatabaseRequest object set and used by the
     // osgDB::DatabasePager.
     osg::ref_ptr<osg::Referenced> _databaseRequest;
@@ -82,12 +83,12 @@ private:
 
 public:
 
-    // Constructor
+    // Constructor.
     TileEntry( const SGBucket& b );
     TileEntry( const TileEntry& t );
 
     // Destructor
-    ~TileEntry();
+    virtual ~TileEntry() = 0;
 
     // Update the ssg transform node for this tile so it can be
     // properly drawn relative to our (0,0,0) point
@@ -148,6 +149,27 @@ public:
     {
         return _databaseRequest;
     }
+
+    enum Extension {
+        STG, VPB
+    };
+
+    virtual TileEntry::Extension getExtension() = 0;
 };
+
+class STGTileEntry : public TileEntry { 
+    public:
+        STGTileEntry ( const SGBucket& b );
+        ~STGTileEntry();
+        inline TileEntry::Extension getExtension() { return TileEntry::Extension::STG; };
+};
+
+class VPBTileEntry : public TileEntry { 
+    public:
+        VPBTileEntry ( const SGBucket& b );
+        ~VPBTileEntry();
+        inline TileEntry::Extension getExtension() { return TileEntry::Extension::VPB; };
+};
+
 
 #endif // _TILEENTRY_HXX

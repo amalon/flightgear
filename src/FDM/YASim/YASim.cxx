@@ -204,6 +204,10 @@ void YASim::init()
         node->setDoubleValue("yoffset-in", pos[1] * M2FT * 12);
         node->setDoubleValue("zoffset-in", pos[2] * M2FT * 12);
 
+        node->setDoubleValue("xoffset-m", pos[0]);
+        node->setDoubleValue("yoffset-m", pos[1]);
+        node->setDoubleValue("zoffset-m", pos[2]);
+
         _gearProps.push_back(GearProps(node));
     }
 

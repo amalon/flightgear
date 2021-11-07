@@ -128,8 +128,9 @@ void LiveMetarProperties::handleMetarData( const std::string & data )
     try {
         m = new FGMetar(data.c_str());
     }
-    catch( sg_io_exception  &) {
-        SG_LOG( SG_ENVIRONMENT, SG_WARN, "Can't parse metar: " << data );
+    catch( sg_io_exception &e) {
+        SG_LOG( SG_ENVIRONMENT, SG_WARN, "Can't parse metar: " << data <<
+               " (" << e.getFormattedMessage() <<  ")");
 
         // ensure we only report one METAR parse failure per session
         if (!haveReportedMETARFailure) {

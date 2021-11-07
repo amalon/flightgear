@@ -454,6 +454,8 @@ void FGAICarrier::bind(){
     props->setBoolValue("controls/crew", false);
     props->setStringValue("navaids/tacan/channel-ID", _TACAN_channel_id.c_str());
     props->setStringValue("sign", _sign.c_str());
+    std::string island_texture = "island_" + _sign + ".jpg";
+    props->setStringValue("island_texture", island_texture.c_str());
     props->setBoolValue("controls/lighting/deck-lights", false);
     props->setDoubleValue("controls/lighting/flood-lights-red-norm", 0);
 

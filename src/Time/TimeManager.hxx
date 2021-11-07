@@ -128,6 +128,7 @@ private:
     SGPropertyNode_ptr _modelHz;
     SGPropertyNode_ptr _timeDelta, _simTimeDelta;
     
+    bool    _simpleTimeEnabledPrev = false;
     SGPropertyNode_ptr _simpleTimeEnabled;
     SGPropertyNode_ptr _simpleTimeUtc;
     SGPropertyNode_ptr _simpleTimeFdm;

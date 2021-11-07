@@ -2133,6 +2133,7 @@ FGReplay::saveTape(const SGPath& Filename, SGPropertyNode_ptr MetaData)
     /* done *********************************************************/
     output.close();
 
+    if (!ok) SG_LOG(SG_SYSTEMS, SG_ALERT, "Failed to write to file " << Filename);
     return ok;
 }
 
@@ -2420,7 +2421,7 @@ FGReplay::loadTape(const SGPath& Filename, bool Preview, SGPropertyNode& MetaMet
     m_continuous_in_config = new SGPropertyNode;
     int e = loadContinuousHeader(Filename.str(), &in, m_continuous_in_config);
     if (e == 0) {
-        SG_LOG(SG_SYSTEMS, SG_DEBUG, "m_continuous_in_config is:\n"
+        SG_LOG(SG_SYSTEMS, SG_BULK, "m_continuous_in_config is:\n"
                 << writePropertiesInline(m_continuous_in_config, true /*write_all*/) << "\n");
         copyProperties(m_continuous_in_config->getNode("meta", 0, true), &MetaMeta);
         if (Preview) {

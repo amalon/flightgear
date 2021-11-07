@@ -197,10 +197,12 @@ void LayerTable::Bind()
 {
     // tie all environments to ~/entry[n]/xxx
     // register this as a changelistener of ~/entry[n]/pressure-sea-level-inhg
+    // and ~/entry[n]/elevation-ft
     for( unsigned i = 0; i < size(); i++ ) {
         SGPropertyNode_ptr baseNode = _rootNode->getChild("entry", i, true );
         at(i)->environment.Tie( baseNode );
         baseNode->getNode( "pressure-sea-level-inhg", true )->addChangeListener( this );
+        baseNode->getNode("elevation-ft", true)->addChangeListener(this);
     }
 }
 
@@ -208,19 +210,36 @@ void LayerTable::Unbind()
 {
     // untie all environments to ~/entry[n]/xxx
     // deregister this as a changelistener of ~/entry[n]/pressure-sea-level-inhg
+    // and ~/entry[n]/elevation-ft
     for( unsigned i = 0; i < size(); i++ ) {
         SGPropertyNode_ptr baseNode = _rootNode->getChild("entry", i, true );
         at(i)->environment.Untie();
         baseNode->getNode( "pressure-sea-level-inhg", true )->removeChangeListener( this );
+        baseNode->getNode("elevation-ft", true)->removeChangeListener(this);
     }
 }
 
 void LayerTable::valueChanged( SGPropertyNode * node ) 
 {
-    // Make sure all environments in our column use the same sea level pressure
-    double value = node->getDoubleValue();
-    for( iterator it = begin(); it != end(); it++ )
-        (*it)->environment.set_pressure_sea_level_inhg( value );
+    // - Make sure all environments in our column use the same sea level pressure
+    // - Synchronize layer elevations
+    if (node->getNameString() == "pressure-sea-level-inhg") {
+        double value = node->getDoubleValue();
+        for (iterator it = begin(); it != end(); it++) {
+            (*it)->environment.set_pressure_sea_level_inhg(value);
+        }
+    } else {
+        bool sort_required = false;
+        double last_altitude_ft = 0.0;
+        for (iterator it = begin(); it != end(); it++) {
+            (*it)->altitude_ft = (*it)->environment.get_elevation_ft();
+            if ((*it)->altitude_ft < last_altitude_ft)
+                sort_required = true;
+            last_altitude_ft = (*it)->altitude_ft;
+        }
+        if (sort_required)
+            sort(begin(), end(), LayerTableBucket::lessThan);
+    }
 }
 
 

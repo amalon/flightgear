@@ -69,6 +69,8 @@ private:
     SGPropertyNode_ptr _rootNode;
     SGPropertyNode_ptr _metarValidNode;
     
+    std::string _metarData;
+    
     std::string _station_id;
     double _station_elevation;
     double _station_latitude;

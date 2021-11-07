@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <map>
 #include <string>
+#include <iterator>
 
 
 /* Returns translated string for specified menu/menuitem name. */
@@ -350,7 +351,7 @@ struct FdmInitialisedListener : SGPropertyChangeListener
 
 void Highlight::bind()
 {
-    s_prop_enabled = globals->get_props()->getNode("sim/highlighting/enabled");
+    s_prop_enabled = globals->get_props()->getNode("sim/highlighting/enabled", true);
     globals->get_props()->setStringValue("sim/highlighting/current", "");
     globals->get_props()->setStringValue("sim/highlighting/current-ptr", "/sim/highlighting/current");
     

@@ -74,7 +74,7 @@ void WindowsFileDialog::exec()
     opf.nMaxFile = MAX_PATH;
 
     std::string extensions;
-    size_t extensionsLen;
+    size_t extensionsLen=0;
     if (!_filterPatterns.empty()) {
         for (const auto& ext : _filterPatterns) {
             if (!simgear::strutils::starts_with(ext, "*.")) {

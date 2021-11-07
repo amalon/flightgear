@@ -91,6 +91,7 @@ private:
 
     /// is caching of expired tiles enabled or not?
     bool _enableCache;    
+    bool _use_vpb;
 public:
     FGTileMgr();
     ~FGTileMgr();

@@ -334,7 +334,6 @@ void FGEnvironmentMgr::updateClosestAirport()
     auto automaticTowerActive = fgGetBool("/sim/tower/auto-position", true);
 
     SGGeod nearestTowerPosition;
-    bool nearestTowerPositionValid = false; /* <nearestTowerPositionValid> is set but unused. */
     std::string nearestIdent;
     const SGGeod airportGeod;
     double towerDistance = numeric_limits<double>::max();
@@ -366,8 +365,6 @@ void FGEnvironmentMgr::updateClosestAirport()
         }
         //
         nearestIdent = nearestAirport->ident();
-        nearestTowerPositionValid = true;
-
         towerDistance = SGGeodesy::distanceM(nearestTowerPosition, pos);
         
         // when the tower doesn't move we can clear these. 
@@ -380,12 +377,10 @@ void FGEnvironmentMgr::updateClosestAirport()
     auto nctn = SGSharedPtr< NearestCarrierToNotification> (new NearestCarrierToNotification(pos));
     if (simgear::Emesary::ReceiptStatus::OK == simgear::Emesary::GlobalTransmitter::instance()->NotifyAll(nctn)) {
         if (nearestCarrier != nctn->GetCarrier()) {
-            SG_LOG(SG_ENVIRONMENT, SG_INFO, "Nearest carrier " << nctn->GetCarrierIdent() << " at a distance of " << nctn->GetDistanceMeters());
             nearestCarrier = nctn->GetCarrier();
             fgSetString("/sim/airport/nearest-carrier", nctn->GetCarrierIdent());
         }
     } else {
-        SG_LOG(SG_ENVIRONMENT, SG_INFO, "No carriers found");
         fgSetString("/sim/airport/nearest-carrier", "");
         fgSetDouble("/sim/airport/nearest-carrier-latitude-deg", 0);
         fgSetDouble("/sim/airport/nearest-carrier-longitude-deg", 0);
@@ -397,7 +392,6 @@ void FGEnvironmentMgr::updateClosestAirport()
     // figure out if the carrier's tower is closer
     if (nearestCarrier && (nctn->GetDistanceMeters() < towerDistance)) {
         nearestIdent = nctn->GetCarrierIdent();
-        nearestTowerPositionValid = true;
 
         //
         // these will be used to determine and update the tower position

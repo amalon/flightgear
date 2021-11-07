@@ -270,6 +270,10 @@ void FGEnvironment::Tie( SGPropertyNode_ptr base, bool archivable )
       &FGEnvironment::get_visibility_m, 
       &FGEnvironment::set_visibility_m);
 
+  _tiedProperties.Tie("elevation-ft", this,
+                      &FGEnvironment::get_elevation_ft,
+                      &FGEnvironment::set_elevation_ft);
+
   _tiedProperties.Tie("temperature-sea-level-degc", this, 
       &FGEnvironment::get_temperature_sea_level_degc, 
       &FGEnvironment::set_temperature_sea_level_degc);

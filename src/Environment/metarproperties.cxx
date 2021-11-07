@@ -204,8 +204,9 @@ static const double thickness_value[] = { 0, 65, 600, 750, 1000 };
 
 const char* MetarProperties::get_metar() const
 {
-    if (!_metar) return "";
-    return _metar->getData();
+    if (!_metar || _metarData.empty())
+        return "";
+    return _metarData.c_str();
 }
     
 void MetarProperties::set_metar( const char * metarString )
@@ -239,8 +240,12 @@ void MetarProperties::setMetar( SGSharedPtr<FGMetar> m )
     _metar = m;
     _decoded.clear();
     if (!m) {
+        _metarData.clear();
         return;
     }
+    
+    // copy the string so we have guranteed storage for get_metar tied property API
+    _metarData = _metar->getDataString();
     
     const vector<string> weather = m->getWeather();
     for( vector<string>::const_iterator it = weather.begin(); it != weather.end(); ++it ) {

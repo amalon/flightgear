@@ -75,8 +75,16 @@ void TileCache::init( void ) {
 
 
 // Search for the specified "bucket" in the cache
-bool TileCache::exists( const SGBucket& b ) const {
+bool TileCache::exists_stg( const SGBucket& b ) const {
     long tile_index = b.gen_index();
+    const_tile_map_iterator it = tile_cache.find( tile_index );
+
+    return ( it != tile_cache.end() );
+}
+
+bool TileCache::exists_vpb( const SGBucket& b ) const {
+    // VPB tiles are stored with negative index to avoid clash with STG index
+    long tile_index =  - b.gen_vpb_index();
     const_tile_map_iterator it = tile_cache.find( tile_index );
 
     return ( it != tile_cache.end() );
@@ -191,7 +199,7 @@ void TileCache::clear_cache() {
 /**
  * Create a new tile and schedule it for loading.
  */
-bool TileCache::insert_tile( TileEntry *e ) {
+bool TileCache::insert_tile( STGTileEntry *e ) {
     // register tile in the cache
     long tile_index = e->get_tile_bucket().gen_index();
     tile_cache[tile_index] = e;
@@ -199,6 +207,19 @@ bool TileCache::insert_tile( TileEntry *e ) {
 
     return true;
 }
+
+/**
+ * Create a new tile and schedule it for loading.  VPB version, with negative index.
+ */
+bool TileCache::insert_tile( VPBTileEntry *e ) {
+    // register tile in the cache
+    long tile_index = - e->get_tile_bucket().gen_vpb_index();
+    tile_cache[tile_index] = e;
+    e->update_time_expired(current_time);
+
+    return true;
+}
+
 
 // update tile's priority and expiry time according to current request
 void TileCache::request_tile(TileEntry* t,float priority,bool current_view,double request_time)
@@ -221,5 +242,33 @@ void TileCache::request_tile(TileEntry* t,float priority,bool current_view,doubl
     else
     {
         t->update_time_expired( current_time+request_time );
+    }
+}
+
+// Return a pointer to the specified tile cache entry
+STGTileEntry* TileCache::get_stg_tile( const SGBucket& b ) const {
+
+    const_tile_map_iterator it = std::find_if(tile_cache.begin(), tile_cache.end(), 
+                        [b](auto &t) {
+                            return ((b.gen_index() == t.first) && (t.second->getExtension() == TileEntry::Extension::STG));
+                        });
+    if ( it != tile_cache.end() ) {
+        return dynamic_cast<STGTileEntry*>(it->second);
+    } else {
+        return NULL;
+    }
+}
+
+// Return a pointer to the specified tile cache entry
+VPBTileEntry* TileCache::get_vpb_tile( const SGBucket& b ) const {
+    const_tile_map_iterator it = std::find_if(tile_cache.begin(), tile_cache.end(), 
+                        [b](auto &t) {
+                            // Negative indices are used for the VPB tiles.
+                            return (( - b.gen_vpb_index() == t.first) && (t.second->getExtension() == TileEntry::Extension::VPB));
+                        });
+    if ( it != tile_cache.end() ) {
+        return dynamic_cast<VPBTileEntry*>(it->second);
+    } else {
+        return NULL;
     }
 }

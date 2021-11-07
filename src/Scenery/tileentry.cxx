@@ -37,10 +37,9 @@
 
 using std::string;
 
-// Constructor
+// Base constructor
 TileEntry::TileEntry ( const SGBucket& b )
     : tile_bucket( b ),
-      tileFileName(b.gen_index_str()),
       _node( new osg::LOD ),
       _priority(-FLT_MAX),
       _current_view(false),
@@ -48,8 +47,6 @@ TileEntry::TileEntry ( const SGBucket& b )
 {
     _create_orthophoto();
     
-    tileFileName += ".stg";
-    _node->setName(tileFileName);
     // Give a default LOD range so that traversals that traverse
     // active children (like the groundcache lookup) will work before
     // tile manager has had a chance to update this node.
@@ -129,5 +126,33 @@ TileEntry::removeFromSceneGraph()
             parent->removeChild( _node.get() );
         }
     }
+}
+
+// Constructor - STG Variant
+STGTileEntry::STGTileEntry ( const SGBucket& b ) : TileEntry(b)
+{
+    tileFileName = b.gen_index_str() + ".stg";
+    _node->setName(tileFileName);
+}
+
+// Destructor - STG Variant
+STGTileEntry::~STGTileEntry ()
+{
+}
+
+// Constructur - VPB version
+VPBTileEntry::VPBTileEntry ( const SGBucket& b ) : TileEntry(b)
+{
+    tileFileName = "vpb/" + b.gen_vpb_base() + ".osgb";
+    _node->setName(tileFileName);
+    // Give a default LOD range so that traversals that traverse
+    // active children (like the groundcache lookup) will work before
+    // tile manager has had a chance to update this node.
+    _node->setRange(0, 0.0, 160000.0);
+}
+
+// Destructor - VPB Variant
+VPBTileEntry::~VPBTileEntry ()
+{
 }
 

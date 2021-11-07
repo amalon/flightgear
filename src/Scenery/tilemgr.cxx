@@ -146,7 +146,8 @@ FGTileMgr::FGTileMgr():
     _scenery_loaded(fgGetNode("/sim/sceneryloaded", true)),
     _scenery_override(fgGetNode("/sim/sceneryloaded-override", true)),
     _pager(FGScenery::getPagerSingleton()),
-    _enableCache(true)
+    _enableCache(true),
+    _use_vpb(false)
 {
 }
 
@@ -206,6 +207,7 @@ void FGTileMgr::reinit()
     double rough    = fgGetDouble("/sim/rendering/static-lod/rough-delta", SG_OBJECT_RANGE_ROUGH) + detailed;
     double bare     = fgGetDouble("/sim/rendering/static-lod/bare", SG_OBJECT_RANGE_BARE) + rough;
     double tile_min_expiry = fgGetDouble("/sim/rendering/plod-minimum-expiry-time-secs", SG_TILE_MIN_EXPIRY);
+    _use_vpb = fgGetBool("/scenery/use-vpb");
 
     _options->setPluginStringData("SimGear::LOD_RANGE_BARE", std::to_string(bare));
     _options->setPluginStringData("SimGear::LOD_RANGE_ROUGH", std::to_string(rough));
@@ -275,13 +277,12 @@ void FGTileMgr::materialLibChanged()
 bool FGTileMgr::sched_tile( const SGBucket& b, double priority, bool current_view, double duration)
 {
     // see if tile already exists in the cache
-    TileEntry *t = tile_cache.get_tile( b );
+    STGTileEntry *t = tile_cache.get_stg_tile( b );
     if (!t)
     {
         // create a new entry
-        t = new TileEntry( b );
-        SG_LOG( SG_TERRAIN, SG_INFO, "sched_tile: new tile entry for:" << b );
-
+        t = new STGTileEntry( b );
+        SG_LOG( SG_TERRAIN, SG_INFO, "sched_tile: new STG tile entry for:" << b );
 
         // insert the tile into the cache, update will generate load request
         if ( tile_cache.insert_tile( t ) )
@@ -302,6 +303,36 @@ bool FGTileMgr::sched_tile( const SGBucket& b, double priority, bool current_vie
 
     // update tile's properties
     tile_cache.request_tile(t,priority,current_view,duration);
+
+    if (_use_vpb) {
+        VPBTileEntry *v = tile_cache.get_vpb_tile( b );
+
+        if (!v)
+        {
+            // create a new entry
+            v = new VPBTileEntry( b );
+            SG_LOG( SG_TERRAIN, SG_INFO, "sched_tile: new VPB tile entry for:" << b );
+
+            // insert the tile into the cache, update will generate load request
+            if ( tile_cache.insert_tile( v ) )
+            {
+                // Attach to scene graph
+                v->addToSceneGraph(globals->get_scenery()->get_terrain_branch());
+            } else {
+                // insert failed (cache full with no available entries to
+                // delete.)  Try again later
+                delete v;
+                return false;
+            }
+
+            SG_LOG( SG_TERRAIN, SG_DEBUG, "  New tile cache size " << (int)tile_cache.get_size() );
+        }
+
+        // update tile's properties.  We ensure VPB tiles have maximum priority - priority is calcualated as
+        // _negative_ the square of the distance from the viewer to the tile.
+        // so by multiplying by 0.1 we increase the number towards 0.
+        tile_cache.request_tile(v,priority * 0.1,current_view,duration);
+    }
 
     return t->is_loaded();
 }
