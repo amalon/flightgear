@@ -273,6 +273,16 @@ bool computeIntersections(const CameraGroup* cgroup,
                           const osg::Vec2d& windowPos,
                           osgUtil::LineSegmentIntersector::Intersections&
                           intersections);
+/** Do ray intersection testing in scene space.
+ * @param cgroup the CameraGroup
+ * @param lineStrip the line strip coordinate array
+ * @param intersections container for the result of intersection
+ * testing.
+ * @return true if any intersections are found
+ */
+bool computeSceneIntersections(const CameraGroup* cgroup,
+                               const std::vector<osg::Vec3d>& lineStrip,
+                               osgUtil::LineSegmentIntersector::Intersections& intersections);
 /** Warp the pointer to coordinates in the GUI camera of a camera group.
  * @param cgroup the camera group
  * @param x x window coordinate of pointer

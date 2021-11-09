@@ -66,6 +66,11 @@ public:
     /** Just pick into the scene and return the pick callbacks on the way ...
      */
     PickList pick(const osg::Vec2& windowPos);
+    PickList pick(const std::vector<osg::Vec3d>& lineStrip);
+    PickList pick(const osg::Vec3d& start, const osg::Vec3d& end)
+    {
+        return pick({start, end});
+    }
     
     /* Returns either composite_viewer or viewer. */
     osgViewer::ViewerBase* getViewerBase();

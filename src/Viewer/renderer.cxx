@@ -121,6 +121,9 @@
 using namespace osg;
 using namespace flightgear;
 
+typedef osgUtil::LineSegmentIntersector::Intersection Intersection;
+typedef osgUtil::LineSegmentIntersector::Intersections Intersections;
+
 class FGHintUpdateCallback : public osg::StateAttribute::Callback {
 public:
   FGHintUpdateCallback(const char* configNode) :
@@ -951,7 +954,6 @@ FGRenderer::resize( int width, int height )
     resize(width, height, _xpos->getIntValue(), _ypos->getIntValue());
 }
 
-typedef osgUtil::LineSegmentIntersector::Intersection Intersection;
 SGVec2d uvFromIntersection(const Intersection& hit)
 {
   // Taken from http://trac.openscenegraph.org/projects/osg/browser/OpenSceneGraph/trunk/examples/osgmovie/osgmovie.cpp
@@ -1007,16 +1009,10 @@ SGVec2d uvFromIntersection(const Intersection& hit)
   return toSG( osg::Vec2d(tc1 * r1 + tc2 * r2 + tc3 * r3) );
 }
 
-PickList FGRenderer::pick(const osg::Vec2& windowPos)
+PickList handlePickIntersections(Intersections& intersections)
 {
     PickList result;
 
-    typedef osgUtil::LineSegmentIntersector::Intersections Intersections;
-    Intersections intersections;
-
-    if (!computeIntersections(CameraGroup::getDefault(), windowPos, intersections))
-        return result;
-    
     // We attempt to highlight nodes until Highlight::highlight_nodes()
     // succeeds and returns +ve, or highlighting is disabled and it returns -1.
     auto highlight = globals->get_subsystem<Highlight>();
@@ -1055,6 +1051,26 @@ PickList FGRenderer::pick(const osg::Vec2& windowPos)
     }
 
     return result;
+}
+
+PickList FGRenderer::pick(const osg::Vec2& windowPos)
+{
+    Intersections intersections;
+
+    if (!computeIntersections(CameraGroup::getDefault(), windowPos, intersections))
+        return PickList();
+
+    return handlePickIntersections(intersections);
+}
+
+PickList FGRenderer::pick(const std::vector<osg::Vec3d>& lineStrip)
+{
+    Intersections intersections;
+
+    if (!computeSceneIntersections(CameraGroup::getDefault(), lineStrip, intersections))
+        return PickList();
+
+    return handlePickIntersections(intersections);
 }
 
 osgViewer::ViewerBase* FGRenderer::getViewerBase()
