@@ -914,6 +914,57 @@ osg::Camera* getGUICamera(CameraGroup* cgroup)
 }
 
 static bool
+computeSceneIntersection(const CameraGroup *cgroup,
+                         const osg::Vec3d& start,
+                         const osg::Vec3d& end,
+                         osgUtil::LineSegmentIntersector::Intersections &intersections)
+{
+    osg::ref_ptr<osgUtil::LineSegmentIntersector> picker =
+        new osgUtil::LineSegmentIntersector(osgUtil::Intersector::MODEL,
+                                            start, end);
+    osgUtil::IntersectionVisitor iv(picker);
+    iv.setTraversalMask(simgear::PICK_BIT);
+
+    const_cast<CameraGroup *>(cgroup)->getView()->getCamera()->accept(iv);
+    if (picker->containsIntersections()) {
+        intersections = picker->getIntersections();
+        return true;
+    }
+
+    return false;
+}
+
+static bool
+computeSceneIntersection(const CameraGroup *cgroup,
+                         const std::vector<osg::Vec3d>& lineStrip,
+                         osgUtil::LineSegmentIntersector::Intersections &intersections)
+{
+    osg::ref_ptr<osgUtil::IntersectorGroup> group = new osgUtil::IntersectorGroup();
+    for (unsigned int i = 1; i < lineStrip.size(); ++i)
+        group->addIntersector(new osgUtil::LineSegmentIntersector(
+                                                osgUtil::Intersector::MODEL,
+                                                lineStrip[i-1], lineStrip[i]));
+    osgUtil::IntersectionVisitor iv(group);
+    iv.setTraversalMask(simgear::PICK_BIT);
+
+    const_cast<CameraGroup *>(cgroup)->getView()->getCamera()->accept(iv);
+    if (group->containsIntersections()) {
+        // Append each segment's intersections to the list
+        intersections.clear();
+        for (auto& intersector: group->getIntersectors())
+            if (intersector->containsIntersections()) {
+                auto *lineIntersector = static_cast<osgUtil::LineSegmentIntersector *>(intersector.get());;
+                auto& someIntersections = lineIntersector->getIntersections();
+                intersections.insert(std::begin(someIntersections),
+                                     std::end(someIntersections));
+            }
+        return true;
+    }
+
+    return false;
+}
+
+static bool
 computeCameraIntersection(const CameraGroup *cgroup,
                           const CameraInfo *cinfo,
                           const osg::Vec2d &windowPos,
@@ -942,20 +993,10 @@ computeCameraIntersection(const CameraGroup *cgroup,
     start = start * invViewMat;
     end = end * invViewMat;
 
-    osg::ref_ptr<osgUtil::LineSegmentIntersector> picker =
-        new osgUtil::LineSegmentIntersector(osgUtil::Intersector::MODEL,
-                                            osg::Vec3d(start.x(), start.y(), start.z()),
-                                            osg::Vec3d(end.x(), end.y(), end.z()));
-    osgUtil::IntersectionVisitor iv(picker);
-    iv.setTraversalMask(simgear::PICK_BIT);
-
-    const_cast<CameraGroup *>(cgroup)->getView()->getCamera()->accept(iv);
-    if (picker->containsIntersections()) {
-        intersections = picker->getIntersections();
-        return true;
-    }
-
-    return false;
+    return computeSceneIntersection(cgroup,
+                                    osg::Vec3d(start.x(), start.y(), start.z()),
+                                    osg::Vec3d(end.x(), end.y(), end.z()),
+                                    intersections);
 }
 
 bool computeIntersections(const CameraGroup* cgroup,
@@ -973,6 +1014,22 @@ bool computeIntersections(const CameraGroup* cgroup,
             continue;
 
         if (computeCameraIntersection(cgroup, cinfo, windowPos, intersections))
+            return true;
+    }
+
+    intersections.clear();
+    return false;
+}
+
+bool computeSceneIntersections(const CameraGroup* cgroup,
+                               const std::vector<osg::Vec3d>& lineStrip,
+                               osgUtil::LineSegmentIntersector::Intersections& intersections)
+{
+    if (lineStrip.size() > 2) {
+        if (computeSceneIntersection(cgroup, lineStrip, intersections))
+            return true;
+    } else if (lineStrip.size() == 2) {
+        if (computeSceneIntersection(cgroup, lineStrip[0], lineStrip[1], intersections))
             return true;
     }
 
