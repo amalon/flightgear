@@ -564,14 +564,15 @@ private:
     // FG specific concepts
 
     /**
-     * Base class for inputs used by a VR interaction mode.
-     * VR interaction modes are made up of inputs derived from this base class,
-     * which refer to VR actions and have bindings, and which interpret them in
-     * an interaction specific way. Instances of this class are specific to a
-     * single subaction, so inputs defined outside of a subaction XML tag will
-     * instantiate it multiple times.
+     * Base class for input processing objects used by a VR interaction mode.
+     * VR interaction modes are made up of process objects derived from this
+     * base class, which refer to VR actions and other process objects, may have
+     * bindings, and which interpret them in an interaction specific way.
+     * Instances of this class are specific to a single subaction, so process
+     * objects defined outside of a subaction XML tag will instantiate multiple
+     * times.
      */
-    class ModeInput
+    class ModeProcess
     {
         public:
 
@@ -579,13 +580,14 @@ private:
              * Construct from a property node.
              * @param mode       Interaction mode object.
              * @param subaction  Subaction the mode is tied to.
-             * @param node       Property node describing the input.
-             * @param statusNode Property node for describing the input status.
+             * @param node       Property node describing the process object.
+             * @param statusNode Property node for describing the process object
+             *                   status.
              */
-            ModeInput(Mode *mode, Subaction *subaction, SGPropertyNode *node,
-                      SGPropertyNode *statusNode);
+            ModeProcess(Mode *mode, Subaction *subaction, SGPropertyNode *node,
+			SGPropertyNode *statusNode);
             /// Destructor.
-            virtual ~ModeInput() = default;
+            virtual ~ModeProcess() = default;
 
             /**
              * Initialise nasal bindings in the provided @a module.
@@ -597,7 +599,8 @@ private:
              * Initialise nasal bindings for the specified property @a node.
              * This pure virtual function must be implemented by derived
              * classes.
-             * @param node   Mode input property node to get bindings from.
+             * @param node   Mode process object property node to get bindings
+             *               from.
              * @param module Nasal module name.
              */
             virtual void postinit(SGPropertyNode *node,
@@ -613,21 +616,22 @@ private:
 
         protected:
 
-            /// Property node for the input.
+            /// Property node for the process object.
             SGPropertyNode_ptr _node;
-            /// Main property node for input status.
+            /// Main property node for process object status.
             SGPropertyNode_ptr _statusNode;
             /// Identifying name.
             std::string _name;
-            /// Which subaction this input belongs to.
+            /// Which subaction this process object belongs to.
             osg::ref_ptr<Subaction> _subaction;
     };
 
     /**
-     * A mode input to pass through a boolean action.
-     * This is a straightforward pass through mode input for boolean actions.
+     * A mode process object to pass through a boolean action.
+     * This is a straightforward pass through mode process object for boolean
+     * actions.
      */
-    class ModeInputBoolean : public ModeInput
+    class ModeProcessBoolean : public ModeProcess
     {
         public:
 
@@ -635,13 +639,14 @@ private:
              * Construct from a property node.
              * @param mode       Interaction mode object.
              * @param subaction  Subaction the mode is tied to.
-             * @param node       Property node describing the input.
-             * @param statusNode Property node for describing the input status.
+             * @param node       Property node describing the process object.
+             * @param statusNode Property node for describing the process object
+             *                   status.
              */
-            ModeInputBoolean(Mode *mode, Subaction *subaction,
-                             SGPropertyNode *node, SGPropertyNode *statusNode);
+            ModeProcessBoolean(Mode *mode, Subaction *subaction,
+			       SGPropertyNode *node, SGPropertyNode *statusNode);
 
-            // Implement ModeInput virtual functions
+            // Implement ModeProcess virtual functions
             void postinit(SGPropertyNode *node,
                           const std::string &module) override;
             void update(double dt) override;
@@ -650,34 +655,34 @@ private:
 
             /// The boolean action to use.
             osg::ref_ptr<ActionBoolean> _action;
-            /// The property object for describing the input status.
+            /// The property object for describing the process object status.
             SGPropObjBool _statusProp;
             /// Generic button object hands most of the specifics.
             FGButton _button;
     };
 
     /**
-     * A mode input which extracts euler angles from a pose action.
+     * A mode process object which extracts euler angles from a pose action.
      * Pose actions provide a position vector and orientation quaternion. In
      * order to use the VR controllers as direct input devices which feel like
      * real flight controls, these need converting into euler axis angles as a
      * joystick would normally do.
      */
-    class ModeInputPoseEuler : public ModeInput
+    class ModeProcessPoseEuler : public ModeProcess
     {
         public:
 
             /**
              * Construct from a property node.
-             * @param mode      Interaction mode object.
-             * @param subaction Subaction the mode is tied to.
-             * @param node      Property node describing the input.
-             * @param statusNode Property node for describing the input status.
+             * @param mode       Interaction mode object.
+             * @param subaction  Subaction the mode is tied to.
+             * @param node       Property node describing the process object.
+             * @param statusNode Property node for describing the process object status.
              */
-            ModeInputPoseEuler(Mode *mode, Subaction *subaction,
-                               SGPropertyNode *node, SGPropertyNode *statusNode);
+            ModeProcessPoseEuler(Mode *mode, Subaction *subaction,
+				 SGPropertyNode *node, SGPropertyNode *statusNode);
 
-            // Implement ModeInput virtual functions
+            // Implement ModeProcess virtual functions
             void postinit(SGPropertyNode *node,
                           const std::string &module) override;
             void update(double dt) override;
@@ -779,9 +784,9 @@ private:
                         return _node;
                     }
 
-                    /// Read inputs from a given property node.
-                    void readInputs(Mode *mode, SGPropertyNode *node,
-                                    SGPropertyNode *statusNode);
+                    /// Read process objects from a given property node.
+                    void readProcesses(Mode *mode, SGPropertyNode *node,
+                                       SGPropertyNode *statusNode);
                     /// Run initial nasal commands in a node.
                     void initNasal(SGPropertyNode *node);
                     /// Initialise nasal bindings.
@@ -797,8 +802,8 @@ private:
                     SGPropertyNode_ptr _node;
                     /// Nasal model name.
                     std::string _module;
-                    /// The list of inputs for the subaction.
-                    std::list<ModeInput *> _inputs;
+                    /// The list of process objects for the subaction.
+                    std::list<ModeProcess *> _processes;
             };
 
             /// Path string, in the form "type/mode".

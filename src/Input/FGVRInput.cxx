@@ -476,12 +476,12 @@ FGVRInput::InteractionProfile::InteractionProfile(FGVRInput *input,
     }
 }
 
-// FGVRInput::ModeInput
+// FGVRInput::ModeProcess
 
-FGVRInput::ModeInput::ModeInput(FGVRInput::Mode *mode,
-                                Subaction *subaction,
-                                SGPropertyNode *node,
-                                SGPropertyNode *statusNode) :
+FGVRInput::ModeProcess::ModeProcess(FGVRInput::Mode *mode,
+				    Subaction *subaction,
+				    SGPropertyNode *node,
+				    SGPropertyNode *statusNode) :
     _node(node),
     _statusNode(statusNode),
     _name(node->getStringValue("name")),
@@ -489,18 +489,18 @@ FGVRInput::ModeInput::ModeInput(FGVRInput::Mode *mode,
 {
 }
 
-void FGVRInput::ModeInput::postinit(const std::string &module)
+void FGVRInput::ModeProcess::postinit(const std::string &module)
 {
     postinit(_node, module);
 }
 
-// FGVRInput::ModeInputBoolean
+// FGVRInput::ModeProcessBoolean
 
-FGVRInput::ModeInputBoolean::ModeInputBoolean(FGVRInput::Mode *mode,
-                                              Subaction *subaction,
-                                              SGPropertyNode *node,
-                                              SGPropertyNode *statusNode) :
-    ModeInput(mode, subaction, node, statusNode),
+FGVRInput::ModeProcessBoolean::ModeProcessBoolean(FGVRInput::Mode *mode,
+						  Subaction *subaction,
+						  SGPropertyNode *node,
+						  SGPropertyNode *statusNode) :
+    ModeProcess(mode, subaction, node, statusNode),
     _statusProp(statusNode)
 {
     // Get the boolean action
@@ -514,13 +514,13 @@ FGVRInput::ModeInputBoolean::ModeInputBoolean(FGVRInput::Mode *mode,
     }
 }
 
-void FGVRInput::ModeInputBoolean::postinit(SGPropertyNode *node,
-                                            const std::string &module)
+void FGVRInput::ModeProcessBoolean::postinit(SGPropertyNode *node,
+					     const std::string &module)
 {
     _button.init(node, _name, module);
 }
 
-void FGVRInput::ModeInputBoolean::update(double dt)
+void FGVRInput::ModeProcessBoolean::update(double dt)
 {
     int modifiers = fgGetKeyModifiers();
     SubactionInfoBoolean *info = _action->getSubactionInfo(_subaction);
@@ -531,13 +531,13 @@ void FGVRInput::ModeInputBoolean::update(double dt)
     }
 }
 
-// FGVRInput::ModeInputPoseEuler
+// FGVRInput::ModeProcessPoseEuler
 
-FGVRInput::ModeInputPoseEuler::ModeInputPoseEuler(FGVRInput::Mode *mode,
+FGVRInput::ModeProcessPoseEuler::ModeProcessPoseEuler(FGVRInput::Mode *mode,
                                                   Subaction *subaction,
                                                   SGPropertyNode *node,
                                                   SGPropertyNode *statusNode) :
-    ModeInput(mode, subaction, node, statusNode),
+    ModeProcess(mode, subaction, node, statusNode),
     _transform(SGQuatd::unit()),
     _statusPropEuler {
         SGPropObjDouble(statusNode->getChild("euler", 0, true)),
@@ -566,13 +566,13 @@ FGVRInput::ModeInputPoseEuler::ModeInputPoseEuler(FGVRInput::Mode *mode,
     }
 }
 
-void FGVRInput::ModeInputPoseEuler::postinit(SGPropertyNode *node,
-                                            const std::string &module)
+void FGVRInput::ModeProcessPoseEuler::postinit(SGPropertyNode *node,
+					       const std::string &module)
 {
     read_bindings(node, _bindings, KEYMOD_NONE, module);
 }
 
-void FGVRInput::ModeInputPoseEuler::update(double dt)
+void FGVRInput::ModeProcessPoseEuler::update(double dt)
 {
     if (_poseAction.valid()) {
         SubactionInfoPose *poseInfo = _poseAction->getSubactionInfo(_subaction);
@@ -632,35 +632,36 @@ FGVRInput::Mode::SubactionInfo::SubactionInfo(Subaction *subaction,
 
 FGVRInput::Mode::SubactionInfo::~SubactionInfo()
 {
-    for (auto *input: _inputs)
-        delete input;
+    for (auto *process: _processes)
+        delete process;
 }
 
-void FGVRInput::Mode::SubactionInfo::readInputs(Mode *mode,
-                                                SGPropertyNode *node,
-                                                SGPropertyNode *statusNode)
+void FGVRInput::Mode::SubactionInfo::readProcesses(Mode *mode,
+                                                   SGPropertyNode *node,
+                                                   SGPropertyNode *statusNode)
 {
     // Read input processing nodes
-    for (SGPropertyNode *inputNode: node->getChildren("input")) {
-        const char *inputName = inputNode->getStringValue("name");
-        const char *inputType = inputNode->getStringValue("type");
+    for (SGPropertyNode *processNode: node->getChildren("process")) {
+        const char *processName = processNode->getStringValue("name");
+        const char *processType = processNode->getStringValue("type");
 
-        SGPropertyNode *inputStatusNode = statusNode->getNode(inputName, true);
+        SGPropertyNode *processStatusNode = statusNode->getNode(processName,
+                                                                true);
 
-        // Create an input of the specified type
-        ModeInput *input = nullptr;
-        if (!strcmp(inputType, "boolean")) {
-            input = new ModeInputBoolean(mode, _subaction, inputNode,
-                                         inputStatusNode);
-        } else if (!strcmp(inputType, "pose_euler")) {
-            input = new ModeInputPoseEuler(mode, _subaction, inputNode,
-                                           inputStatusNode);
+        // Create a process of the specified type
+        ModeProcess *process = nullptr;
+        if (!strcmp(processType, "boolean")) {
+            process = new ModeProcessBoolean(mode, _subaction, processNode,
+                                             processStatusNode);
+        } else if (!strcmp(processType, "pose_euler")) {
+            process = new ModeProcessPoseEuler(mode, _subaction, processNode,
+                                               processStatusNode);
         } else {
             SG_LOG(SG_INPUT, SG_WARN,
-                   "Unknown VR mode input type \"" << inputType << "\" VR mode " << mode->getPath() << " input " << inputName);
+                   "Unknown VR mode process type \"" << processType << "\" VR mode " << mode->getPath() << " process " << processName);
         }
-        if (input)
-            _inputs.push_back(input);
+        if (process)
+            _processes.push_back(process);
     }
 }
 
@@ -690,14 +691,14 @@ void FGVRInput::Mode::SubactionInfo::postinit(const std::string &modulePfx)
     FGNasalSys *nasalsys = (FGNasalSys *)globals->get_subsystem("nasal");
     nasalsys->createModule(_module.c_str(), _module.c_str(), "", 0);
 
-    for (auto *input: _inputs)
-        input->postinit(_module);
+    for (auto *process: _processes)
+        process->postinit(_module);
 }
 
 void FGVRInput::Mode::SubactionInfo::update(double dt)
 {
-    for (auto *input: _inputs)
-        input->update(dt);
+    for (auto *process: _processes)
+        process->update(dt);
 }
 
 // FGVRInput::Mode
@@ -741,11 +742,11 @@ FGVRInput::Mode::Mode(FGVRInput *input,
             std::ostringstream statusPath;
             statusPath << "modes/" << type << "/" << mode << "[" << i << "]";
             SGPropertyNode *statusNode = input->getStatusNode()->getNode(statusPath.str(), true);
-            // Read mode wide inputs
-            info->readInputs(this, node, statusNode);
+            // Read mode wide process objects
+            info->readProcesses(this, node, statusNode);
 
-            // And subaction specific inputs
-            info->readInputs(this, subactionNode, statusNode);
+            // And subaction specific process objects
+            info->readProcesses(this, subactionNode, statusNode);
         }
     }
 }
