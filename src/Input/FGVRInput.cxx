@@ -476,6 +476,161 @@ FGVRInput::InteractionProfile::InteractionProfile(FGVRInput *input,
     }
 }
 
+// FGVRInput::ModeProcessInputSourceAction
+
+FGVRInput::ModeProcessInputSourceAction::ModeProcessInputSourceAction(
+                                                    Subaction *subaction,
+                                                    osgXR::Action *action) :
+    _subaction(subaction),
+    _action(action)
+{
+}
+
+bool FGVRInput::ModeProcessInputSourceAction::getBoolValue(bool &outValue)
+{
+    if (_action.valid()) {
+        SubactionInfo *info = getActionCommon()->getSubactionInfo(_subaction);
+        if (info)
+            return info->getBoolCurValue(outValue);
+    }
+    return false;
+}
+
+bool FGVRInput::ModeProcessInputSourceAction::getFloatValue(float &outValue)
+{
+    if (_action.valid()) {
+        SubactionInfo *info = getActionCommon()->getSubactionInfo(_subaction);
+        if (info)
+            return info->getFloatCurValue(outValue);
+    }
+    return false;
+}
+
+bool FGVRInput::ModeProcessInputSourceAction::getVector2fValue(osg::Vec2f &outValue)
+{
+    if (_action.valid()) {
+        SubactionInfo *info = getActionCommon()->getSubactionInfo(_subaction);
+        if (info)
+            return info->getVector2fCurValue(outValue);
+    }
+    return false;
+}
+
+bool FGVRInput::ModeProcessInputSourceAction::getPoseValue(osgXR::ActionPose::Location &outValue)
+{
+    if (_action.valid()) {
+        SubactionInfo *info = getActionCommon()->getSubactionInfo(_subaction);
+        if (info)
+            return info->getPoseCurValue(outValue);
+    }
+    return false;
+}
+
+// FGVRInput::ModeProcessInput
+
+FGVRInput::ModeProcessInput::ModeProcessInput(FGVRInput::Mode *mode,
+                                              Subaction *subaction,
+                                              SGPropertyNode *node) :
+    _lastBool(false),
+    _lastFloat(0.0f),
+    _lastVec2f(0.0f, 0.0f)
+{
+    for (SGPropertyNode *actionNode: node->getChildren("action")) {
+        const char *actionName = actionNode->getStringValue();
+        osgXR::Action *action = mode->getActionSet()->findAction(actionName);
+        if (action) {
+            _sources.push_back(std::make_unique<ModeProcessInputSourceAction>(
+                                                                subaction,
+                                                                action));
+        } else {
+            SG_LOG(SG_INPUT, SG_WARN,
+                   "No VR action \"" << actionName << "\" found in action-set \"" << mode->getActionSet()->getName() << "\" for VR mode " << mode->getPath() << " input " << node->getName());
+        }
+    }
+}
+
+bool FGVRInput::ModeProcessInput::getBoolValue(bool &outValue, bool *outChanged)
+{
+    // Use logical OR of valid values from sources (like OpenXR)
+    bool ret = false;
+    for (auto &source: _sources) {
+        if (source->getBoolValue(outValue)) {
+            if (outChanged)
+                *outChanged = (outValue != _lastBool);
+            _lastBool = outValue;
+            ret = true;
+            if (outValue)
+                return true;
+        }
+    }
+    return ret;
+}
+
+bool FGVRInput::ModeProcessInput::getFloatValue(float &outValue,
+                                                bool *outChanged)
+{
+    // Use largest absolute valid value from sources (like OpenXR)
+    bool ret = false;
+    float maxVal;
+    for (auto &source: _sources) {
+        float val;
+        if (source->getFloatValue(val)) {
+            if (!ret || fabs(val) > fabs(maxVal))
+                maxVal = val;
+            ret = true;
+        }
+    }
+    if (ret) {
+        outValue = maxVal;
+        if (outChanged)
+            *outChanged = (outValue != _lastFloat);
+        _lastFloat = outValue;
+    }
+    return false;
+}
+
+bool FGVRInput::ModeProcessInput::getVector2fValue(osg::Vec2f &outValue,
+                                                   bool *outChanged)
+{
+    // Use longest valid value from sources (like OpenXR)
+    bool ret = false;
+    float maxLength2;
+    osg::Vec2f maxVal;
+    for (auto &source: _sources) {
+        osg::Vec2f val;
+        if (source->getVector2fValue(val)) {
+            float length2 = val.length2();
+            if (!ret || length2 > maxLength2) {
+                maxLength2 = length2;
+                maxVal = val;
+            }
+            ret = true;
+        }
+    }
+    if (ret) {
+        outValue = maxVal;
+        if (outChanged)
+            *outChanged = (outValue != _lastVec2f);
+        _lastVec2f = outValue;
+    }
+    return false;
+}
+
+bool FGVRInput::ModeProcessInput::getPoseValue(osgXR::ActionPose::Location &outValue,
+                                               bool *outChanged)
+{
+    // Use first valid value from sources
+    for (auto &source: _sources) {
+        if (source->getPoseValue(outValue)) {
+            if (outChanged)
+                *outChanged = (outValue != _lastPose);
+            _lastPose = outValue;
+            return true;
+        }
+    }
+    return false;
+}
+
 // FGVRInput::ModeProcess
 
 FGVRInput::ModeProcess::ModeProcess(FGVRInput::Mode *mode,
@@ -494,6 +649,11 @@ void FGVRInput::ModeProcess::postinit(const std::string &module)
     postinit(_node, module);
 }
 
+SGPropertyNode *FGVRInput::ModeProcess::getInputNode(const std::string &name)
+{
+    return _node->getNode("inputs", true)->getNode(name, true);
+}
+
 // FGVRInput::ModeProcessButton
 
 FGVRInput::ModeProcessButton::ModeProcessButton(FGVRInput::Mode *mode,
@@ -501,17 +661,9 @@ FGVRInput::ModeProcessButton::ModeProcessButton(FGVRInput::Mode *mode,
                                                 SGPropertyNode *node,
                                                 SGPropertyNode *statusNode) :
     ModeProcess(mode, subaction, node, statusNode),
+    _input(mode, subaction, getInputNode("input")),
     _statusProp(statusNode)
 {
-    // Get the boolean action
-    const char *actionName = node->getStringValue("action");
-    osgXR::Action *action = mode->getActionSet()->findAction(actionName);
-    if (action)
-        _action = dynamic_cast<ActionBoolean *>(action);
-    if (!_action.valid()) {
-        SG_LOG(SG_INPUT, SG_WARN,
-               "No VR boolean action \"" << actionName << "\" found in action-set \"" << mode->getActionSet()->getName() << "\" for VR mode " << mode->getPath() << " input " << _name);
-    }
 }
 
 void FGVRInput::ModeProcessButton::postinit(SGPropertyNode *node,
@@ -523,9 +675,8 @@ void FGVRInput::ModeProcessButton::postinit(SGPropertyNode *node,
 void FGVRInput::ModeProcessButton::update(double dt)
 {
     int modifiers = fgGetKeyModifiers();
-    SubactionInfoBoolean *info = _action->getSubactionInfo(_subaction);
-    if (info) {
-        bool val = info->getCurValue();
+    bool val;
+    if (_input.getBoolValue(val)) {
         _button.update(modifiers, val);
         _statusProp = val;
     }
@@ -538,6 +689,7 @@ FGVRInput::ModeProcessPoseEuler::ModeProcessPoseEuler(FGVRInput::Mode *mode,
                                                   SGPropertyNode *node,
                                                   SGPropertyNode *statusNode) :
     ModeProcess(mode, subaction, node, statusNode),
+    _pose(mode, subaction, getInputNode("pose")),
     _transform(SGQuatd::unit()),
     _statusPropEuler {
         SGPropObjDouble(statusNode->getChild("euler", 0, true)),
@@ -546,16 +698,6 @@ FGVRInput::ModeProcessPoseEuler::ModeProcessPoseEuler(FGVRInput::Mode *mode,
     },
     _lastValue { 0.0, 0.0, 0.0 }
 {
-    // Get the pose action
-    const char *actionName = node->getStringValue("action");
-    osgXR::Action *action = mode->getActionSet()->findAction(actionName);
-    if (action)
-        _poseAction = dynamic_cast<ActionPose *>(action);
-    if (!_poseAction.valid()) {
-        SG_LOG(SG_INPUT, SG_WARN,
-               "No VR pose action \"" << actionName << "\" found in action-set \"" << mode->getActionSet()->getName() << "\" for VR mode " << mode->getPath() << " input " << _name);
-    }
-
     // Get the transform
     SGPropertyNode *transform = node->getChild("transform", 0, false);
     if (transform) {
@@ -574,47 +716,44 @@ void FGVRInput::ModeProcessPoseEuler::postinit(SGPropertyNode *node,
 
 void FGVRInput::ModeProcessPoseEuler::update(double dt)
 {
-    if (_poseAction.valid()) {
-        SubactionInfoPose *poseInfo = _poseAction->getSubactionInfo(_subaction);
-        if (poseInfo) {
-            const auto &location = poseInfo->getCurValue();
-            if (location.isOrientationValid()) {
-                // Convert orientation to SGQuatd
-                const auto &xrQuat = location.getOrientation();
-                SGQuatd quat(xrQuat._v);
+    osgXR::ActionPose::Location location;
+    if (_pose.getPoseValue(location)) {
+        if (location.isOrientationValid()) {
+            // Convert orientation to SGQuatd
+            const auto &xrQuat = location.getOrientation();
+            SGQuatd quat(xrQuat._v);
 
-                /*
-                 * Transform into sensible euler friendly coordinate space
-                 * OpenXR space: x=right, y=up, z=behind
-                 * Desired space: x=right, y=forward, z=up
-                 * So thats yaw left 90, pitch up 90
-                 */
-                static const SGQuatd fixedTransform
-                    = SGQuatd::fromEulerDeg(-90.0, 90.0, 0.0);
-                quat = conj(fixedTransform) * (quat * fixedTransform);
+            /*
+             * Transform into sensible euler friendly coordinate space
+             * OpenXR space: x=right, y=up, z=behind
+             * Desired space: x=right, y=forward, z=up
+             * So thats yaw left 90, pitch up 90
+             */
+            static const SGQuatd fixedTransform
+                = SGQuatd::fromEulerDeg(-90.0, 90.0, 0.0);
+            quat = conj(fixedTransform) * (quat * fixedTransform);
 
-                // Transform by the custom input transformation
-                quat = quat * _transform;
+            // Transform by the custom input transformation
+            quat = quat * _transform;
 
-                // Calculate euler angles
-                double value[3];
-                quat.getEulerRad(value[2], value[1], value[0]);
+            // Calculate euler angles
+            double value[3];
+            quat.getEulerRad(value[2], value[1], value[0]);
 
-                // Fire bindings
-                bool changed = false;
-                for (unsigned int i = 0; i < 3; ++i) {
-                    if (value[i] != _lastValue[i]) {
-                        changed = true;
-                        _statusPropEuler[i] = SGMiscd::rad2deg(value[i]);
-                    }
+            // Fire bindings
+            bool changed = false;
+            for (unsigned int i = 0; i < 3; ++i) {
+                if (value[i] != _lastValue[i]) {
+                    changed = true;
+                    _statusPropEuler[i] = SGMiscd::rad2deg(value[i]);
                 }
-                if (changed) {
-                    if (!_bindings[KEYMOD_NONE].empty()) {
-                        for (unsigned int i = 0; i < 3; ++i)
-                            _lastValue[i] = value[i];
-                        for (auto &binding: _bindings[KEYMOD_NONE])
-                            binding->fire(_statusNode);
-                    }
+            }
+            if (changed) {
+                if (!_bindings[KEYMOD_NONE].empty()) {
+                    for (unsigned int i = 0; i < 3; ++i)
+                        _lastValue[i] = value[i];
+                    for (auto &binding: _bindings[KEYMOD_NONE])
+                        binding->fire(_statusNode);
                 }
             }
         }

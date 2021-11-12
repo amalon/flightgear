@@ -35,6 +35,7 @@
 
 #include <list>
 #include <map>
+#include <memory>
 #include <string>
 
 ////////////////////////////////////////////////////////////////////////
@@ -294,6 +295,34 @@ private:
             /// Fire bindings if the value has changed.
             virtual void fireBindings() = 0;
 
+            /**
+             * Get the value of the action as a boolean.
+             * @param outValue[out] Output value.
+             * @return true on success, false on failure.
+             */
+            virtual bool getBoolCurValue(bool &outValue) { return false; }
+
+            /**
+             * Get the value of the action as a float.
+             * @param outValue[out] Output value.
+             * @return true on success, false on failure.
+             */
+            virtual bool getFloatCurValue(float &outValue) { return false; }
+
+            /**
+             * Get the value of the action as a 2D vector.
+             * @param outValue[out] Output value.
+             * @return true on success, false on failure.
+             */
+            virtual bool getVector2fCurValue(osg::Vec2f &outValue) { return false; }
+
+            /**
+             * Get the value of the action as a pose.
+             * @param outValue[out] Output value.
+             * @return true on success, false on failure.
+             */
+            virtual bool getPoseCurValue(osgXR::ActionPose::Location &outValue) { return false; }
+
         protected:
 
             /// The subaction or nullptr for all.
@@ -333,6 +362,18 @@ private:
             const auto &getCurValue() const
             {
                 return _curValue;
+            }
+
+            bool getBoolCurValue(bool &outValue) override
+            {
+                outValue = _curValue;
+                return true;
+            }
+
+            bool getFloatCurValue(float &outValue) override
+            {
+                outValue = _curValue ? 1.0f : 0.0f;
+                return true;
             }
 
         protected:
@@ -375,6 +416,18 @@ private:
             const auto &getCurValue() const
             {
                 return _curValue;
+            }
+
+            bool getBoolCurValue(bool &outValue) override
+            {
+                outValue = _curValue > 0.5f;
+                return true;
+            }
+
+            bool getFloatCurValue(float &outValue) override
+            {
+                outValue = _curValue;
+                return true;
             }
 
         protected:
@@ -421,6 +474,12 @@ private:
                 return _curValue;
             }
 
+            bool getVector2fCurValue(osg::Vec2f &outValue) override
+            {
+                outValue = _curValue;
+                return true;
+            }
+
         protected:
 
             /// The last polled value of the action/subaction.
@@ -464,6 +523,12 @@ private:
             const osgXR::ActionPose::Location &getCurValue() const
             {
                 return _curValue;
+            }
+
+            bool getPoseCurValue(osgXR::ActionPose::Location &outValue) override
+            {
+                outValue = _curValue;
+                return true;
             }
 
         protected:
@@ -563,6 +628,105 @@ private:
 
     // FG specific concepts
 
+    class ModeProcessInputSource
+    {
+        public:
+
+            /// Destructor.
+            virtual ~ModeProcessInputSource() = default;
+
+            // Interface for derived classes to implement
+
+            /**
+             * Get the value of the input source as a boolean.
+             * @param outValue[out] Output value.
+             * @return true on success, false on failure.
+             */
+            virtual bool getBoolValue(bool &outValue) { return false; }
+
+            /**
+             * Get the value of the input source as a float.
+             * @param outValue[out] Output value.
+             * @return true on success, false on failure.
+             */
+            virtual bool getFloatValue(float &outValue) { return false; }
+
+            /**
+             * Get the value of the input source as a 2D vector.
+             * @param outValue[out] Output value.
+             * @return true on success, false on failure.
+             */
+            virtual bool getVector2fValue(osg::Vec2f &outValue) { return false; }
+
+            /**
+             * Get the value of the input source as a pose.
+             * @param outValue[out] Output value.
+             * @return true on success, false on failure.
+             */
+            virtual bool getPoseValue(osgXR::ActionPose::Location &outValue) { return false; }
+    };
+
+    class ModeProcessInputSourceAction : public ModeProcessInputSource
+    {
+        public:
+
+            /**
+             * Construct from a property node.
+             * @param subaction Subaction the mode is tied to.
+             * @param action    Action object.
+             */
+            ModeProcessInputSourceAction(Subaction *subaction,
+                                         osgXR::Action *action);
+
+            // Implement ModeProcessInputSource virtual functions
+            bool getBoolValue(bool &outValue) override;
+            bool getFloatValue(float &outValue) override;
+            bool getVector2fValue(osg::Vec2f &outValue) override;
+            bool getPoseValue(osgXR::ActionPose::Location &outValue) override;
+
+        protected:
+
+            ActionCommon *getActionCommon()
+            {
+                return dynamic_cast<ActionCommon*>(_action.get());
+            }
+
+            osg::ref_ptr<Subaction> _subaction;
+            osg::ref_ptr<osgXR::Action> _action;
+    };
+
+    class ModeProcessInput
+    {
+        public:
+
+            /**
+             * Construct from a property node.
+             * @param mode      Interaction mode object.
+             * @param subaction Subaction the mode is tied to.
+             * @param node      Property node describing the input.
+             */
+            ModeProcessInput(FGVRInput::Mode *mode,
+                             Subaction *subaction,
+                             SGPropertyNode *node);
+
+            bool getBoolValue(bool &outValue,
+                              bool *outChanged = nullptr);
+            bool getFloatValue(float &outValue,
+                               bool *outChanged = nullptr);
+            bool getVector2fValue(osg::Vec2f &outValue,
+                                  bool *outChanged = nullptr);
+            bool getPoseValue(osgXR::ActionPose::Location &outValue,
+                              bool *outChanged = nullptr);
+
+        protected:
+
+            std::list<std::unique_ptr<ModeProcessInputSource>> _sources;
+            bool _lastBool;
+            float _lastFloat;
+            osg::Vec2f _lastVec2f;
+            osgXR::ActionPose::Location _lastPose;
+    };
+
     /**
      * Base class for input processing objects used by a VR interaction mode.
      * VR interaction modes are made up of process objects derived from this
@@ -616,6 +780,8 @@ private:
 
         protected:
 
+            SGPropertyNode *getInputNode(const std::string &name);
+
             /// Property node for the process object.
             SGPropertyNode_ptr _node;
             /// Main property node for process object status.
@@ -653,8 +819,8 @@ private:
 
         protected:
 
-            /// The boolean action to use.
-            osg::ref_ptr<ActionBoolean> _action;
+            /// The boolean input.
+            ModeProcessInput _input;
             /// The property object for describing the process object status.
             SGPropObjBool _statusProp;
             /// Generic button object hands most of the specifics.
@@ -689,8 +855,8 @@ private:
 
         protected:
 
-            /// The pose action to extract euler angles from.
-            osg::ref_ptr<ActionPose> _poseAction;
+            /// The pose input.
+            ModeProcessInput _pose;
             /// The quaternion transformation to apply first.
             SGQuatd _transform;
             /// The property object for describing the pose euler angles.
