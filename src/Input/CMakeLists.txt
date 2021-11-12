@@ -82,8 +82,16 @@ if (ENABLE_HID_INPUT)
 endif()
 
 if (ENABLE_OSGXR)
-	list(APPEND SOURCES FGVRInput.cxx)
-	list(APPEND HEADERS FGVRInput.hxx)
+	list(APPEND SOURCES
+		FGVRButton.cxx
+		FGVRInput.cxx
+		FGVRPoseEuler.cxx
+	)
+	list(APPEND HEADERS
+		FGVRButton.hxx
+		FGVRInput.hxx
+		FGVRPoseEuler.hxx
+	)
 endif()
 
 flightgear_component(Input "${SOURCES}" "${HEADERS}")

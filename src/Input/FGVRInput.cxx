@@ -20,7 +20,6 @@
 #include "FGVRInput.hxx"
 
 #include <simgear/debug/ErrorReportingCallback.hxx>
-#include <simgear/math/SGMisc.hxx>
 
 #include <Main/fg_props.hxx>
 #include <Scripting/NasalSys.hxx>
@@ -28,6 +27,9 @@
 
 #include <algorithm>
 #include <cmath>
+
+#include "FGVRButton.hxx"
+#include "FGVRPoseEuler.hxx"
 
 using flightgear::VRManager;
 
@@ -654,112 +656,6 @@ SGPropertyNode *FGVRInput::ModeProcess::getInputNode(const std::string &name)
     return _node->getNode("inputs", true)->getNode(name, true);
 }
 
-// FGVRInput::ModeProcessButton
-
-FGVRInput::ModeProcessButton::ModeProcessButton(FGVRInput::Mode *mode,
-                                                Subaction *subaction,
-                                                SGPropertyNode *node,
-                                                SGPropertyNode *statusNode) :
-    ModeProcess(mode, subaction, node, statusNode),
-    _input(mode, subaction, getInputNode("input")),
-    _statusProp(statusNode)
-{
-}
-
-void FGVRInput::ModeProcessButton::postinit(SGPropertyNode *node,
-                                            const std::string &module)
-{
-    _button.init(node, _name, module);
-}
-
-void FGVRInput::ModeProcessButton::update(double dt)
-{
-    int modifiers = fgGetKeyModifiers();
-    bool val;
-    if (_input.getBoolValue(val)) {
-        _button.update(modifiers, val);
-        _statusProp = val;
-    }
-}
-
-// FGVRInput::ModeProcessPoseEuler
-
-FGVRInput::ModeProcessPoseEuler::ModeProcessPoseEuler(FGVRInput::Mode *mode,
-                                                  Subaction *subaction,
-                                                  SGPropertyNode *node,
-                                                  SGPropertyNode *statusNode) :
-    ModeProcess(mode, subaction, node, statusNode),
-    _pose(mode, subaction, getInputNode("pose")),
-    _transform(SGQuatd::unit()),
-    _statusPropEuler {
-        SGPropObjDouble(statusNode->getChild("euler", 0, true)),
-        SGPropObjDouble(statusNode->getChild("euler", 1, true)),
-        SGPropObjDouble(statusNode->getChild("euler", 2, true))
-    },
-    _lastValue { 0.0, 0.0, 0.0 }
-{
-    // Get the transform
-    SGPropertyNode *transform = node->getChild("transform", 0, false);
-    if (transform) {
-        double yaw   = transform->getDoubleValue("yaw-deg", 0.0);
-        double pitch = transform->getDoubleValue("pitch-deg", 0.0);
-        double roll  = transform->getDoubleValue("roll-deg", 0.0);
-        _transform = SGQuatd::fromEulerDeg(yaw, pitch, roll);
-    }
-}
-
-void FGVRInput::ModeProcessPoseEuler::postinit(SGPropertyNode *node,
-					       const std::string &module)
-{
-    read_bindings(node, _bindings, KEYMOD_NONE, module);
-}
-
-void FGVRInput::ModeProcessPoseEuler::update(double dt)
-{
-    osgXR::ActionPose::Location location;
-    if (_pose.getPoseValue(location)) {
-        if (location.isOrientationValid()) {
-            // Convert orientation to SGQuatd
-            const auto &xrQuat = location.getOrientation();
-            SGQuatd quat(xrQuat._v);
-
-            /*
-             * Transform into sensible euler friendly coordinate space
-             * OpenXR space: x=right, y=up, z=behind
-             * Desired space: x=right, y=forward, z=up
-             * So thats yaw left 90, pitch up 90
-             */
-            static const SGQuatd fixedTransform
-                = SGQuatd::fromEulerDeg(-90.0, 90.0, 0.0);
-            quat = conj(fixedTransform) * (quat * fixedTransform);
-
-            // Transform by the custom input transformation
-            quat = quat * _transform;
-
-            // Calculate euler angles
-            double value[3];
-            quat.getEulerRad(value[2], value[1], value[0]);
-
-            // Fire bindings
-            bool changed = false;
-            for (unsigned int i = 0; i < 3; ++i) {
-                if (value[i] != _lastValue[i]) {
-                    changed = true;
-                    _statusPropEuler[i] = SGMiscd::rad2deg(value[i]);
-                }
-            }
-            if (changed) {
-                if (!_bindings[KEYMOD_NONE].empty()) {
-                    for (unsigned int i = 0; i < 3; ++i)
-                        _lastValue[i] = value[i];
-                    for (auto &binding: _bindings[KEYMOD_NONE])
-                        binding->fire(_statusNode);
-                }
-            }
-        }
-    }
-}
-
 // FGVRInput::Mode::SubactionInfo
 
 FGVRInput::Mode::SubactionInfo::SubactionInfo(Subaction *subaction,
@@ -790,11 +686,11 @@ void FGVRInput::Mode::SubactionInfo::readProcesses(Mode *mode,
         // Create a process of the specified type
         ModeProcess *process = nullptr;
         if (!strcmp(processType, "button")) {
-            process = new ModeProcessButton(mode, _subaction, processNode,
-                                            processStatusNode);
+            process = new FGVRButton(mode, _subaction, processNode,
+                                     processStatusNode);
         } else if (!strcmp(processType, "pose_euler")) {
-            process = new ModeProcessPoseEuler(mode, _subaction, processNode,
-                                               processStatusNode);
+            process = new FGVRPoseEuler(mode, _subaction, processNode,
+                                        processStatusNode);
         } else {
             SG_LOG(SG_INPUT, SG_WARN,
                    "Unknown VR mode process type \"" << processType << "\" VR mode " << mode->getPath() << " process " << processName);

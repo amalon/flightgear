@@ -57,13 +57,17 @@ public:
     // Subsystem identification.
     static const char* staticSubsystemClassId() { return "input-vr"; }
 
+    // Forward class declarations
+    class Mode;
+
 private:
 
     void _remove(bool all);
 
     // Forward class declarations
-    class Mode;
     class SubactionInfo;
+
+public:
 
     /**
      * Represents a part of the user they can interact in VR using.
@@ -99,6 +103,8 @@ private:
             /// Current mode this subaction should be using
             Mode *_curMode;
     };
+
+private:
 
     /**
      * Represents a set of osgXR actions.
@@ -695,6 +701,8 @@ private:
             osg::ref_ptr<osgXR::Action> _action;
     };
 
+public:
+
     class ModeProcessInput
     {
         public:
@@ -736,7 +744,7 @@ private:
      * objects defined outside of a subaction XML tag will instantiate multiple
      * times.
      */
-    class ModeProcess
+    class ModeProcess : public FGCommonInput
     {
         public:
 
@@ -790,81 +798,6 @@ private:
             std::string _name;
             /// Which subaction this process object belongs to.
             osg::ref_ptr<Subaction> _subaction;
-    };
-
-    /**
-     * A mode process object to treat a boolean input as a button.
-     * This is a straightforward pass through mode process object for boolean
-     * actions.
-     */
-    class ModeProcessButton : public ModeProcess
-    {
-        public:
-
-            /**
-             * Construct from a property node.
-             * @param mode       Interaction mode object.
-             * @param subaction  Subaction the mode is tied to.
-             * @param node       Property node describing the process object.
-             * @param statusNode Property node for describing the process object
-             *                   status.
-             */
-            ModeProcessButton(Mode *mode, Subaction *subaction,
-                              SGPropertyNode *node, SGPropertyNode *statusNode);
-
-            // Implement ModeProcess virtual functions
-            void postinit(SGPropertyNode *node,
-                          const std::string &module) override;
-            void update(double dt) override;
-
-        protected:
-
-            /// The boolean input.
-            ModeProcessInput _input;
-            /// The property object for describing the process object status.
-            SGPropObjBool _statusProp;
-            /// Generic button object hands most of the specifics.
-            FGButton _button;
-    };
-
-    /**
-     * A mode process object which extracts euler angles from a pose action.
-     * Pose actions provide a position vector and orientation quaternion. In
-     * order to use the VR controllers as direct input devices which feel like
-     * real flight controls, these need converting into euler axis angles as a
-     * joystick would normally do.
-     */
-    class ModeProcessPoseEuler : public ModeProcess
-    {
-        public:
-
-            /**
-             * Construct from a property node.
-             * @param mode       Interaction mode object.
-             * @param subaction  Subaction the mode is tied to.
-             * @param node       Property node describing the process object.
-             * @param statusNode Property node for describing the process object status.
-             */
-            ModeProcessPoseEuler(Mode *mode, Subaction *subaction,
-				 SGPropertyNode *node, SGPropertyNode *statusNode);
-
-            // Implement ModeProcess virtual functions
-            void postinit(SGPropertyNode *node,
-                          const std::string &module) override;
-            void update(double dt) override;
-
-        protected:
-
-            /// The pose input.
-            ModeProcessInput _pose;
-            /// The quaternion transformation to apply first.
-            SGQuatd _transform;
-            /// The property object for describing the pose euler angles.
-            SGPropObjDouble _statusPropEuler[3];
-            /// Bindings.
-            binding_list_t _bindings[KEYMOD_MAX];
-            /// The previous euler angle values.
-            double _lastValue[3];
     };
 
     /**
@@ -981,6 +914,8 @@ private:
             /// Subaction specific data indexed by subaction object.
             std::map<Subaction *, SubactionInfo *> _subactions;
     };
+
+private:
 
     /// Get the main property node for VR input status nodes.
     SGPropertyNode *getStatusNode()
