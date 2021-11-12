@@ -627,11 +627,11 @@ private:
     };
 
     /**
-     * A mode process object to pass through a boolean action.
+     * A mode process object to treat a boolean input as a button.
      * This is a straightforward pass through mode process object for boolean
      * actions.
      */
-    class ModeProcessBoolean : public ModeProcess
+    class ModeProcessButton : public ModeProcess
     {
         public:
 
@@ -643,8 +643,8 @@ private:
              * @param statusNode Property node for describing the process object
              *                   status.
              */
-            ModeProcessBoolean(Mode *mode, Subaction *subaction,
-			       SGPropertyNode *node, SGPropertyNode *statusNode);
+            ModeProcessButton(Mode *mode, Subaction *subaction,
+                              SGPropertyNode *node, SGPropertyNode *statusNode);
 
             // Implement ModeProcess virtual functions
             void postinit(SGPropertyNode *node,

@@ -494,12 +494,12 @@ void FGVRInput::ModeProcess::postinit(const std::string &module)
     postinit(_node, module);
 }
 
-// FGVRInput::ModeProcessBoolean
+// FGVRInput::ModeProcessButton
 
-FGVRInput::ModeProcessBoolean::ModeProcessBoolean(FGVRInput::Mode *mode,
-						  Subaction *subaction,
-						  SGPropertyNode *node,
-						  SGPropertyNode *statusNode) :
+FGVRInput::ModeProcessButton::ModeProcessButton(FGVRInput::Mode *mode,
+                                                Subaction *subaction,
+                                                SGPropertyNode *node,
+                                                SGPropertyNode *statusNode) :
     ModeProcess(mode, subaction, node, statusNode),
     _statusProp(statusNode)
 {
@@ -514,13 +514,13 @@ FGVRInput::ModeProcessBoolean::ModeProcessBoolean(FGVRInput::Mode *mode,
     }
 }
 
-void FGVRInput::ModeProcessBoolean::postinit(SGPropertyNode *node,
-					     const std::string &module)
+void FGVRInput::ModeProcessButton::postinit(SGPropertyNode *node,
+                                            const std::string &module)
 {
     _button.init(node, _name, module);
 }
 
-void FGVRInput::ModeProcessBoolean::update(double dt)
+void FGVRInput::ModeProcessButton::update(double dt)
 {
     int modifiers = fgGetKeyModifiers();
     SubactionInfoBoolean *info = _action->getSubactionInfo(_subaction);
@@ -650,9 +650,9 @@ void FGVRInput::Mode::SubactionInfo::readProcesses(Mode *mode,
 
         // Create a process of the specified type
         ModeProcess *process = nullptr;
-        if (!strcmp(processType, "boolean")) {
-            process = new ModeProcessBoolean(mode, _subaction, processNode,
-                                             processStatusNode);
+        if (!strcmp(processType, "button")) {
+            process = new ModeProcessButton(mode, _subaction, processNode,
+                                            processStatusNode);
         } else if (!strcmp(processType, "pose_euler")) {
             process = new ModeProcessPoseEuler(mode, _subaction, processNode,
                                                processStatusNode);
