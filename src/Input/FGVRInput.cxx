@@ -32,6 +32,7 @@
 #include <cmath>
 
 #include "FGVRButton.hxx"
+#include "FGVRPick.hxx"
 #include "FGVRPoseEuler.hxx"
 
 using flightgear::CameraGroup;
@@ -675,7 +676,8 @@ FGVRInput::Mode::SubactionInfo::~SubactionInfo()
         delete process;
 }
 
-void FGVRInput::Mode::SubactionInfo::readProcesses(Mode *mode,
+void FGVRInput::Mode::SubactionInfo::readProcesses(FGVRInput *input,
+                                                   Mode *mode,
                                                    SGPropertyNode *node,
                                                    SGPropertyNode *statusNode)
 {
@@ -692,6 +694,9 @@ void FGVRInput::Mode::SubactionInfo::readProcesses(Mode *mode,
         if (!strcmp(processType, "button")) {
             process = new FGVRButton(mode, _subaction, processNode,
                                      processStatusNode);
+        } else if (!strcmp(processType, "pick")) {
+            process = new FGVRPick(input, mode, _subaction, processNode,
+                                   processStatusNode);
         } else if (!strcmp(processType, "pose_euler")) {
             process = new FGVRPoseEuler(mode, _subaction, processNode,
                                         processStatusNode);
@@ -782,10 +787,10 @@ FGVRInput::Mode::Mode(FGVRInput *input,
             statusPath << "modes/" << type << "/" << mode << "[" << i << "]";
             SGPropertyNode *statusNode = input->getStatusNode()->getNode(statusPath.str(), true);
             // Read mode wide process objects
-            info->readProcesses(this, node, statusNode);
+            info->readProcesses(input, this, node, statusNode);
 
             // And subaction specific process objects
-            info->readProcesses(this, subactionNode, statusNode);
+            info->readProcesses(input, this, subactionNode, statusNode);
         }
     }
 }

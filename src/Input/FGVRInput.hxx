@@ -890,7 +890,8 @@ public:
                     }
 
                     /// Read process objects from a given property node.
-                    void readProcesses(Mode *mode, SGPropertyNode *node,
+                    void readProcesses(FGVRInput *input, Mode *mode,
+                                       SGPropertyNode *node,
                                        SGPropertyNode *statusNode);
                     /// Run initial nasal commands in a node.
                     void initNasal(SGPropertyNode *node);
