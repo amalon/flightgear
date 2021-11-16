@@ -22,15 +22,19 @@
 #include <simgear/debug/ErrorReportingCallback.hxx>
 
 #include <Main/fg_props.hxx>
+#include <Scenery/scenery.hxx>
 #include <Scripting/NasalSys.hxx>
+#include <Viewer/CameraGroup.hxx>
 #include <Viewer/VRManager.hxx>
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 
 #include "FGVRButton.hxx"
 #include "FGVRPoseEuler.hxx"
 
+using flightgear::CameraGroup;
 using flightgear::VRManager;
 
 // FGVRInput::Subaction
@@ -827,11 +831,50 @@ void FGVRInput::Mode::update(Subaction *subaction, double dt)
         (*it).second->update(dt);
 }
 
+namespace {
+
+/// Update callback for MatrixTransform to sync it to master camera.
+class LocalSpaceUpdateCallback : public osg::NodeCallback
+{
+    public:
+
+        LocalSpaceUpdateCallback(osg::MatrixTransform *transform) :
+            _transform(transform)
+        {
+        }
+
+        void operator()(osg::Node* node, osg::NodeVisitor* nv) override
+        {
+            CameraGroup *cgroup = CameraGroup::getDefault();
+            osg::Camera *masterCam = cgroup->getView()->getCamera();
+
+            // Update the transform object to match the master camera view
+            _transform->setMatrix(masterCam->getInverseViewMatrix());
+
+            traverse(node, nv);
+        }
+
+    protected:
+
+        /// Transform node to adjust.
+        osg::ref_ptr<osg::MatrixTransform> _transform;
+};
+
+}
+
 // FGVRInput
 
 FGVRInput::FGVRInput() :
-    _running(false)
+    _running(false),
+    _localSpaceUpdater(new osg::Group),
+    _localSpace(new osg::MatrixTransform)
 {
+    // Only transform nodes in range are updated, so the update callback must be
+    // higher up the scene graph than _localSpace.
+    _localSpace->setName("LocalSpace");
+    _localSpaceUpdater->setName("LocalSpaceUpdater");
+    _localSpaceUpdater->addChild(_localSpace);
+    _localSpaceUpdater->setUpdateCallback(new LocalSpaceUpdateCallback(_localSpace));
 }
 
 FGVRInput::~FGVRInput()
@@ -861,6 +904,10 @@ void FGVRInput::init()
     _statusNode = fgGetNode("/devices/status/vr", true);
 
     VRManager *manager = VRManager::instance();
+
+    // Set up local space updating
+    osg::Group* sceneGroup = globals->get_scenery()->get_scene_graph();
+    sceneGroup->addChild(_localSpaceUpdater);
 
     // Set up action sets from property tree
     SGPropertyNode_ptr actionSetsNode = vrNode->getNode("action-sets", true);

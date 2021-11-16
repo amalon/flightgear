@@ -31,6 +31,7 @@
 #include <osgXR/InteractionProfile>
 #include <osgXR/Subaction>
 
+#include <osg/MatrixTransform>
 #include <osg/Vec2f>
 
 #include <list>
@@ -56,6 +57,11 @@ public:
 
     // Subsystem identification.
     static const char* staticSubsystemClassId() { return "input-vr"; }
+
+    // Accessors
+
+    /// Get a group representing the OpenXR local space.
+    osg::MatrixTransform *getLocalSpaceGroup() { return _localSpace.get(); }
 
     // Forward class declarations
     class Mode;
@@ -948,6 +954,10 @@ private:
      * This is so bindings can be fired once after VR stops to clear values.
      */
     bool _running;
+    /// Wrapper around local space node for updating.
+    osg::ref_ptr<osg::Group> _localSpaceUpdater;
+    /// Local space scene graph node.
+    osg::ref_ptr<osg::MatrixTransform> _localSpace;
 };
 
 #endif
