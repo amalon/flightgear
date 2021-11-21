@@ -48,3 +48,12 @@ void FGVRButton::update(double dt)
         _statusProp = val;
     }
 }
+
+void FGVRButton::deactivate()
+{
+    if (_input.getLastBoolValue()) {
+        _input.deactivate();
+        _statusProp = false;
+        _button.update(fgGetKeyModifiers(), false);
+    }
+}

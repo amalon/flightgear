@@ -46,6 +46,7 @@ class FGVRButton : public FGVRInput::ModeProcess
         void postinit(SGPropertyNode *node,
                       const std::string &module) override;
         void update(double dt) override;
+        void deactivate() override;
 
     protected:
 

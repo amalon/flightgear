@@ -556,6 +556,14 @@ FGVRInput::ModeProcessInput::ModeProcessInput(FGVRInput::Mode *mode,
     }
 }
 
+void FGVRInput::ModeProcessInput::deactivate()
+{
+    _lastBool = false;
+    _lastFloat = 0.0f;
+    _lastVec2f = osg::Vec2f();
+    _lastPose = osgXR::ActionPose::Location();
+}
+
 bool FGVRInput::ModeProcessInput::getBoolValue(bool &outValue, bool *outChanged)
 {
     // Use logical OR of valid values from sources (like OpenXR)
@@ -745,6 +753,18 @@ void FGVRInput::Mode::SubactionInfo::update(double dt)
         process->update(dt);
 }
 
+void FGVRInput::Mode::SubactionInfo::activate()
+{
+    for (auto *process: _processes)
+        process->activate();
+}
+
+void FGVRInput::Mode::SubactionInfo::deactivate()
+{
+    for (auto *process: _processes)
+        process->deactivate();
+}
+
 // FGVRInput::Mode
 
 FGVRInput::Mode::Mode(FGVRInput *input,
@@ -820,6 +840,12 @@ void FGVRInput::Mode::activate(Subaction *subaction)
 {
     if (_actionSet.valid())
         _actionSet->activate(subaction);
+
+    auto it = _subactions.find(subaction);
+    if (it != _subactions.end()) {
+        auto *info = (*it).second;
+        info->activate();
+    }
 }
 
 void FGVRInput::Mode::deactivate(Subaction *subaction)
@@ -827,6 +853,10 @@ void FGVRInput::Mode::deactivate(Subaction *subaction)
     // FIXME hmm, need per subaction ref counting in actionset activation
     if (_actionSet.valid())
         _actionSet->deactivate(subaction);
+
+    auto it = _subactions.find(subaction);
+    if (it != _subactions.end())
+        (*it).second->deactivate();
 }
 
 void FGVRInput::Mode::update(Subaction *subaction, double dt)

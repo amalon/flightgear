@@ -246,3 +246,18 @@ void FGVRPick::update(double dt)
         _private->update(dt);
     }
 }
+
+void FGVRPick::deactivate()
+{
+    _pose.deactivate();
+    _private->_pickSwitch->setValue(0, false);
+
+    if (_mouseLeft.getLastBoolValue()) {
+        _mouseLeft.deactivate();
+        _private->buttonUp(0);
+    }
+    if (_mouseMiddle.getLastBoolValue()) {
+        _mouseMiddle.deactivate();
+        _private->buttonUp(1);
+    }
+}

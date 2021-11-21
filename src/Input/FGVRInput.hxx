@@ -723,6 +723,8 @@ public:
                              Subaction *subaction,
                              SGPropertyNode *node);
 
+            void deactivate();
+
             bool getBoolValue(bool &outValue,
                               bool *outChanged = nullptr);
             bool getFloatValue(float &outValue,
@@ -731,6 +733,26 @@ public:
                                   bool *outChanged = nullptr);
             bool getPoseValue(osgXR::ActionPose::Location &outValue,
                               bool *outChanged = nullptr);
+
+            bool getLastBoolValue() const
+            {
+                return _lastBool;
+            }
+
+            float getLastFloatValue() const
+            {
+                return _lastFloat;
+            }
+
+            const osg::Vec2f &getLastVector2fValue() const
+            {
+                return _lastVec2f;
+            }
+
+            const osgXR::ActionPose::Location &getLastPoseValue() const
+            {
+                return _lastPose;
+            }
 
         protected:
 
@@ -791,6 +813,12 @@ public:
              * @param dt Time passed in seconds.
              */
             virtual void update(double dt) = 0;
+
+            /// Called when the mode is activated.
+            virtual void activate() {};
+
+            /// Called when the mode is deactivated.
+            virtual void deactivate() {};
 
         protected:
 
@@ -899,6 +927,10 @@ public:
                     void postinit(const std::string &modulePfx);
                     /// Update inpus and fire bindings.
                     void update(double dt);
+                    /// Called when the mode is activated.
+                    void activate();
+                    /// Called when the mode is deactivated.
+                    void deactivate();
 
                 protected:
 
