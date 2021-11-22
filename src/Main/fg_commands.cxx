@@ -37,6 +37,10 @@
 #include <GUI/gui.h>
 #include <Main/sentryIntegration.hxx>
 
+#ifdef ENABLE_OSGXR
+#include <Input/FGVRInput.hxx>
+#endif
+
 #include "fg_init.hxx"
 #include "fg_io.hxx"
 #include "fg_os.hxx"
@@ -1047,6 +1051,53 @@ static bool do_reload_nasal_module(const SGPropertyNode* arg, SGPropertyNode*)
     return nasalSys->reloadModuleFromFile(arg->getStringValue("module"));
 }
 
+// VR interaction mode commands
+
+#ifndef ENABLE_OSGXR
+static void
+no_vr_support()
+{
+    SG_LOG(SG_GENERAL, SG_ALERT,
+           "No VR support! Rebuild fgfs with VR enabled.");
+}
+#endif
+
+static bool
+do_vr_mode_push(const SGPropertyNode* arg, SGPropertyNode* root)
+{
+#ifdef ENABLE_OSGXR
+    auto input = globals->get_subsystem<FGVRInput>();
+    if (!input) {
+        SG_LOG(SG_GENERAL, SG_ALERT,
+               "do_vr_mode_push command: VR input subsystem not found");
+        return false;
+    }
+
+    return input->handleModePushCommand(arg, root);
+#else
+    no_vr_support();
+    return false;
+#endif
+}
+
+static bool
+do_vr_mode_toggle(const SGPropertyNode* arg, SGPropertyNode* root)
+{
+#ifdef ENABLE_OSGXR
+    auto input = globals->get_subsystem<FGVRInput>();
+    if (!input) {
+        SG_LOG(SG_GENERAL, SG_ALERT,
+               "do_vr_mode_toggle command: VR input subsystem not found");
+        return false;
+    }
+
+    return input->handleModeToggleCommand(arg, root);
+#else
+    no_vr_support();
+    return false;
+#endif
+}
+
 
 ////////////////////////////////////////////////////////////////////////
 // Command setup.
@@ -1108,6 +1159,9 @@ static struct {
 
     {"video-start", do_video_start},
     {"video-stop", do_video_stop},
+
+    {"vr-mode-push", do_vr_mode_push},
+    {"vr-mode-toggle", do_vr_mode_toggle},
 
     {0, 0} // zero-terminated
 };
