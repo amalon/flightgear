@@ -63,11 +63,36 @@ public:
     /// Get a group representing the OpenXR local space.
     osg::MatrixTransform* getLocalSpaceGroup() { return _localSpace.get(); }
 
+    // Command handlers
+
+    bool handleModePushCommand(const SGPropertyNode* arg, SGPropertyNode* root);
+    bool handleModeToggleCommand(const SGPropertyNode* arg, SGPropertyNode* root);
+
     // Forward class declarations
     class Mode;
+    class Subaction;
 
 private:
     void _remove(bool all);
+
+    /// Get the translated Mode identified by @a modePath.
+    Mode* getTranslatedMode(Subaction* subaction, const std::string& modePath);
+
+    /**
+     * Find the mode and subaction a property node is inside.
+     * The mode is found by searching up through @a node's parents looking for a
+     * "mode-path" value.
+     * The subaction is found from @a node's "subaction" value, or the
+     * "subaction-path" value of the parent node found for the mode.
+     * If either are not found, the output pointer will not be written.
+     * @param node         The node to search from.
+     * @param outMode      Pointer to Mode pointer to write if Mode is found, or
+     *                     nullptr if no output is needed.
+     * @param outSubaction Pointer to Subaction pointer to write if subaction is
+     *                     found, or nullptr if no subaction is needed.
+     */
+    void findModeSubaction(const SGPropertyNode* node,
+                           Mode** outMode, Subaction** outSubaction);
 
     // Forward class declarations
     class SubactionInfo;
