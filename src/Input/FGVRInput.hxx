@@ -98,14 +98,17 @@ public:
             /// Get a preset mode.
             const char *getPresetMode(const char *id);
 
-            /// Set the current mode this subaction should be using.
-            void setMode(Mode *mode);
+            /// Push a mode in front.
+            void pushMode(Mode *mode);
 
-            /// Get the current mode this subaction should be using.
-            Mode *getMode(Mode *mode)
-            {
-                return _curMode;
-            }
+            /**
+             * Pop modes in front of @a keepMode.
+             * @return Number of nodes removed.
+             */
+            unsigned int popModesFront(Mode *keepMode);
+
+            /// Clear all modes.
+            void clearModes();
 
             /// Regular update of subaction.
             void update(double dt);
@@ -115,8 +118,8 @@ public:
             /// Preset modes node.
             SGPropertyNode_ptr _modesNode;
 
-            /// Current mode this subaction should be using
-            Mode *_curMode;
+            /// Stack of modes in use by the subaction.
+            std::vector<Mode *> _modeStack;
     };
 
 private:

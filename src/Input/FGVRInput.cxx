@@ -43,8 +43,7 @@ using flightgear::VRManager;
 
 FGVRInput::Subaction::Subaction(osgXR::Manager *manager,
                                 const std::string &path) :
-    osgXR::Subaction(manager, path),
-    _curMode(nullptr)
+    osgXR::Subaction(manager, path)
 {
 }
 
@@ -60,20 +59,43 @@ const char *FGVRInput::Subaction::getPresetMode(const char *id)
     return _modesNode->getStringValue(id, nullptr);
 }
 
-void FGVRInput::Subaction::setMode(FGVRInput::Mode *mode)
+void FGVRInput::Subaction::pushMode(FGVRInput::Mode *mode)
 {
-    if (_curMode)
-        _curMode->deactivate(this);
-    _curMode = mode;
-    if (_curMode)
-        _curMode->activate(this);
+    _modeStack.push_back(mode);
+    mode->activate(this);
+}
+
+unsigned int FGVRInput::Subaction::popModesFront(FGVRInput::Mode *keepMode)
+{
+    int index = -1;
+    for (unsigned int i = 0; i < _modeStack.size(); ++i)
+        if (_modeStack[i] == keepMode)
+            index = i;
+    // not found?
+    if (index < 0)
+        return 0;
+
+    // pop off end leaving keepMode at the top
+    unsigned int ret = _modeStack.size() - (index + 1);
+    while ((int)_modeStack.size() > index + 1) {
+        _modeStack[_modeStack.size() - 1]->deactivate(this);
+        _modeStack.pop_back();
+    }
+    return ret;
+}
+
+void FGVRInput::Subaction::clearModes()
+{
+    while (!_modeStack.empty())
+        _modeStack.back()->deactivate(this);
 }
 
 void FGVRInput::Subaction::update(double dt)
 {
-    // If there is an active mode, allow it to poll for changes
-    if (_curMode)
-        _curMode->update(this, dt);
+    // Allow active modes to poll for changes
+    // Note this may change the mode stack
+    for (unsigned int i = 0; i < _modeStack.size(); ++i)
+        _modeStack[i]->update(this, dt);
 }
 
 // FGVRInput::ActionSet
@@ -953,7 +975,7 @@ void FGVRInput::_remove(bool all)
 
     // Clean up interaction modes
     for (auto &subactionPair: _subactions)
-        subactionPair.second->setMode(nullptr);
+        subactionPair.second->clearModes();
     for (auto &modePair: _modes)
         delete modePair.second;
 }
@@ -1023,7 +1045,7 @@ void FGVRInput::init()
         const char *defaultMode = subaction->getPresetMode("default");
         auto it = _modes.find(defaultMode);
         if (it != _modes.end())
-            subaction->setMode((*it).second);
+            subaction->pushMode((*it).second);
     }
 }
 
