@@ -819,6 +819,7 @@ FGVRInput::Mode::Mode(FGVRInput *input,
     std::ostringstream modePath;
     modePath << type << "/" << mode;
     _path = modePath.str();
+    node->setStringValue("mode-path", _path);
 
     // Get the mode's default action-set
     const char *actionSet = node->getStringValue("action-set");
@@ -845,6 +846,9 @@ FGVRInput::Mode::Mode(FGVRInput *input,
             // Copy the whole mode node so bindings etc can be per-subaction
             SGPropertyNode *nodeCopy = dataNode->getChild("subaction", i, true);
             copyProperties(node, nodeCopy);
+            // for fgcommands to be able to distinguish subactions, put the
+            // subaction path in a property.
+            nodeCopy->setStringValue("subaction-path", subactionPath);
 
             SGPropertyNode *subactionCopy = nodeCopy->getChild("subaction", i);
 
@@ -1089,6 +1093,123 @@ void FGVRInput::update(double dt)
     // Handle subactions (and current interaction modes)
     for (auto &subactionPair: _subactions)
         subactionPair.second->update(dt);
+}
+
+FGVRInput::Mode *FGVRInput::getTranslatedMode(FGVRInput::Subaction *subaction,
+                                              const char *modePath)
+{
+    if (!modePath)
+        return nullptr;
+
+    // Try translating mode via the subaction presets
+    const char *translatedModePath = subaction->getPresetMode(modePath);
+    if (translatedModePath)
+        modePath = translatedModePath;
+
+    // Find the mode object
+    auto it = _modes.find(modePath);
+    if (it != _modes.end())
+        return (*it).second;
+
+    return nullptr;
+}
+
+void FGVRInput::findModeSubaction(const SGPropertyNode *node,
+                                  FGVRInput::Mode **outMode,
+                                  FGVRInput::Subaction **outSubaction)
+{
+    const char *modePath = nullptr;
+    const char *subactionPath = nullptr;
+    if (outSubaction)
+        subactionPath = node->getStringValue("subaction-path", nullptr);
+
+    if (outMode || (outSubaction && !subactionPath)) {
+        // Search upward for a parent with mode-path
+        const SGPropertyNode *parent;
+        for (parent = node->getParent(); parent; parent = parent->getParent()) {
+            modePath = parent->getStringValue("mode-path", nullptr);
+            if (modePath)
+                break;
+        }
+        if (parent && outSubaction && !subactionPath)
+            subactionPath = parent->getStringValue("subaction-path", nullptr);
+    }
+
+    if (outMode && modePath) {
+        // Find the mode
+        auto it = _modes.find(modePath);
+        if (it != _modes.end())
+            *outMode = (*it).second;
+    }
+
+    if (outSubaction && subactionPath) {
+        // Find the subaction
+        auto it = _subactions.find(subactionPath);
+        if (it != _subactions.end())
+            *outSubaction = (*it).second;
+    }
+}
+
+bool FGVRInput::handleModePushCommand(const SGPropertyNode *arg,
+                                      SGPropertyNode *root)
+{
+    // Find the subaction and optionally current mode
+    Mode *curMode = nullptr;
+    Subaction *subaction = nullptr;
+    findModeSubaction(arg, &curMode, &subaction);
+    if (!subaction) {
+        SG_LOG(SG_GENERAL, SG_ALERT,
+               "do_vr_mode_push command: Could not find subaction");
+        return false;
+    }
+
+    // Find the destination mode
+    Mode *mode = getTranslatedMode(subaction,
+                                   arg->getStringValue("mode", nullptr));
+    if (!mode) {
+        SG_LOG(SG_GENERAL, SG_ALERT,
+               "do_vr_mode_push command: Mode not found");
+        return false;
+    }
+
+    // Drop modes in front of current mode
+    if (curMode)
+        subaction->popModesFront(curMode);
+    // And push new mode
+    subaction->pushMode(mode);
+    return true;
+}
+
+bool FGVRInput::handleModeToggleCommand(const SGPropertyNode *arg,
+                                        SGPropertyNode *root)
+{
+    // Find the subaction and optionally current mode
+    Mode *curMode = nullptr;
+    Subaction *subaction = nullptr;
+    findModeSubaction(arg, &curMode, &subaction);
+    if (!subaction) {
+        SG_LOG(SG_GENERAL, SG_ALERT,
+               "do_vr_mode_toggle command: Could not find subaction");
+        return false;
+    }
+
+    // Find the destination mode
+    Mode *mode = getTranslatedMode(subaction,
+                                   arg->getStringValue("mode", nullptr));
+    if (!mode) {
+        SG_LOG(SG_GENERAL, SG_ALERT,
+               "do_vr_mode_toggle command: Mode not found");
+        return false;
+    }
+
+    // Drop modes in front of current mode
+    bool doPush = false;
+    if (curMode)
+        doPush = !subaction->popModesFront(curMode);
+    // And push new mode
+    if (doPush)
+        subaction->pushMode(mode);
+    return true;
 }
 
 FGVRInput::Subaction *FGVRInput::getSubaction(osgXR::Manager *manager,
