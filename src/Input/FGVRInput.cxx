@@ -20,6 +20,7 @@
 #include "FGVRInput.hxx"
 
 #include <simgear/debug/ErrorReportingCallback.hxx>
+#include <simgear/props/props_io.hxx>
 
 #include <Main/fg_props.hxx>
 #include <Scenery/scenery.hxx>
@@ -672,8 +673,10 @@ SGPropertyNode *FGVRInput::ModeProcess::getInputNode(const std::string &name)
 // FGVRInput::Mode::SubactionInfo
 
 FGVRInput::Mode::SubactionInfo::SubactionInfo(Subaction *subaction,
+                                              SGPropertyNode *modeNodeCopy,
                                               SGPropertyNode *node) :
     _subaction(subaction),
+    _modeNodeCopy(modeNodeCopy),
     _node(node)
 {
 }
@@ -717,12 +720,17 @@ void FGVRInput::Mode::SubactionInfo::readProcesses(FGVRInput *input,
     }
 }
 
+void FGVRInput::Mode::SubactionInfo::initNasal()
+{
+    initNasal(_modeNodeCopy);
+    initNasal(_node);
+}
+
 void FGVRInput::Mode::SubactionInfo::initNasal(SGPropertyNode *node)
 {
     simgear::ErrorReportContext errCtx("input-device", _module);
     for (SGPropertyNode *nasal: node->getChildren("nasal")) {
         nasal->setStringValue("module", _module.c_str());
-        nasal->setIntValue("subaction", _node->getIndex());
         FGNasalSys *nasalsys = (FGNasalSys *)globals->get_subsystem("nasal");
         bool ok = nasalsys->handleCommand(nasal, nullptr);
         if (!ok) {
@@ -771,8 +779,8 @@ FGVRInput::Mode::Mode(FGVRInput *input,
                       osgXR::Manager *manager,
                       const char *type,
                       const char *mode,
-                      SGPropertyNode *node) :
-    _node(node)
+                      SGPropertyNode *node,
+                      SGPropertyNode *dataNode)
 {
     std::ostringstream modePath;
     modePath << type << "/" << mode;
@@ -800,17 +808,23 @@ FGVRInput::Mode::Mode(FGVRInput *input,
         if (!subactionPath.empty()) {
             Subaction *subaction = input->getSubaction(manager, subactionPath);
             assert(_subactions.find(subaction) == _subactions.end());
-            SubactionInfo *info = new SubactionInfo(subaction, subactionNode);
+            // Copy the whole mode node so bindings etc can be per-subaction
+            SGPropertyNode *nodeCopy = dataNode->getChild("subaction", i, true);
+            copyProperties(node, nodeCopy);
+
+            SGPropertyNode *subactionCopy = nodeCopy->getChild("subaction", i);
+
+            SubactionInfo *info = new SubactionInfo(subaction, nodeCopy, subactionCopy);
             _subactions[subaction] = info;
 
             std::ostringstream statusPath;
             statusPath << "modes/" << type << "/" << mode << "[" << i << "]";
             SGPropertyNode *statusNode = input->getStatusNode()->getNode(statusPath.str(), true);
             // Read mode wide process objects
-            info->readProcesses(input, this, node, statusNode);
+            info->readProcesses(input, this, nodeCopy, statusNode);
 
             // And subaction specific process objects
-            info->readProcesses(input, this, subactionNode, statusNode);
+            info->readProcesses(input, this, subactionCopy, statusNode);
         }
     }
 }
@@ -831,8 +845,6 @@ void FGVRInput::Mode::postinit()
     {
         auto *info = subactionPair.second;
         info->postinit(module);
-        info->initNasal(_node);
-        info->initNasal(info->getNode());
     }
 }
 
@@ -844,6 +856,8 @@ void FGVRInput::Mode::activate(Subaction *subaction)
     auto it = _subactions.find(subaction);
     if (it != _subactions.end()) {
         auto *info = (*it).second;
+        // Call mode init code with each activation
+        info->initNasal();
         info->activate();
     }
 }
@@ -969,14 +983,18 @@ void FGVRInput::init()
     manager->syncActionSetup();
 
     // Set up interaction modes from property tree
-    SGPropertyNode_ptr modesNode = vrNode->getNode("modes", true);
+    SGPropertyNode *modesNode = vrNode->getNode("modes", true);
+    SGPropertyNode *modeCopy = vrNode->getNode("mode-data", true);
     for (int i = 0; i < modesNode->nChildren(); ++i) {
         SGPropertyNode *typeNode = modesNode->getChild(i);
         const char *type = typeNode->getName();
+        SGPropertyNode *typeCopy = modeCopy->getNode(type, true);
         for (int j = 0; j < typeNode->nChildren(); ++j) {
             SGPropertyNode *modeNode = typeNode->getChild(j);
             const char *modeName = modeNode->getName();
-            auto *mode = new Mode(this, manager, type, modeName, modeNode);
+            SGPropertyNode *modeCopy = typeCopy->getNode(modeName, true);
+            auto *mode = new Mode(this, manager, type, modeName, modeNode,
+                                  modeCopy);
             const std::string &modePath = mode->getPath();
             assert(_modes.find(modePath) == _modes.end());
             _modes[modePath] = mode;

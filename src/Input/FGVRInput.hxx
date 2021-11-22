@@ -852,9 +852,11 @@ public:
              * @param type       Type of mode the mode belongs in.
              * @param mode       Identifying mode name within @a type.
              * @param node       Property node describing the mode.
+             * @param dataNode   A separate property node for storing data.
              */
             Mode(FGVRInput *input, osgXR::Manager *manager, const char *type,
-                 const char *mode, SGPropertyNode *node);
+                 const char *mode, SGPropertyNode *node,
+                 SGPropertyNode *dataNode);
             /// Destructor.
             ~Mode();
 
@@ -907,20 +909,17 @@ public:
 
                     /// Constructor.
                     SubactionInfo(Subaction *subaction,
+                                  SGPropertyNode *modeNodeCopy,
                                   SGPropertyNode *node);
                     /// Destructor.
                     ~SubactionInfo();
-
-                    /// Get property node for subaction info.
-                    SGPropertyNode *getNode()
-                    {
-                        return _node;
-                    }
 
                     /// Read process objects from a given property node.
                     void readProcesses(FGVRInput *input, Mode *mode,
                                        SGPropertyNode *node,
                                        SGPropertyNode *statusNode);
+                    /// Run initial nasal commands in both nodes.
+                    void initNasal();
                     /// Run initial nasal commands in a node.
                     void initNasal(SGPropertyNode *node);
                     /// Initialise nasal bindings.
@@ -936,6 +935,8 @@ public:
 
                     /// The subaction object.
                     osg::ref_ptr<Subaction> _subaction;
+                    /// Copy of mode property node.
+                    SGPropertyNode_ptr _modeNodeCopy;
                     /// Property node for subaction info.
                     SGPropertyNode_ptr _node;
                     /// Nasal model name.
@@ -946,8 +947,6 @@ public:
 
             /// Path string, in the form "type/mode".
             std::string _path;
-            /// Property node for mode.
-            SGPropertyNode_ptr _node;
             /// Primary action set used by this mode.
             osg::ref_ptr<ActionSet> _actionSet;
             /// Subaction specific data indexed by subaction object.
