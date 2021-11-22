@@ -92,6 +92,12 @@ public:
              */
             Subaction(osgXR::Manager *manager, const std::string &path);
 
+            /// Configure subaction based on property node.
+            void setup(SGPropertyNode *node);
+
+            /// Get a preset mode.
+            const char *getPresetMode(const char *id);
+
             /// Set the current mode this subaction should be using.
             void setMode(Mode *mode);
 
@@ -105,6 +111,9 @@ public:
             void update(double dt);
 
         protected:
+
+            /// Preset modes node.
+            SGPropertyNode_ptr _modesNode;
 
             /// Current mode this subaction should be using
             Mode *_curMode;

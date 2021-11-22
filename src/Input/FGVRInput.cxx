@@ -48,6 +48,18 @@ FGVRInput::Subaction::Subaction(osgXR::Manager *manager,
 {
 }
 
+void FGVRInput::Subaction::setup(SGPropertyNode *node)
+{
+    _modesNode = node->getNode("modes", false);
+}
+
+const char *FGVRInput::Subaction::getPresetMode(const char *id)
+{
+    if (!_modesNode)
+        return nullptr;
+    return _modesNode->getStringValue(id, nullptr);
+}
+
 void FGVRInput::Subaction::setMode(FGVRInput::Mode *mode)
 {
     if (_curMode)
@@ -1004,12 +1016,14 @@ void FGVRInput::init()
     // Set up subactions
     for (SGPropertyNode *subactionNode: vrNode->getChildren("subaction")) {
         const char *subactionPath = subactionNode->getStringValue("path");
-        const char *defaultMode = subactionNode->getStringValue("default-mode");
+        Subaction *subaction = getSubaction(manager, subactionPath);
+        subaction->setup(subactionNode);
+
+        // Set default mode
+        const char *defaultMode = subaction->getPresetMode("default");
         auto it = _modes.find(defaultMode);
-        if (it != _modes.end()) {
-            Subaction *subaction = getSubaction(manager, subactionPath);
+        if (it != _modes.end())
             subaction->setMode((*it).second);
-        }
     }
 }
 
