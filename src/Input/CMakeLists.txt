@@ -83,9 +83,11 @@ endif()
 
 if (ENABLE_OSGXR)
 	list(APPEND SOURCES
+		FGVRButton.cxx
 		FGVRInput.cxx
 	)
 	list(APPEND HEADERS
+		FGVRButton.hxx
 		FGVRInput.hxx
 	)
 endif()
