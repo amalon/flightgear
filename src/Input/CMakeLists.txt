@@ -85,10 +85,12 @@ if (ENABLE_OSGXR)
 	list(APPEND SOURCES
 		FGVRButton.cxx
 		FGVRInput.cxx
+		FGVRPoseEuler.cxx
 	)
 	list(APPEND HEADERS
 		FGVRButton.hxx
 		FGVRInput.hxx
+		FGVRPoseEuler.hxx
 	)
 endif()
 

@@ -34,6 +34,7 @@
 #include <cmath>
 
 #include "FGVRButton.hxx"
+#include "FGVRPoseEuler.hxx"
 
 using flightgear::CameraGroup;
 using flightgear::VRManager;
@@ -733,6 +734,9 @@ void FGVRInput::Mode::SubactionInfo::readProcesses(Mode* mode,
         if (processType == "button") {
             process = new FGVRButton(mode, _subaction, processNode,
                                      processStatusNode);
+        } else if (processType == "pose_euler") {
+            process = new FGVRPoseEuler(mode, _subaction, processNode,
+                                        processStatusNode);
         } else {
             SG_LOG(SG_INPUT, SG_WARN,
                    "Unknown VR mode process type \"" << processType << "\" VR mode " << mode->getPath() << " process " << processName);
