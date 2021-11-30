@@ -87,7 +87,7 @@ bool FGAIFlightPlan::create(FGAIAircraft * ac, FGAirport * dep,
                           aircraftType, airline);
         break;
     case 3:
-        retVal = createTakeOff(ac, firstFlight, dep, speed, fltType);
+        retVal = createTakeOff(ac, firstFlight, dep, SGGeod::fromDeg(longitude, latitude), speed, fltType);
         break;
     case 4:
         retVal = createClimb(ac, firstFlight, dep, arr, speed, alt, fltType);
@@ -239,6 +239,7 @@ void FGAIFlightPlan::createDefaultTakeoffTaxi(FGAIAircraft * ac,
     wpt->setFlaps(0.5f);
     pushBackWaypoint(wpt);
 
+
     // Acceleration point, 105 meters into the runway,
     SGGeod accelPoint = aRunway->pointOnCenterline(105.0);
     wpt = createOnRunway(ac, "Accel", accelPoint, airportElev,
@@ -317,11 +318,11 @@ bool FGAIFlightPlan::createTakeoffTaxi(FGAIAircraft * ac, bool firstFlight,
             } else if (lastNodeVisited) {
                 node = lastNodeVisited;
             } else {
-                SG_LOG(SG_AI, SG_WARN, "Taxiroute could not be constructed no lastNodeVisited.");
+                SG_LOG(SG_AI, SG_WARN, "Taxiroute could not be constructed no lastNodeVisited at " << (apt?apt->getId():"????") << gate.isValid());
             }
         }
     } else {
-        SG_LOG(SG_AI, SG_WARN, "Taxiroute could not be constructed no parking.");
+        SG_LOG(SG_AI, SG_WARN, "Taxiroute could not be constructed no parking." << (apt?apt->getId():"????"));
     }
     
     FGTaxiRoute taxiRoute;
@@ -388,8 +389,16 @@ bool FGAIFlightPlan::createTakeoffTaxi(FGAIAircraft * ac, bool firstFlight,
         }
         pushBackWaypoint(wpt);
     }
+    double accell_point = 105.0;
     // Acceleration point, 105 meters into the runway,
-    SGGeod accelPoint = rwy->pointOnCenterlineDisplaced(105.0);
+    SGGeod entryPoint = waypoints.back()->getPos(); 
+    SGGeod runwayEnd = rwy->pointOnCenterlineDisplaced(0);
+    double distM = SGGeodesy::distanceM(entryPoint, runwayEnd);
+    if (distM > accell_point) {
+        SG_LOG(SG_AI, SG_BULK, "Distance down runway " << distM << " " << accell_point);
+        accell_point += distM;
+    }
+    SGGeod accelPoint = rwy->pointOnCenterlineDisplaced(accell_point);
     FGAIWaypoint *wpt = createOnRunway(ac, "Accel", accelPoint, apt->getElevation(), ac->getPerformance()->vRotate());
     wpt->setFlaps(0.5f);
     pushBackWaypoint(wpt);
@@ -468,8 +477,8 @@ bool FGAIFlightPlan::createLandingTaxi(FGAIAircraft * ac, FGAirport * apt,
    // int route;
     for (int i = 0; i < size - 2; i++) {
         taxiRoute.next(node, &route);
-        char buffer[20];
-        snprintf(buffer, 20, "landingtaxi-%d-%d",  node->getIndex(), i);
+        char buffer[32];
+        snprintf(buffer, sizeof(buffer), "landingtaxi-%d-%d",  node->getIndex(), i);
         FGAIWaypoint *wpt =
             createOnGround(ac, buffer, node->geod(), apt->getElevation(),
                            ac->getPerformance()->vTaxi());
@@ -511,12 +520,15 @@ static double pitchDistance(double pitchAngleDeg, double altGainM)
  *  more likely however. 
  * 
  ******************************************************************/
-bool FGAIFlightPlan::createTakeOff(FGAIAircraft * ac, bool firstFlight,
-                                   FGAirport * apt, double speed,
+bool FGAIFlightPlan::createTakeOff(FGAIAircraft * ac, 
+                                   bool firstFlight,
+                                   FGAirport * apt,
+                                   const SGGeod& pos,
+                                   double speed,
                                    const string & fltType)
 {
     SG_LOG(SG_AI, SG_BULK, "createTakeOff " << apt->getId() << "/" << activeRunway);
-    const double ACCEL_POINT = 105.0;
+    double accell_point = 105.0;
   // climb-out angle in degrees. could move this to the perf-db but this
   // value is pretty sane
     const double INITIAL_PITCH_ANGLE = 10.0;
@@ -557,9 +569,18 @@ bool FGAIFlightPlan::createTakeOff(FGAIAircraft * ac, bool firstFlight,
         return false;
     
     double airportElev = apt->getElevation();
+
+    if (pos.isValid()) {
+       SGGeod runwayEnd = rwy->pointOnCenterlineDisplaced(0);
+       double distM = SGGeodesy::distanceM(pos, runwayEnd);
+       if (distM > accell_point) {
+            SG_LOG(SG_AI, SG_BULK, "Distance down runway " << distM << " " << accell_point);
+            accell_point += distM;
+       }
+    }
     
     // distance from the runway threshold to accelerate to rotation speed.
-    double d = accelDistance(vTaxiMetric, vRotateMetric, accelMetric) + ACCEL_POINT;
+    double d = accelDistance(vTaxiMetric, vRotateMetric, accelMetric) + accell_point;
     SGGeod rotatePoint = rwy->pointOnCenterlineDisplaced(d);
     wpt = createOnRunway(ac, "rotate", rotatePoint, airportElev, vRotate);
     wpt->setFlaps(0.5f);
@@ -1042,9 +1063,9 @@ bool FGAIFlightPlan::createLanding(FGAIAircraft * ac, FGAirport * apt,
   
     double rolloutDistance = accelDistance(vTouchdownMetric, vTaxiMetric, decelMetric);
   
-    int nPoints = 50;
+    int nPoints = (int)(rolloutDistance/30);
     for (int i = 1; i < nPoints; i++) {
-        snprintf(buffer, 12, "landing03%d", i);
+        snprintf(buffer, 12, "landing%03d", i);
         double t = ((double) i) / nPoints;
         coord = rwy->pointOnCenterline(touchdownDistance + (rolloutDistance * t));
         double vel = (vTouchdownMetric * (1.0 - t)) + (vTaxiMetric * t);

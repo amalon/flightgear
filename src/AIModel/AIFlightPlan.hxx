@@ -186,7 +186,7 @@ public:
   bool    create(FGAIAircraft *, FGAirport *dep, FGAirport *arr, int leg, double alt, double speed, double lat, double lon,
 		 bool firstLeg, double radius, const std::string& fltType, const std::string& aircraftType, const std::string& airline, double distance);
   bool createPushBack(FGAIAircraft *, bool, FGAirport*, double radius, const std::string&, const std::string&, const std::string&);
-  bool createTakeOff(FGAIAircraft *, bool, FGAirport *, double, const std::string&);
+  bool createTakeOff(FGAIAircraft *, bool, FGAirport *, const SGGeod& pos, double speed, const std::string& flightType);
 
   void setLeg(int val) { 
     SG_LOG(SG_AI, SG_BULK, "Set Leg " << leg);

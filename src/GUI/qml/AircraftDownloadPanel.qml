@@ -141,7 +141,7 @@ Item {
         anchors.left: button.right
         anchors.leftMargin: 6
         anchors.verticalCenter: button.verticalCenter
-        text: "Size: " + (root.packageSize / 0x100000).toFixed(1) + "MB"
+        text: qsTr("Size: ") + (root.packageSize / 0x100000).toFixed(1) + qsTr(" MB")
     }
 
     Column {
@@ -182,8 +182,8 @@ Item {
         StyledText {
             id: statusText
             visible: false
-            text: (compact ? "" : "Downloaded ") + (root.downloadedBytes / 0x100000).toFixed(1) +
-                  "MB of " + (root.packageSize / 0x100000).toFixed(1) + "MB";
+            text: (compact ? "" : qsTr("Downloaded ")) + (root.downloadedBytes / 0x100000).toFixed(1) +
+                  qsTr(" MB of ") + (root.packageSize / 0x100000).toFixed(1) + qsTr(" MB");
         }
     } // item container for progress bar and text
 

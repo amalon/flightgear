@@ -35,24 +35,8 @@
 #include <Time/bodysolver.hxx>
 
 #include <algorithm>
-
-#ifdef HAVE_UNISTD_H
-    #include <unistd.h>    // for gettimeofday() and the _POSIX_TIMERS define
-#endif
-
-#ifdef HAVE_SYS_TIME_H
-    #include <sys/time.h>  // for get/setitimer, gettimeofday, struct timeval
-#endif
-
-#if defined(_POSIX_TIMERS) && (0 < _POSIX_TIMERS)
-    #include <time.h>
-#endif
-
-#ifdef WIN32
-    #include <windows.h>
-    #include <mmsystem.h>
-#endif
-
+#include <chrono>
+#include <thread>
 
 
 static bool do_timeofday (const SGPropertyNode * arg, SGPropertyNode * root)
@@ -227,70 +211,10 @@ void TimeManager::valueChanged(SGPropertyNode* aProp)
 //
 static double TimeUTC()
 {
-    time_t      sec;
-    unsigned    nsec;
-    
-    #ifdef _WIN32
-        static bool qpc_init = false;
-        static LARGE_INTEGER s_frequency;
-        static BOOL s_use_qpc;
-        if (!qpc_init) {
-            s_use_qpc = QueryPerformanceFrequency(&s_frequency);
-            qpc_init = true;
-        }
-        if (qpc_init && s_use_qpc) {
-            LARGE_INTEGER now;
-            QueryPerformanceCounter(&now);
-            sec = now.QuadPart / s_frequency.QuadPart;
-            nsec = (1000000000LL * (now.QuadPart - sec * s_frequency.QuadPart)) / s_frequency.QuadPart;
-        }
-        else {
-            unsigned int msec = timeGetTime();
-            sec = msec / 1000;
-            nsec = (msec - sec * 1000) * 1000 * 1000;
-        }
-    #elif defined(_POSIX_TIMERS) && (0 < _POSIX_TIMERS)
-        struct timespec ts;
-        clock_gettime(CLOCK_REALTIME, &ts);
-        sec = ts.tv_sec;
-        nsec = ts.tv_nsec;
-    #elif defined( HAVE_GETTIMEOFDAY ) // openbsd
-        struct timeval current;
-        gettimeofday(&current, NULL);
-        sec = current.tv_sec;
-        nsec = current.tv_usec * 1000;
-    #elif defined( HAVE_GETLOCALTIME )
-        SYSTEMTIME current;
-        GetLocalTime(&current);
-        sec = current.wSecond;
-        nsec = current.wMilliseconds * 1000 * 1000;
-    #else
-        #error Unable to find UTC time.
-    #endif
-    return sec + nsec * 1.0e-9;
-}
-
-static void SleepUTC(double t)
-{
-    #ifdef _WIN32
-    int msec = (int) (t * 1000);
-    if (msec > 0) {
-        Sleep(msec);
-    }
-    #else
-    time_t sec = (time_t) floor(t);
-    int nsec = (t - sec) * 1e9;
-    struct timespec ts = { sec, nsec };
-    for(;;) {
-        struct timespec rem;
-        int e = nanosleep(&ts, &rem);
-        if (e == 0) {
-            break;
-        }
-        assert(errno == -EINTR);
-        ts = rem;
-    }
-    #endif
+    auto t = std::chrono::system_clock::now().time_since_epoch();
+    typedef std::chrono::duration<double, std::ratio<1, 1>>  duration_hz_fp;
+    auto ret = std::chrono::duration_cast<duration_hz_fp>(t);
+    return ret.count();
 }
 
 void TimeManager::computeTimeDeltasSimple(double& simDt, double& realDt)
@@ -317,8 +241,7 @@ void TimeManager::computeTimeDeltasSimple(double& simDt, double& realDt)
             double delay_end = _simple_time_utc + 1.0/max_frame_rate;
             if (delay_end > t) {
                 sleep_time = delay_end - t;
-                //SGTimeStamp::sleepForMSec(sleep_time * 1000);
-                SleepUTC(sleep_time);
+                std::this_thread::sleep_for(std::chrono::milliseconds((int) (sleep_time * 1000)));
                 t = delay_end;
             }
         }

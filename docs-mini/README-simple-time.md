@@ -11,7 +11,7 @@ For example in multiplayer refueling, each pilot will see the same relative posi
 
 ## Using simple-time
 
-Simple-time is enabled in the "Time" dialogue (from menu "File/Time"), or from the command line with: `--prop:bool:/sim/time/simple-time/enabled=true`.
+Simple-time is enabled in the "Time Mode" dialogue (from menu "File/Time Mode"), or from the command line with: `--prop:bool:/sim/time/simple-time/enabled=true`.
 
 
 There are no configuration settings.

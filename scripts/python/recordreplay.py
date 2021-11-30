@@ -111,7 +111,8 @@ class Fg:
         '''
         self.child = None
         self.aircraft = aircraft
-        args += f' --aircraft={aircraft}'
+        if aircraft:
+            args += f' --aircraft={aircraft}'
         
         if telnet_port is None:
             telnet_port = 5500

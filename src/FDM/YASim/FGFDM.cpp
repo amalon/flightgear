@@ -63,13 +63,12 @@ FGFDM::~FGFDM()
 }
 
 void FGFDM::property_associations(
-        void* ref,
-        void (*fn)(void* ref, const std::string& from, const std::string& to)
+        std::function<void(const std::string& from, const std::string& to)> fn
         )
 {
     for (auto& a: _property_to_properties) {
         for (auto& b: a.second) {
-            fn(ref, a.first, b);
+            fn(a.first, b);
         }
     }
 }

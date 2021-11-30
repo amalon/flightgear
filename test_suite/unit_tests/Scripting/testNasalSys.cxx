@@ -203,3 +203,27 @@ void NasalSysTests::testCompileLarge()
 //    )");
 //    CPPUNIT_ASSERT(ok);
 }
+
+
+void NasalSysTests::testRoundFloor()
+{
+    auto nasalSys = globals->get_subsystem<FGNasalSys>();
+    nasalSys->getAndClearErrorList();
+
+    bool ok = FGTestApi::executeNasal(R"(
+        unitTest.assert_equal(math.round(121266, 1000), 121000);
+        unitTest.assert_equal(math.round(121.1234, 0.01), 121.12);
+        unitTest.assert_equal(math.round(121266, 10), 121270);
+    
+        unitTest.assert_equal(math.floor(121766, 1000), 121000);
+        unitTest.assert_equal(math.floor(121.1299, 0.01), 121.12);
+    
+        # floor towards lower value
+        unitTest.assert_equal(math.floor(-121.1229, 0.01), -121.13);
+    
+        # truncate towards zero
+        unitTest.assert_equal(math.trunc(-121.1229, 0.01), -121.12);
+        unitTest.assert_equal(math.trunc(-121.1299, 0.01), -121.12);
+    )");
+    CPPUNIT_ASSERT(ok);
+}

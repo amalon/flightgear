@@ -234,8 +234,7 @@ FGInterface::common_init ()
 }
 
 void FGInterface::property_associations(
-        void* ref,
-        void (*fn)(void* ref, const std::string& from, const std::string& to)
+        std::function<void(const std::string& from, const std::string& to)> fn
         )
 {
     /* Do nothing by default. */

@@ -214,7 +214,7 @@ void FGOutputFG::SocketDataFill(FGNetFDM* net)
   net->stall_warning = 0.0;  // 0.0 - 1.0 indicating the amount of stall
   net->slip_deg    = (float)(Auxiliary->Getbeta(inDegrees));  // slip ball deflection, deg
 
-  net->num_engines = min(FGNetFDM::FG_MAX_ENGINES,Propulsion->GetNumEngines()); // Number of valid engines
+  net->num_engines = min((unsigned) FGNetFDM::FG_MAX_ENGINES, Propulsion->GetNumEngines()); // Number of valid engines
 
   for (i=0; i<net->num_engines; i++) {
     FGEngine* engine = Propulsion->GetEngine(i);
@@ -254,7 +254,7 @@ void FGOutputFG::SocketDataFill(FGNetFDM* net)
     }
   }
 
-  net->num_tanks = min(FGNetFDM::FG_MAX_TANKS, Propulsion->GetNumTanks());   // Max number of fuel tanks
+  net->num_tanks = min((unsigned) FGNetFDM::FG_MAX_TANKS, Propulsion->GetNumTanks());   // Max number of fuel tanks
 
   for (i=0; i<net->num_tanks; i++) {
     net->fuel_quantity[i] = (float)(((FGTank *)Propulsion->GetTank(i))->GetContents());

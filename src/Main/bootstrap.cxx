@@ -268,10 +268,13 @@ int main ( int argc, char **argv )
   _bootstrap_OSInit = 0;
     
 #if defined(HAVE_SENTRY)
-  std::cerr << "Will init sentry" << std::endl;
-  flightgear::initSentry();
-  std::cerr << "Did init sentry" << std::endl;
-#endif
+  const bool noSentry = flightgear::Options::checkForArg(argc, argv, "disable-sentry");
+  if (!noSentry) {
+      std::cerr << "Will init sentry" << std::endl;
+      flightgear::initSentry();
+      std::cerr << "Did init sentry" << std::endl;
+  }
+  #endif
 
 // if we're not using the normal crash-reported, install our
 // custom segfault handler on Linux, in debug builds.

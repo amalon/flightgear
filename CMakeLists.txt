@@ -191,7 +191,7 @@ option(ENABLE_DEMCONVERT "Set to ON to build the dem conversion tool (default)" 
 option(ENABLE_HID_INPUT  "Set to ON to build HID-based input code" ${EVENT_INPUT_DEFAULT})
 option(ENABLE_PLIB_JOYSTICK  "Set to ON to enable legacy joystick code (default)" ON)
 option(ENABLE_SWIFT      "Set to ON to build the swift module" ON)
-
+option(ENABLE_SENTRY     "Set to ON to build the Sentry.io crash reporting" ON)
 
 # Test-suite options.
 option(ENABLE_AUTOTESTING "Set to ON to execute the test suite after building the test_suite target (default)" ON)
@@ -271,6 +271,9 @@ find_package(OpenSceneGraph 3.6.0 REQUIRED
   osgGA
 )
 
+##############################################################################
+## Sentry.io setup
+if (ENABLE_SENTRY)
 find_package(sentry QUIET)
 
 set(sentry_api_key "https://b10d9504e71244a7a86ba6c93acf6412@o372956.ingest.sentry.io/5188535")
@@ -278,6 +281,7 @@ if (TARGET sentry::sentry)
     message(STATUS "Sentry.io crash reporting enabled")
     set(HAVE_SENTRY 1)
 endif()
+endif (ENABLE_SENTRY)
 
 ##############################################################################
 ## Sqlite3 setup

@@ -382,6 +382,7 @@ FGReplay::init()
     speed_up             = fgGetNode("/sim/speed-up",            true);
     replay_multiplayer   = fgGetNode("/sim/replay/record-multiplayer",  true);
     recovery_period      = fgGetNode("/sim/replay/recovery-period", true);
+    log_frame_times      = fgGetNode("/sim/replay/log-frame-times", true);
 
     // alias to keep backward compatibility
     fgGetNode("/sim/freeze/replay-state", true)->alias(replay_master);
@@ -551,6 +552,11 @@ bool
 FGReplay::start(bool NewTape)
 {
     // freeze the fdm, resume from sim pause
+    if (log_frame_times->getBoolValue())
+    {
+        // Clear existing log.
+        log_frame_times->removeAllChildren();
+    }
     double StartTime = get_start_time();
     double EndTime = get_end_time();
     was_finished_already = false;
@@ -1150,6 +1156,14 @@ FGReplay::update( double dt )
 
     // remember recent state
     last_replay_state = replay_state;
+
+    if (replay_state == 1)  // normal replay
+    {
+        if (log_frame_times->getBoolValue())
+        {
+            log_frame_times->addChild("dt")->setDoubleValue(dt);
+        }
+    }
 
     switch(replay_state)
     {

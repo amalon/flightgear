@@ -90,7 +90,7 @@ signals:
     void standaloneChanged(bool standalone);
 
 protected:
-    void itemChange(QQuickItem::ItemChange change, const QQuickItem::ItemChangeData &value);
+    void itemChange(QQuickItem::ItemChange change, const QQuickItem::ItemChangeData &value) override;
 
 private:
     void registerWithScope();

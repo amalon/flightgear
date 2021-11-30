@@ -36,6 +36,8 @@ JSB  1/9/00          Created
 INCLUDES
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
+#include <assert.h>
+
 #include "FGTable.h"
 #include "input_output/FGXMLElement.h"
 
@@ -107,9 +109,23 @@ FGTable::FGTable(const FGTable& t) : PropertyManager(t.PropertyManager)
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+unsigned int FindNumColumns(const string& test_line)
+{
+  // determine number of data columns in table (first column is row lookup - don't count)
+  size_t position=0;
+  unsigned int nCols=0;
+  while ((position = test_line.find_first_not_of(" \t", position)) != string::npos) {
+    nCols++;
+    position = test_line.find_first_of(" \t", position);
+  }
+  return nCols;
+}
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 FGTable::FGTable(FGPropertyManager* propMan, Element* el,
-                 const std::string& prefix)
-  : PropertyManager(propMan), Prefix(prefix)
+                 const std::string& Prefix)
+  : PropertyManager(propMan)
 {
   unsigned int i;
 
@@ -142,7 +158,7 @@ FGTable::FGTable(FGPropertyManager* propMan, Element* el,
     std::cerr << el->ReadFrom()
               <<"  An unknown table type attribute is listed: " << call_type
               << endl;
-    throw("Execution cannot continue.");
+    throw TableException("Unknown table type.");
   }
 
   // Determine and store the lookup properties for this table unless this table
@@ -157,10 +173,11 @@ FGTable::FGTable(FGPropertyManager* propMan, Element* el,
     // The 'internal' attribute of the table element cannot be specified
     // at the same time that independentVars are specified.
     if (internal) {
-      cerr << endl << fgred << "  This table specifies both 'internal' call type" << endl;
-      cerr << "  and specific lookup properties via the 'independentVar' element." << endl;
-      cerr << "  These are mutually exclusive specifications. The 'internal'" << endl;
-      cerr << "  attribute will be ignored." << fgdef << endl << endl;
+      cerr  << el->ReadFrom()
+            << fgred << "  This table specifies both 'internal' call type" << endl
+            << "  and specific lookup properties via the 'independentVar' element." << endl
+            << "  These are mutually exclusive specifications. The 'internal'" << endl
+            << "  attribute will be ignored." << fgdef << endl << endl;
       internal = false;
     }
 
@@ -182,7 +199,7 @@ FGTable::FGTable(FGPropertyManager* propMan, Element* el,
       } else if (lookup_axis == string("table")) {
         lookupProperty[eTable] = node;
       } else if (!lookup_axis.empty()) {
-        throw("Lookup table axis specification not understood: " + lookup_axis);
+        throw TableException("Lookup table axis specification not understood: " + lookup_axis);
       } else { // assumed single dimension table; row lookup
         lookupProperty[eRow] = node;
       }
@@ -202,7 +219,8 @@ FGTable::FGTable(FGPropertyManager* propMan, Element* el,
       if (FindNumColumns(test_line) == 2) dimension = 1;    // 1D table
       else if (FindNumColumns(test_line) > 2) dimension = 2; // 2D table
       else {
-        cerr << "Invalid number of columns in table" << endl;
+        std::cerr << tableData->ReadFrom()
+                  << "Invalid number of columns in table" << endl;
       }
     }
 
@@ -211,7 +229,10 @@ FGTable::FGTable(FGPropertyManager* propMan, Element* el,
     if (brkpt_string.empty()) {
      // no independentVars found, and table is not marked as internal, nor is it
      // a 3D table
-      throw("No independent variable found for table.");
+      std::cerr << el->ReadFrom()
+                << "No independentVars found, and table is not marked as internal,"
+                << " nor is it a 3D table." << endl;
+      throw TableException("No independent variable found for table.");
     }
   }
   // end lookup property code
@@ -243,9 +264,15 @@ FGTable::FGTable(FGPropertyManager* propMan, Element* el,
 
     if (nRows >= 2) {
       nCols = FindNumColumns(tableData->GetDataLine(0));
-      if (nCols < 2) throw(string("Not enough columns in table data."));
+      if (nCols < 2) {
+        std::cerr << tableData->ReadFrom()
+                  << "Not enough columns in table data" << endl;
+        throw TableException("Not enough columns in table data.");
+      }
     } else {
-      throw(string("Not enough rows in the table data."));
+      std::cerr << tableData->ReadFrom()
+                << "Not enough rows in table data" << endl;
+      throw TableException("Not enough rows in the table data.");
     }
 
     Type = tt2D;
@@ -296,14 +323,14 @@ FGTable::FGTable(FGPropertyManager* propMan, Element* el,
   if (dimension > 2) {
     for (b=2; b<=nTables; ++b) {
       if (Data[b][1] <= Data[b-1][1]) {
-        stringstream errormsg;
-        errormsg << fgred << highint << endl
-             << "  FGTable: breakpoint lookup is not monotonically increasing" << endl
-             << "  in breakpoint " << b;
-        if (nameel != 0) errormsg << " of table in " << nameel->GetAttributeValue("name");
-        errormsg << ":" << reset << endl
-                 << "  " << Data[b][1] << "<=" << Data[b-1][1] << endl;
-        throw(errormsg.str());
+        std::cerr << el->ReadFrom()
+                  << fgred << highint 
+                  << "  FGTable: breakpoint lookup is not monotonically increasing" << endl
+                  << "  in breakpoint " << b;
+        if (nameel != 0) std::cerr << " of table in " << nameel->GetAttributeValue("name");
+        std::cerr << ":" << reset << endl
+                  << "  " << Data[b][1] << "<=" << Data[b-1][1] << endl;
+        throw TableException("Breakpoint lookup is not monotonically increasing");
       }
     }
   }
@@ -312,14 +339,14 @@ FGTable::FGTable(FGPropertyManager* propMan, Element* el,
   if (dimension > 1) {
     for (c=2; c<=nCols; ++c) {
       if (Data[0][c] <= Data[0][c-1]) {
-        stringstream errormsg;
-        errormsg << fgred << highint << endl
-             << "  FGTable: column lookup is not monotonically increasing" << endl
-             << "  in column " << c;
-        if (nameel != 0) errormsg << " of table in " << nameel->GetAttributeValue("name");
-        errormsg << ":" << reset << endl
-                 << "  " << Data[0][c] << "<=" << Data[0][c-1] << endl;
-        throw(errormsg.str());
+        std::cerr << el->ReadFrom()
+                  << fgred << highint 
+                  << "  FGTable: column lookup is not monotonically increasing" << endl
+                  << "  in column " << c;
+        if (nameel != 0) std::cerr << " of table in " << nameel->GetAttributeValue("name");
+        std::cerr << ":" << reset << endl
+                  << "  " << Data[0][c] << "<=" << Data[0][c-1] << endl;
+        throw TableException("FGTable: column lookup is not monotonically increasing");
       }
     }
   }
@@ -328,19 +355,19 @@ FGTable::FGTable(FGPropertyManager* propMan, Element* el,
   if (dimension < 3) { // in 3D tables, check only rows of subtables
     for (r=2; r<=nRows; ++r) {
       if (Data[r][0]<=Data[r-1][0]) {
-        stringstream errormsg;
-        errormsg << fgred << highint << endl
-             << "  FGTable: row lookup is not monotonically increasing" << endl
-             << "  in row " << r;
-        if (nameel != 0) errormsg << " of table in " << nameel->GetAttributeValue("name");
-        errormsg << ":" << reset << endl
-                 << "  " << Data[r][0] << "<=" << Data[r-1][0] << endl;
-        throw(errormsg.str());
+        std::cerr << el->ReadFrom()
+                  << fgred << highint 
+                  << "  FGTable: row lookup is not monotonically increasing" << endl
+                  << "  in row " << r;
+        if (nameel != 0) std::cerr << " of table in " << nameel->GetAttributeValue("name");
+        std::cerr << ":" << reset << endl
+                  << "  " << Data[r][0] << "<=" << Data[r-1][0] << endl;
+        throw TableException("FGTable: row lookup is not monotonically increasing");
       }
     }
   }
 
-  bind(el);
+  bind(el, Prefix);
 
   if (debug_lvl & 1) Print();
 }
@@ -363,6 +390,13 @@ double** FGTable::Allocate(void)
 
 FGTable::~FGTable()
 {
+  // Untie the bound property so that it makes no further reference to this
+  // instance of FGTable after the destruction is completed.
+  if (!Name.empty() && !internal) {
+    string tmp = mkPropertyName(nullptr, "");
+    PropertyManager->Untie(tmp);
+  }
+
   if (nTables > 0) {
     for (unsigned int i=0; i<nTables; i++) delete Tables[i];
     Tables.clear();
@@ -375,20 +409,6 @@ FGTable::~FGTable()
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-unsigned int FGTable::FindNumColumns(const string& test_line)
-{
-  // determine number of data columns in table (first column is row lookup - don't count)
-  size_t position=0;
-  unsigned int nCols=0;
-  while ((position = test_line.find_first_not_of(" \t", position)) != string::npos) {
-    nCols++;
-    position = test_line.find_first_of(" \t", position);
-  }
-  return nCols;
-}
-
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 double FGTable::GetValue(void) const
 {
   double temp = 0;
@@ -396,13 +416,19 @@ double FGTable::GetValue(void) const
 
   switch (Type) {
   case tt1D:
+    assert(lookupProperty[eRow]);
     temp = lookupProperty[eRow]->getDoubleValue();
     temp2 = GetValue(temp);
     return temp2;
   case tt2D:
+    assert(lookupProperty[eRow]);
+    assert(lookupProperty[eColumn]);
     return GetValue(lookupProperty[eRow]->getDoubleValue(),
                     lookupProperty[eColumn]->getDoubleValue());
   case tt3D:
+    assert(lookupProperty[eRow]);
+    assert(lookupProperty[eColumn]);
+    assert(lookupProperty[eTable]);
     return GetValue(lookupProperty[eRow]->getDoubleValue(),
                     lookupProperty[eColumn]->getDoubleValue(),
                     lookupProperty[eTable]->getDoubleValue());
@@ -432,7 +458,7 @@ double FGTable::GetValue(double key) const
   }
 
   // the key is somewhere in the middle, search for the right breakpoint
-  // The search is particularly efficient if 
+  // The search is particularly efficient if
   // the correct breakpoint has not changed since last frame or
   // has only changed very little
 
@@ -508,7 +534,7 @@ double FGTable::GetValue(double rowKey, double colKey, double tableKey) const
   }
 
   // the key is somewhere in the middle, search for the right breakpoint
-  // The search is particularly efficient if 
+  // The search is particularly efficient if
   // the correct breakpoint has not changed since last frame or
   // has only changed very little
 
@@ -625,28 +651,33 @@ void FGTable::Print(void)
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-void FGTable::bind(Element* el)
+string FGTable::mkPropertyName(Element* el, const std::string& Prefix)
+{
+  if (!Prefix.empty()) {
+    if (is_number(Prefix)) {
+      if (Name.find("#") != string::npos) { // if "#" is found
+        Name = replace(Name, "#", Prefix);
+      } else {
+        cerr << el->ReadFrom()
+              << "Malformed table name with number: " << Prefix
+              << " and property name: " << Name
+              << " but no \"#\" sign for substitution." << endl;
+      }
+    } else {
+      Name = Prefix + "/" + Name;
+    }
+  }
+
+  return PropertyManager->mkPropertyName(Name, false);
+}
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+void FGTable::bind(Element* el, const string& Prefix)
 {
   typedef double (FGTable::*PMF)(void) const;
   if ( !Name.empty() && !internal) {
-    string tmp;
-    if (Prefix.empty())
-      tmp  = PropertyManager->mkPropertyName(Name, false); // Allow upper
-    else {
-      if (is_number(Prefix)) {
-        if (Name.find("#") != string::npos) { // if "#" is found
-          Name = replace(Name,"#",Prefix);
-          tmp  = PropertyManager->mkPropertyName(Name, false); // Allow upper
-        } else {
-          cerr << el->ReadFrom()
-               << "Malformed table name with number: " << Prefix
-               << " and property name: " << Name
-               << " but no \"#\" sign for substitution." << endl;
-        }
-      } else {
-        tmp  = PropertyManager->mkPropertyName(Prefix + "/" + Name, false);
-      }
-    }
+    string tmp = mkPropertyName(el, Prefix);
 
     if (PropertyManager->HasNode(tmp)) {
       FGPropertyNode* _property = PropertyManager->GetNode(tmp);

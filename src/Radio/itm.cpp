@@ -1000,7 +1000,7 @@ double avar(double zzt, double zzl, double zzc, prop_type &prop, propv_type &pro
 			cfp1 = bfp1[temp_klim];
 			cfp2 = bfp2[temp_klim];
 			cfp3 = bfp3[temp_klim];
-			// fall throught
+			[[fallthrough]];
 
 		case 4:
 			// :33: Mode of variablity coefficients, page 17
@@ -1024,15 +1024,14 @@ double avar(double zzt, double zzl, double zzc, prop_type &prop, propv_type &pro
 				set_warn("kdv set to 0", 2);
 				prop.kwx = mymax(prop.kwx, 2);
 			}
-
-			// fall throught
+			[[fallthrough]];
 
 		case 3:
 			// :34: Frequency coefficients, page 18
 			q = log(0.133 * prop.k);
 			gm = cfm1 + cfm2 / ((cfm3 * q * cfm3 * q) + 1.0);
 			gp = cfp1 + cfp2 / ((cfp3 * q * cfp3 * q) + 1.0);
-			// fall throught
+			[[fallthrough]];
 
 		case 2:
 			// :35: System coefficients, page 18
@@ -1046,7 +1045,7 @@ double avar(double zzt, double zzl, double zzc, prop_type &prop, propv_type &pro
 			       sqrt(2*a_1 * prop.h_e[1]) +
 			       pow((575.7e12 / prop.k), THIRD);
 			}
-			// fall throught
+			[[fallthrough]];
 
 		case 1:
 			// :36: Distance coefficients, page 18

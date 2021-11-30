@@ -399,8 +399,8 @@ void FGAIFlightPlan::IncrementWaypoint(bool eraseWaypoints )
     int nextBearing = this->getBearing(currentWP, nextWP);
 
     nextTurnAngle = SGMiscd::normalizePeriodic(-180, 180, nextBearing - currentBearing);
-    if (previousWP->getSpeed()>0&&nextWP->getSpeed()<0 ||
-        previousWP->getSpeed()<0&&nextWP->getSpeed()>0) {
+    if ((previousWP->getSpeed() > 0 && nextWP->getSpeed() < 0) ||
+        (previousWP->getSpeed() < 0 && nextWP->getSpeed() > 0)) {
       nextTurnAngle += 180;
       SG_LOG(SG_AI, SG_BULK, "Add 180 to turn angle pushback end");       
     }

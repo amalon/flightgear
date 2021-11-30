@@ -1006,8 +1006,8 @@ PickList handlePickIntersections(Intersections& intersections)
         osg::NodePath::const_reverse_iterator npi;
 
         for (npi = np.rbegin(); npi != np.rend(); ++npi) {
-            if (!higlight_num_props) {
-                higlight_num_props = highlight->highlight_nodes(*npi);
+            if (!higlight_num_props && highlight) {
+                higlight_num_props = highlight->highlightNodes(*npi);
             }
             SGSceneUserData* ud = SGSceneUserData::getSceneUserData(*npi);
             if (!ud || (ud->getNumPickCallbacks() == 0))

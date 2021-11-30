@@ -74,6 +74,7 @@
 
 
 #include <cmath>
+#include <functional>
 
 #include <simgear/compiler.h>
 #include <simgear/constants.h>
@@ -440,12 +441,11 @@ public:
     //perform initializion that is common to all FDM's
     void common_init();
 
-    // Makes possibly multiple calls of fn(ref, ...) with pairs of property
-    // paths that are associated in the FDM. Default implementation does
-    // nothing. Used by the Highlight subsystem.
+    // Makes possibly multiple calls of fn() with pairs of property paths that
+    // are associated in the FDM. Default implementation does nothing. Used by
+    // the Highlight subsystem.
     virtual void property_associations(
-            void* ref,
-            void (*fn)(void* ref, const std::string& from, const std::string& to)
+            std::function<void(const std::string& from, const std::string& to)> fn
             );
 
     // Positions

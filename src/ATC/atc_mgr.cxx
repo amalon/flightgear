@@ -189,7 +189,7 @@ void FGATCManager::postinit()
             leg = 3;
             string fltType = "ga";
             fp->setRunway(runway);
-            fp->createTakeOff(userAircraft, false, dcs->parent(), 0, fltType);
+            fp->createTakeOff(userAircraft, false, dcs->parent(), {}, 0, fltType);
             userAircraft->setTakeOffStatus(2);
         } else {
             // We're on the ground somewhere. Handle this case later.

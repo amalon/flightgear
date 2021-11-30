@@ -175,7 +175,7 @@ void fgSetDefaults ()
     fgSetBool("/sim/startup/splash-screen", true);
     // we want mouse-pointer to have an undefined value if nothing is
     // specified so we can do the right thing for voodoo-1/2 cards.
-    // fgSetString("/sim/startup/mouse-pointer", "disabled");
+    // fgSetString("/sim/startup/mouse-pointer", "false");
     fgSetBool("/controls/flight/auto-coordination", false);
     fgSetString("/sim/logging/priority", "alert");
 
@@ -1602,7 +1602,7 @@ fgOptLoadTape(const char* arg)
     // load a flight recorder tape but wait until the fdm is initialized.
     //
     struct DelayedTapeLoader : SGPropertyChangeListener {
-    
+
         DelayedTapeLoader( const char * tape, simgear::HTTP::FileRequestRef filerequest) :
             _tape(SGPath::fromUtf8(tape)),
             _filerequest(filerequest)
@@ -1637,7 +1637,7 @@ fgOptLoadTape(const char* arg)
         SGPath _tape;
         simgear::HTTP::FileRequestRef _filerequest;
     };
-    
+
     SGPropertyNode_ptr properties(new SGPropertyNode);
     simgear::HTTP::FileRequestRef filerequest;
     SGTimeStamp timeout;
@@ -1664,7 +1664,7 @@ fgOptLoadTape(const char* arg)
         SG_LOG(SG_GENERAL, SG_MANDATORY_INFO, "Replaying url " << url << " using local path: " << path);
         filerequest.reset(new simgear::HTTP::FileRequest(url, path, true /*append*/));
         filerequest->setAcceptEncoding(""); // "" means request any supported compression.
-        
+
         long max_download_speed = fgGetLong("/sim/replay/download-max-bytes-per-sec");
         if (max_download_speed != 0) {
             // Can be useful to limite download speed for testing background
@@ -1679,7 +1679,7 @@ fgOptLoadTape(const char* arg)
                 << " filerequest->responseCode()=" << filerequest->responseCode()
                 << " filerequest->responseReason()=" << filerequest->responseReason()
                 );
-        
+
         // Load recording header, looping so that we wait for the initial
         // portion of the recording to be downloaded. We give up after a fixed
         // timeout.
@@ -1688,7 +1688,7 @@ fgOptLoadTape(const char* arg)
         for(;;) {
             // Run http client's update() to download any pending data.
             http->update(0);
-            
+
             // Try to load properties from recording header.
             int e = FGReplay::loadContinuousHeader(path, nullptr /*in*/, properties);
             if (e == 0) {
@@ -1704,7 +1704,7 @@ fgOptLoadTape(const char* arg)
                 // Replay from URL only works with Continuous recordings.
                 return FG_OPTIONS_EXIT;
             }
-            
+
             // If we get here, need to download some more.
             if (timeout.elapsedMSec() > (30 * 1000)) {
                 SG_LOG(SG_GENERAL, SG_POPUP, "Timeout while reading downloaded recording from " << url << ". local path=" << path);
@@ -1730,7 +1730,7 @@ fgOptLoadTape(const char* arg)
 
     // Arrange to load the recording after FDM has initialised.
     new DelayedTapeLoader(path.c_str(), filerequest);
-    
+
     return FG_OPTIONS_OK;
 }
 
@@ -1790,8 +1790,8 @@ struct OptionDesc {
     {"compositor",                   true,  OPTION_STRING, "/sim/rendering/default-compositor", false, "", 0 },
     {"disable-splash-screen",        false, OPTION_BOOL,   "/sim/startup/splash-screen", false, "", 0 },
     {"enable-splash-screen",         false, OPTION_BOOL,   "/sim/startup/splash-screen", true, "", 0 },
-    {"disable-mouse-pointer",        false, OPTION_STRING, "/sim/startup/mouse-pointer", false, "disabled", 0 },
-    {"enable-mouse-pointer",         false, OPTION_STRING, "/sim/startup/mouse-pointer", false, "enabled", 0 },
+    {"disable-mouse-pointer",        false, OPTION_STRING, "/sim/startup/mouse-pointer", false, "false", 0 },
+    {"enable-mouse-pointer",         false, OPTION_STRING, "/sim/startup/mouse-pointer", false, "true", 0 },
     {"disable-random-objects",       false, OPTION_BOOL,   "/sim/rendering/random-objects", false, "", 0 },
     {"enable-random-objects",        false, OPTION_BOOL,   "/sim/rendering/random-objects", true, "", 0 },
     {"disable-random-vegetation",    false, OPTION_BOOL,   "/sim/rendering/random-vegetation", false, "", 0 },
@@ -2446,7 +2446,7 @@ OptionResult Options::initAircraft()
         // can't validate this until the -set.xml is parsed
         fgSetString("/sim/aircraft-state", stateName);
     }
-    
+
     return FG_OPTIONS_OK;
 }
 

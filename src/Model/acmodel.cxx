@@ -98,7 +98,9 @@ struct VisitorHighlight : osg::NodeVisitor
         SG_LOG(SG_GENERAL, SG_DEBUG, spaces() << "group: " << group.libraryName() << "::" << group.className());
         for (auto name: m_highlight_names)
         {
-            m_highlight->add_property_node(name, &group);
+            if (m_highlight) {
+                m_highlight->addPropertyNode(name, &group);
+            }
         }
         m_level += 1;
         traverse(group);
@@ -138,7 +140,7 @@ struct VisitorHighlight : osg::NodeVisitor
     }
     unsigned int m_level = 0;   // Only used to indent diagnostics.
     std::vector<std::string> m_highlight_names;
-    Highlight* m_highlight;
+    Highlight* m_highlight = nullptr;
 };
 
 
