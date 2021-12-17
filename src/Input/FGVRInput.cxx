@@ -86,8 +86,10 @@ unsigned int FGVRInput::Subaction::popModesFront(FGVRInput::Mode *keepMode)
 
 void FGVRInput::Subaction::clearModes()
 {
-    while (!_modeStack.empty())
+    while (!_modeStack.empty()) {
         _modeStack.back()->deactivate(this);
+        _modeStack.pop_back();
+    }
 }
 
 void FGVRInput::Subaction::update(double dt)
