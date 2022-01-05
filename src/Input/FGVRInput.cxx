@@ -52,11 +52,11 @@ void FGVRInput::Subaction::setup(SGPropertyNode *node)
     _modesNode = node->getNode("modes", false);
 }
 
-const char *FGVRInput::Subaction::getPresetMode(const char *id)
+std::string FGVRInput::Subaction::getPresetMode(const std::string &id)
 {
     if (!_modesNode)
-        return nullptr;
-    return _modesNode->getStringValue(id, nullptr);
+        return "";
+    return _modesNode->getStringValue(id);
 }
 
 void FGVRInput::Subaction::pushMode(FGVRInput::Mode *mode)
@@ -109,8 +109,8 @@ FGVRInput::ActionSet::ActionSet(FGVRInput *input, osgXR::Manager *manager,
 {
     // Set up action set information
 
-    const char *name = node->getName();
-    const char *desc = node->getStringValue("desc", name);
+    const std::string &name = node->getNameString();
+    std::string desc = node->getStringValue("desc", name.c_str());
     int priority = node->getIntValue("priority", 0);
 
     setName(name, desc);
@@ -120,18 +120,18 @@ FGVRInput::ActionSet::ActionSet(FGVRInput *input, osgXR::Manager *manager,
     // Set up actions in the action set
 
     for (SGPropertyNode *actionNode: node->getChildren("action")) {
-        const char *actionName = actionNode->getStringValue("name");
-        const char *actionType = actionNode->getStringValue("type");
+        std::string actionName = actionNode->getStringValue("name");
+        std::string actionType = actionNode->getStringValue("type");
 
         // Create an action of the specified type
         osgXR::Action *action = nullptr;
-        if (!strcmp(actionType, "boolean")) {
+        if (actionType == "boolean") {
             action = new ActionBoolean(this, actionNode);
-        } else if (!strcmp(actionType, "float")) {
+        } else if (actionType == "float") {
             action = new ActionFloat(this, actionNode);
-        } else if (!strcmp(actionType, "vector2f")) {
+        } else if (actionType == "vector2f") {
             action = new ActionVector2f(this, actionNode);
-        } else if (!strcmp(actionType, "pose")) {
+        } else if (actionType == "pose") {
             action = new ActionPose(this, actionNode);
         } else {
             SG_LOG(SG_INPUT, SG_WARN,
@@ -187,7 +187,7 @@ const std::string &FGVRInput::ActionSet::getModule(Subaction *subaction)
     return module;
 }
 
-osgXR::Action *FGVRInput::ActionSet::findAction(const char *name)
+osgXR::Action *FGVRInput::ActionSet::findAction(const std::string &name)
 {
     auto it = _actionMap.find(name);
     if (it == _actionMap.end())
@@ -226,8 +226,8 @@ FGVRInput::ActionCommon::ActionCommon(osgXR::Action *action,
 {
     // Set up action information
 
-    const char *name = node->getStringValue("name");
-    const char *desc = node->getStringValue("desc", name);
+    std::string name = node->getStringValue("name");
+    std::string desc = node->getStringValue("desc", name.c_str());
 
     action->setName(name, desc);
 }
@@ -490,8 +490,8 @@ void FGVRInput::SubactionInfoPose::fireBindings()
 
 FGVRInput::InteractionProfile::InteractionProfile(FGVRInput *input,
                                                   osgXR::Manager *manager,
-                                                  const char *vendor,
-                                                  const char *type,
+                                                  const std::string &vendor,
+                                                  const std::string &type,
                                                   SGPropertyNode *node) :
     osgXR::InteractionProfile(manager, vendor, type)
 {
@@ -499,19 +499,19 @@ FGVRInput::InteractionProfile::InteractionProfile(FGVRInput *input,
     // The first level of child nodes are action set names
     for (int i = 0; i < node->nChildren(); ++i) {
         SGPropertyNode *actionSetNode = node->getChild(i);
-        const char *actionSetName = actionSetNode->getName();
+        const std::string &actionSetName = actionSetNode->getNameString();
         auto it = input->_actionSets.find(actionSetName);
         if (it != input->_actionSets.end()) {
             ActionSet *actionSet = (*it).second;
             // The next level of child nodes are action names
             for (int j = 0; j < actionSetNode->nChildren(); ++j) {
                 SGPropertyNode *actionNode = actionSetNode->getChild(j);
-                const char *actionName = actionNode->getName();
+                const std::string &actionName = actionNode->getNameString();
                 osgXR::Action *action = actionSet->findAction(actionName);
                 if (action) {
                     // Finally binding child nodes contain suggested bindings
                     for (auto bindingNode: actionNode->getChildren("binding")) {
-                        const char *binding = bindingNode->getStringValue();
+                        std::string binding = bindingNode->getStringValue();
                         suggestBinding(action, binding);
                     }
                 }
@@ -580,7 +580,7 @@ FGVRInput::ModeProcessInput::ModeProcessInput(FGVRInput::Mode *mode,
     _lastVec2f(0.0f, 0.0f)
 {
     for (SGPropertyNode *actionNode: node->getChildren("action")) {
-        const char *actionName = actionNode->getStringValue();
+        std::string actionName = actionNode->getStringValue();
         osgXR::Action *action = mode->getActionSet()->findAction(actionName);
         if (action) {
             _sources.push_back(std::make_unique<ModeProcessInputSourceAction>(
@@ -588,7 +588,7 @@ FGVRInput::ModeProcessInput::ModeProcessInput(FGVRInput::Mode *mode,
                                                                 action));
         } else {
             SG_LOG(SG_INPUT, SG_WARN,
-                   "No VR action \"" << actionName << "\" found in action-set \"" << mode->getActionSet()->getName() << "\" for VR mode " << mode->getPath() << " input " << node->getName());
+                   "No VR action \"" << actionName << "\" found in action-set \"" << mode->getActionSet()->getName() << "\" for VR mode " << mode->getPath() << " input " << node->getNameString());
         }
     }
 }
@@ -730,21 +730,21 @@ void FGVRInput::Mode::SubactionInfo::readProcesses(FGVRInput *input,
 {
     // Read input processing nodes
     for (SGPropertyNode *processNode: node->getChildren("process")) {
-        const char *processName = processNode->getStringValue("name");
-        const char *processType = processNode->getStringValue("type");
+        std::string processName = processNode->getStringValue("name");
+        std::string processType = processNode->getStringValue("type");
 
         SGPropertyNode *processStatusNode = statusNode->getNode(processName,
                                                                 true);
 
         // Create a process of the specified type
         ModeProcess *process = nullptr;
-        if (!strcmp(processType, "button")) {
+        if (processType == "button") {
             process = new FGVRButton(mode, _subaction, processNode,
                                      processStatusNode);
-        } else if (!strcmp(processType, "pick")) {
+        } else if (processType == "pick") {
             process = new FGVRPick(input, mode, _subaction, processNode,
                                    processStatusNode);
-        } else if (!strcmp(processType, "pose_euler")) {
+        } else if (processType == "pose_euler") {
             process = new FGVRPoseEuler(mode, _subaction, processNode,
                                         processStatusNode);
         } else {
@@ -813,8 +813,8 @@ void FGVRInput::Mode::SubactionInfo::deactivate()
 
 FGVRInput::Mode::Mode(FGVRInput *input,
                       osgXR::Manager *manager,
-                      const char *type,
-                      const char *mode,
+                      const std::string &type,
+                      const std::string &mode,
                       SGPropertyNode *node,
                       SGPropertyNode *dataNode)
 {
@@ -824,7 +824,7 @@ FGVRInput::Mode::Mode(FGVRInput *input,
     node->setStringValue("mode-path", _path);
 
     // Get the mode's default action-set
-    const char *actionSet = node->getStringValue("action-set");
+    std::string actionSet = node->getStringValue("action-set");
     auto it = input->_actionSets.find(actionSet);
     if (it != input->_actionSets.end()) {
         _actionSet = (*it).second;
@@ -1002,7 +1002,7 @@ void FGVRInput::init()
     SGPropertyNode_ptr actionSetsNode = vrNode->getNode("action-sets", true);
     for (int i = 0; i < actionSetsNode->nChildren(); ++i) {
         SGPropertyNode *actionSetNode = actionSetsNode->getChild(i);
-        const char *name = actionSetNode->getName();
+        const std::string &name = actionSetNode->getNameString();
         _actionSets[name] = new ActionSet(this, manager, actionSetNode);
     }
 
@@ -1010,10 +1010,10 @@ void FGVRInput::init()
     SGPropertyNode_ptr interactionProfilesNode = vrNode->getNode("interaction-profiles", true);
     for (int i = 0; i < interactionProfilesNode->nChildren(); ++i) {
         SGPropertyNode *vendorNode = interactionProfilesNode->getChild(i);
-        const char *vendor = vendorNode->getName();
+        const std::string &vendor = vendorNode->getNameString();
         for (int j = 0; j < vendorNode->nChildren(); ++j) {
             SGPropertyNode *profileNode = vendorNode->getChild(j);
-            const char *type = profileNode->getName();
+            const std::string &type = profileNode->getNameString();
             _profiles.push_back(new InteractionProfile(this, manager, vendor,
                                                        type, profileNode));
         }
@@ -1027,11 +1027,11 @@ void FGVRInput::init()
     SGPropertyNode *modeCopy = vrNode->getNode("mode-data", true);
     for (int i = 0; i < modesNode->nChildren(); ++i) {
         SGPropertyNode *typeNode = modesNode->getChild(i);
-        const char *type = typeNode->getName();
+        const std::string &type = typeNode->getNameString();
         SGPropertyNode *typeCopy = modeCopy->getNode(type, true);
         for (int j = 0; j < typeNode->nChildren(); ++j) {
             SGPropertyNode *modeNode = typeNode->getChild(j);
-            const char *modeName = modeNode->getName();
+            const std::string &modeName = modeNode->getNameString();
             SGPropertyNode *modeCopy = typeCopy->getNode(modeName, true);
             auto *mode = new Mode(this, manager, type, modeName, modeNode,
                                   modeCopy);
@@ -1043,12 +1043,12 @@ void FGVRInput::init()
 
     // Set up subactions
     for (SGPropertyNode *subactionNode: vrNode->getChildren("subaction")) {
-        const char *subactionPath = subactionNode->getStringValue("path");
+        std::string subactionPath = subactionNode->getStringValue("path");
         Subaction *subaction = getSubaction(manager, subactionPath);
         subaction->setup(subactionNode);
 
         // Set default mode
-        const char *defaultMode = subaction->getPresetMode("default");
+        std::string defaultMode = subaction->getPresetMode("default");
         auto it = _modes.find(defaultMode);
         if (it != _modes.end())
             subaction->pushMode((*it).second);
@@ -1098,18 +1098,17 @@ void FGVRInput::update(double dt)
 }
 
 FGVRInput::Mode *FGVRInput::getTranslatedMode(FGVRInput::Subaction *subaction,
-                                              const char *modePath)
+                                              const std::string &modePath)
 {
-    if (!modePath)
+    if (modePath.empty())
         return nullptr;
 
     // Try translating mode via the subaction presets
-    const char *translatedModePath = subaction->getPresetMode(modePath);
-    if (translatedModePath)
-        modePath = translatedModePath;
+    std::string translatedModePath = subaction->getPresetMode(modePath);
 
     // Find the mode object
-    auto it = _modes.find(modePath);
+    auto it = _modes.find(translatedModePath.empty()
+                          ? modePath : translatedModePath);
     if (it != _modes.end())
         return (*it).second;
 
@@ -1120,31 +1119,31 @@ void FGVRInput::findModeSubaction(const SGPropertyNode *node,
                                   FGVRInput::Mode **outMode,
                                   FGVRInput::Subaction **outSubaction)
 {
-    const char *modePath = nullptr;
-    const char *subactionPath = nullptr;
+    std::string modePath;
+    std::string subactionPath;
     if (outSubaction)
-        subactionPath = node->getStringValue("subaction-path", nullptr);
+        subactionPath = node->getStringValue("subaction-path");
 
-    if (outMode || (outSubaction && !subactionPath)) {
+    if (outMode || (outSubaction && subactionPath.empty())) {
         // Search upward for a parent with mode-path
         const SGPropertyNode *parent;
         for (parent = node->getParent(); parent; parent = parent->getParent()) {
-            modePath = parent->getStringValue("mode-path", nullptr);
-            if (modePath)
+            modePath = parent->getStringValue("mode-path");
+            if (!modePath.empty())
                 break;
         }
-        if (parent && outSubaction && !subactionPath)
-            subactionPath = parent->getStringValue("subaction-path", nullptr);
+        if (parent && outSubaction && subactionPath.empty())
+            subactionPath = parent->getStringValue("subaction-path");
     }
 
-    if (outMode && modePath) {
+    if (outMode && !modePath.empty()) {
         // Find the mode
         auto it = _modes.find(modePath);
         if (it != _modes.end())
             *outMode = (*it).second;
     }
 
-    if (outSubaction && subactionPath) {
+    if (outSubaction && !subactionPath.empty()) {
         // Find the subaction
         auto it = _subactions.find(subactionPath);
         if (it != _subactions.end())
@@ -1166,8 +1165,7 @@ bool FGVRInput::handleModePushCommand(const SGPropertyNode *arg,
     }
 
     // Find the destination mode
-    Mode *mode = getTranslatedMode(subaction,
-                                   arg->getStringValue("mode", nullptr));
+    Mode *mode = getTranslatedMode(subaction, arg->getStringValue("mode"));
     if (!mode) {
         SG_LOG(SG_GENERAL, SG_ALERT,
                "do_vr_mode_push command: Mode not found");

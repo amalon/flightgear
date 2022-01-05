@@ -77,7 +77,7 @@ private:
     void _remove(bool all);
 
     /// Get the translated Mode identified by @a modePath.
-    Mode *getTranslatedMode(Subaction *subaction, const char *modePath);
+    Mode *getTranslatedMode(Subaction *subaction, const std::string &modePath);
 
     /**
      * Find the mode and subaction a property node is inside.
@@ -121,7 +121,7 @@ public:
             void setup(SGPropertyNode *node);
 
             /// Get a preset mode.
-            const char *getPresetMode(const char *id);
+            std::string getPresetMode(const std::string &id);
 
             /// Push a mode in front.
             void pushMode(Mode *mode);
@@ -177,7 +177,7 @@ private:
             const std::string &getModule(Subaction *subaction);
 
             /// Find an action in this set by name.
-            osgXR::Action *findAction(const char *name);
+            osgXR::Action *findAction(const std::string &name);
 
             /**
              * Clean up child action references.
@@ -671,8 +671,8 @@ private:
              * @param node    Property node describing the interaction profile.
              */
             InteractionProfile(FGVRInput *input, osgXR::Manager *manager,
-                               const char *vendor, const char *type,
-                               SGPropertyNode *node);
+                               const std::string &vendor,
+                               const std::string &type, SGPropertyNode *node);
     };
 
     // FG specific concepts
@@ -891,9 +891,9 @@ public:
              * @param node       Property node describing the mode.
              * @param dataNode   A separate property node for storing data.
              */
-            Mode(FGVRInput *input, osgXR::Manager *manager, const char *type,
-                 const char *mode, SGPropertyNode *node,
-                 SGPropertyNode *dataNode);
+            Mode(FGVRInput *input, osgXR::Manager *manager,
+                 const std::string &type, const std::string &mode,
+                 SGPropertyNode *node, SGPropertyNode *dataNode);
             /// Destructor.
             ~Mode();
 
