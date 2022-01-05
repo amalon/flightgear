@@ -144,15 +144,15 @@ void VRManager::setVisibilityMask(bool visibilityMask)
     syncSettings();
 }
 
-void VRManager::setVRMode(const char * mode)
+void VRManager::setVRMode(const std::string &mode)
 {
     osgXR::Settings::VRMode vrMode = osgXR::Settings::VRMODE_AUTOMATIC;
 
-    if (strcmp(mode, "AUTOMATIC") == 0) {
+    if (mode == "AUTOMATIC") {
         vrMode = osgXR::Settings::VRMODE_AUTOMATIC;
-    } else if (strcmp(mode, "SLAVE_CAMERAS") == 0) {
+    } else if (mode == "SLAVE_CAMERAS") {
         vrMode = osgXR::Settings::VRMODE_SLAVE_CAMERAS;
-    } else if (strcmp(mode, "SCENE_VIEW") == 0) {
+    } else if (mode == "SCENE_VIEW") {
         vrMode = osgXR::Settings::VRMODE_SCENE_VIEW;
     }
 
@@ -160,15 +160,15 @@ void VRManager::setVRMode(const char * mode)
     syncSettings();
 }
 
-void VRManager::setSwapchainMode(const char * mode)
+void VRManager::setSwapchainMode(const std::string &mode)
 {
     osgXR::Settings::SwapchainMode swapchainMode = osgXR::Settings::SWAPCHAIN_AUTOMATIC;
 
-    if (strcmp(mode, "AUTOMATIC") == 0) {
+    if (mode == "AUTOMATIC") {
         swapchainMode = osgXR::Settings::SWAPCHAIN_AUTOMATIC;
-    } else if (strcmp(mode,"MULTIPLE") == 0) {
+    } else if (mode == "MULTIPLE") {
         swapchainMode = osgXR::Settings::SWAPCHAIN_MULTIPLE;
-    } else if (strcmp(mode,"SINGLE") == 0) {
+    } else if (mode == "SINGLE") {
         swapchainMode = osgXR::Settings::SWAPCHAIN_SINGLE;
     }
 
@@ -176,22 +176,22 @@ void VRManager::setSwapchainMode(const char * mode)
     syncSettings();
 }
 
-void VRManager::setMirrorMode(const char * mode)
+void VRManager::setMirrorMode(const std::string &mode)
 {
     osgXR::MirrorSettings::MirrorMode mirrorMode = osgXR::MirrorSettings::MIRROR_AUTOMATIC;
     int viewIndex = -1;
 
-    if (strcmp(mode, "AUTOMATIC") == 0) {
+    if (mode == "AUTOMATIC") {
         mirrorMode = osgXR::MirrorSettings::MIRROR_AUTOMATIC;
-    } else if (strcmp(mode, "NONE") == 0) {
+    } else if (mode == "NONE") {
         mirrorMode = osgXR::MirrorSettings::MIRROR_NONE;
-    } else if (strcmp(mode, "LEFT") == 0) {
+    } else if (mode == "LEFT") {
         mirrorMode = osgXR::MirrorSettings::MIRROR_SINGLE;
         viewIndex = 0;
-    } else if (strcmp(mode, "RIGHT") == 0) {
+    } else if (mode == "RIGHT") {
         mirrorMode = osgXR::MirrorSettings::MIRROR_SINGLE;
         viewIndex = 1;
-    } else if (strcmp(mode, "LEFT_RIGHT") == 0) {
+    } else if (mode == "LEFT_RIGHT") {
         mirrorMode = osgXR::MirrorSettings::MIRROR_LEFT_RIGHT;
     }
 
