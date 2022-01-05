@@ -80,9 +80,9 @@ class VRManager : public osgXR::Manager
         void setDepthInfo(bool depthInfo);
         void setVisibilityMask(bool visibilityMask);
 
-        void setVRMode(const char * mode);
-        void setSwapchainMode(const char * mode);
-        void setMirrorMode(const char * mode);
+        void setVRMode(const std::string &mode);
+        void setSwapchainMode(const std::string &mode);
+        void setMirrorMode(const std::string &mode);
 
         // osgXR::Manager overrides
 
@@ -130,11 +130,11 @@ class VRManager : public osgXR::Manager
 
         // Property listeners
 
-        template <typename T>
+        template <typename T, typename R = T>
         class Listener : public SGPropertyChangeListener
         {
             public:
-                typedef void (VRManager::*SetterFn)(T v);
+                typedef void (VRManager::*SetterFn)(R v);
 
                 Listener(VRManager *manager, SetterFn setter) :
                     _manager(manager),
@@ -153,7 +153,7 @@ class VRManager : public osgXR::Manager
                 SetterFn _setter;
         };
         typedef Listener<bool> ListenerBool;
-        typedef Listener<const char *> ListenerString;
+        typedef Listener<std::string, const std::string &> ListenerString;
 
         ListenerBool _listenerEnabled;
         ListenerBool _listenerDepthInfo;
