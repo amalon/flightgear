@@ -119,7 +119,7 @@ void FGSoundManager::reinit()
 
     update_device_list();
 
-    select_device(_device_name->getStringValue());
+    select_device(_device_name->getStringValue().c_str());
     SGSoundMgr::reinit();
     _is_initialized = true;
 
@@ -207,8 +207,8 @@ void FGSoundManager::update(double dt)
  */
 bool FGSoundManager::playAudioSampleCommand(const SGPropertyNode * arg, SGPropertyNode * root)
 {
-    const char *qname = arg->getStringValue("queue");
-    string name = qname ? qname : "chatter";
+    string qname = arg->getStringValue("queue", "");
+    string name = !qname.empty() ? qname : "chatter";
     string path = arg->getStringValue("path");
     string file = arg->getStringValue("file");
     float volume = arg->getFloatValue("volume");

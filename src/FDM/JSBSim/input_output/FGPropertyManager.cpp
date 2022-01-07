@@ -112,14 +112,14 @@ bool FGPropertyNode::HasNode (const string &path)
 
 string FGPropertyNode::GetName( void ) const
 {
-  return string( getName() );
+  return getNameString();
 }
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 string FGPropertyNode::GetPrintableName( void ) const
 {
-  string temp_string(getName());
+  string temp_string(getNameString());
   size_t initial_location=0;
   size_t found_location;
 

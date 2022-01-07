@@ -7,6 +7,7 @@
 #define __FG_PROPS_HXX 1
 
 #include <iosfwd>
+#include <algorithm>
 
 #include <simgear/structure/subsystem_mgr.hxx>
 #include <simgear/props/tiedpropertylist.hxx>
@@ -424,7 +425,7 @@ inline double fgGetDouble (const std::string & name, double defaultValue = 0.0)
  *        does not exist.
  * @return The property's value as a string, or the default value provided.
  */
-extern const char * fgGetString (const char * name,
+extern std::string fgGetString (const char * name,
                                  const char * defaultValue = "");
 
 /**
@@ -441,7 +442,7 @@ extern const char * fgGetString (const char * name,
  *        does not exist.
  * @return The property's value as a string, or the default value provided.
  */
-inline const char * fgGetString (const std::string & name,
+inline std::string fgGetString (const std::string & name,
                                  const std::string & defaultValue = std::string(""))
 {
     return fgGetString( name.c_str(), defaultValue.c_str() );
@@ -856,9 +857,12 @@ public:
         if (node->getType() != simgear::props::STRING)
             return;
 
-        char *s = const_cast<char *>(node->getStringValue());
-        for (; *s; s++)
-            *s = toupper(*s);
+        std::string value = node->getStringValue();
+        std::string value_orig = value;
+        std::transform(value.begin(), value.end(), value.begin(), ::toupper);
+        if (value != value_orig) {
+            node->setStringValue(value);
+        }
     }
 };
 

@@ -1205,7 +1205,7 @@ FGTextLayer::Chunk::getValue () const
       sprintf(_buf, _fmt.c_str(), _text.c_str());
       return _buf;
     case TEXT_VALUE:
-      sprintf(_buf, _fmt.c_str(), _node->getStringValue());
+      sprintf(_buf, _fmt.c_str(), _node->getStringValue().c_str());
       break;
     case DOUBLE_VALUE:
       double d = _offs + _node->getFloatValue() * _mult;

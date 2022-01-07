@@ -281,15 +281,14 @@ void Hitch::findBestAIObject(bool doit,bool running_as_autoconnect)
     _towEndIsConnectedToProperty=false;
     SGPropertyNode * ainode = fgGetNode("/ai/models",false);
     if(!ainode) return;
-    char myCallsign[256]="***********";
+    std::string myCallsign = "***********";
     if (running_as_autoconnect)
     {
         //get own callsign
         SGPropertyNode *cs=fgGetNode("/sim/multiplay/callsign",false);
         if (cs)
         {
-            strncpy(myCallsign,cs->getStringValue(),256);
-            myCallsign[255]=0;
+            myCallsign = cs->getStringValue();
         }
         //reset tow length for search radius. Lentgh will be later copied from master 
         _towLength=_winchInitialTowLength;
@@ -299,8 +298,8 @@ void Hitch::findBestAIObject(bool doit,bool running_as_autoconnect)
     for (int i=0;i<ainode->nChildren();i++)
     {
         SGPropertyNode * n=ainode->getChild(i);
-        _nodeIsMultiplayer = strncmp("multiplayer",n->getName(),11)==0;
-        _nodeIsAiAircraft = strncmp("aircraft",n->getName(),8)==0;
+        _nodeIsMultiplayer = strncmp("multiplayer", n->getNameString().c_str(), 11) == 0;
+        _nodeIsAiAircraft = strncmp("aircraft", n->getNameString().c_str(), 8) == 0;
         if (!(_nodeIsMultiplayer || _nodeIsAiAircraft))
             continue;
         if (running_as_autoconnect)
@@ -308,7 +307,7 @@ void Hitch::findBestAIObject(bool doit,bool running_as_autoconnect)
             if (!_nodeIsMultiplayer)
                 continue;
             if(n->getBoolValue("sim/hitches/aerotow/open",true)) continue;
-            if(strncmp(myCallsign,n->getStringValue("sim/hitches/aerotow/tow/connected-to-ai-or-mp-callsign"),255)!=0)
+            if (myCallsign != n->getStringValue("sim/hitches/aerotow/tow/connected-to-ai-or-mp-callsign"))
                 continue;
         }
         double pos[3];
@@ -565,7 +564,7 @@ void Hitch::integrate (float dt)
             {
                 std::stringstream message;
                 message<<"Could not lock hitch (tow length is insufficient) on hitch "
-                       <<_node->getName()<<" "<<_node->getIndex()<<"!";
+                       <<_node->getNameString()<<" "<<_node->getIndex()<<"!";
                 fgSetString("/sim/messages/pilot", message.str().c_str());
                 _open=true;
                 return;
@@ -576,7 +575,7 @@ void Hitch::integrate (float dt)
         if (_node->getBoolValue("broken",false)&&_open)
             message<<"Oh no, the tow is broken";
         else
-            message<<(_open?"Opened hitch ":"Locked hitch ")<<_node->getName()<<" "<<_node->getIndex()<<"!";
+            message<<(_open?"Opened hitch ":"Locked hitch ")<<_node->getNameString()<<" "<<_node->getIndex()<<"!";
         fgSetString("/sim/messages/pilot", message.str().c_str());
         _oldOpen=_open;
     }
@@ -599,23 +598,21 @@ void Hitch::integrate (float dt)
         if (_node)
         {
             //_towEndNode=fgGetNode(_node->getStringValue("tow/node"), false);
-            char towNode[256];
-            strncpy(towNode,_node->getStringValue("tow/node"),256);
-            towNode[255]=0;
+            std::string towNode = _node->getStringValue("tow/node");
             _towEndNode=fgGetNode("ai/models")->getNode(towNode, false);
             //AI and multiplayer objects seem to change node?
             //Check if we have the right one by callsign
             if (_nodeIsMultiplayer || _nodeIsAiAircraft)
             {
-                char MPcallsign[256]="";
-                const char *MPc;
-                MPc=_node->getStringValue("tow/connected-to-ai-or-mp-callsign");
-                if (MPc)
+                std::string MPcallsign = "";
+                std::string MPc =_node->getStringValue("tow/connected-to-ai-or-mp-callsign");
+                if (!MPc.empty())
                 {
-                    strncpy(MPcallsign,MPc,256);
-                    MPcallsign[255]=0;
+                    MPcallsign = MPc;
                 }
-                if (((_towEndNode)&&(strncmp(_towEndNode->getStringValue("callsign"),MPcallsign,255)!=0))||!_towEndNode)
+                if ((_towEndNode
+                    && _towEndNode->getStringValue("callsign") != MPcallsign)
+                    || !_towEndNode)
                 {
                     _timeToNextReConnectTry-=dt;
                     if((_timeToNextReConnectTry<0)||(_timeToNextReConnectTry>10))
@@ -627,13 +624,17 @@ void Hitch::integrate (float dt)
                             for (int i=0;i<ainode->nChildren();i++)
                             {
                                 SGPropertyNode * n=ainode->getChild(i);
-                                if(_nodeIsMultiplayer?strncmp("multiplayer",n->getName(),11)==0:strncmp("aircraft",n->getName(),8))
-                                    if (strcmp(n->getStringValue("callsign"),MPcallsign)==0)//found
+                                if (_nodeIsMultiplayer
+                                        ? strncmp("multiplayer", n->getNameString().c_str(), 11) == 0
+                                        : strncmp("aircraft", n->getNameString().c_str(), 8)
+                                ) {
+                                    if (n->getStringValue("callsign") == MPcallsign)//found
                                     {
                                         _towEndNode=n;
                                         //_node->setStringValue("tow/node",n->getPath());
                                         _node->setStringValue("tow/node",n->getDisplayName());
                                     }
+                                }
                             }
                         }
                     }

@@ -140,10 +140,10 @@ public:
   bool available() { return initialized; };
   void setInitialized(bool state) { initialized = state; };
 
-  void setMilTimes(ScheduleTime& t) { milTimes = t; };
-  void setGenTimes(ScheduleTime& t) { genTimes = t; };
-  void setComTimes(ScheduleTime& t) { comTimes = t; };
-  void setULTimes (ScheduleTime& t) { ulTimes  = t; };
+  void setMilTimes(const ScheduleTime& t) { milTimes = t; };
+  void setGenTimes(const ScheduleTime& t) { genTimes = t; };
+  void setComTimes(const ScheduleTime& t) { comTimes = t; };
+  void setULTimes (const ScheduleTime& t) { ulTimes  = t; };
 
   void addRunwayGroup(RunwayGroup& g) { preferences.push_back(g); };
 };

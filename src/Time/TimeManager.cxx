@@ -89,6 +89,8 @@ void TimeManager::init()
   _localTimeStringNode = fgGetNode("/sim/time/local-time-string", true);
   _localTimeZoneNode = fgGetNode("/sim/time/local-timezone", true);
   _warpDelta = fgGetNode("/sim/time/warp-delta", true);
+  _frameNumber = fgGetNode("/sim/frame-number", true);
+  _simFixedDt = fgGetNode("/sim/time/fixed-dt", true);
   
   SGPath zone(globals->get_fg_root());
   zone.append("Timezone");
@@ -132,9 +134,12 @@ void TimeManager::init()
     }
     _computeDrift->setBoolValue(true);
 
+  _simpleTimeEnabledPrev = false;
   _simpleTimeEnabled = fgGetNode("/sim/time/simple-time/enabled", true);
   _simpleTimeUtc = fgGetNode("/sim/time/simple-time/utc", true);
   _simpleTimeFdm = fgGetNode("/sim/time/simple-time/fdm", true);
+  _simple_time_utc = 0;
+  _simple_time_fdm = 0;
 }
 
 void TimeManager::unbind()
@@ -219,7 +224,29 @@ static double TimeUTC()
 
 void TimeManager::computeTimeDeltasSimple(double& simDt, double& realDt)
 {
-    double t = TimeUTC();
+    double t;
+    double fixed_dt = _simFixedDt->getDoubleValue();
+    static double fixed_dt_prev = 0.0;
+    if (fixed_dt)
+    {
+        // Always increase time by fixed amount, regardless of elapsed
+        // time. E.g. this can be used to generate high-quality videos.
+        t = _simple_time_fdm + fixed_dt;
+        fixed_dt_prev = fixed_dt;
+    }
+    else
+    {
+        t = TimeUTC();
+        
+        if (fixed_dt_prev)
+        {
+            // We are changing from fixed-dt mode to normal mode; avoid bogus
+            // sleep to match _maxFrameRate, otherwise we can end up pausing
+            // for a long time.
+            _simple_time_fdm = _simple_time_utc = t - fixed_dt_prev;
+            fixed_dt_prev = 0.0;
+        }
+    }
     double modelHz = _modelHz->getDoubleValue();
     bool scenery_loaded = _sceneryLoaded->getBoolValue();
 
@@ -235,7 +262,7 @@ void TimeManager::computeTimeDeltasSimple(double& simDt, double& realDt)
     // inline instead of calling throttleUpdateRate().
     //
     double sleep_time = 0;
-    if (scenery_loaded) {
+    if (scenery_loaded && !fixed_dt) {
         double max_frame_rate = _maxFrameRate->getDoubleValue();
         if (max_frame_rate != 0) {
             double delay_end = _simple_time_utc + 1.0/max_frame_rate;
@@ -363,7 +390,8 @@ void TimeManager::computeTimeDeltas(double& simDt, double& realDt)
   }
 
   // this dt will be clamped by the max sim time by frame.
-  double dt = (currentStamp - _lastStamp).toSecs();
+  double fixed_dt = _simFixedDt->getDoubleValue();
+  double dt = (fixed_dt) ? fixed_dt : (currentStamp - _lastStamp).toSecs();
 
   // here we have a true real dt for a clock "real time".
   double mpProtocolDt = dt;
@@ -426,6 +454,7 @@ void TimeManager::computeTimeDeltas(double& simDt, double& realDt)
 
 void TimeManager::update(double dt)
 {
+  _frameNumber->setIntValue(_frameNumber->getIntValue() + 1);
   bool freeze = _clockFreeze->getBoolValue();
   time_t now = time(NULL);
 
@@ -552,13 +581,13 @@ void TimeManager::updateLocalTimeString()
              aircraftLocalTime->tm_min, aircraftLocalTime->tm_sec);
 
     // check against current string to avoid changes all the time
-    const char* s = _localTimeStringNode->getStringValue();
-    if (strcmp(s, buf) != 0) {
+    string s = _localTimeStringNode->getStringValue();
+    if (s != string(buf)) {
         _localTimeStringNode->setStringValue(buf);
     }
 
-    const char* zs = _localTimeZoneNode->getStringValue();
-    if (strcmp(zs, _impl->get_description()) != 0) {
+    string zs = _localTimeZoneNode->getStringValue();
+    if (zs != string(_impl->get_description())) {
         _localTimeZoneNode->setStringValue(_impl->get_description());
     }
 }

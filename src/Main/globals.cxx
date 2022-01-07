@@ -84,7 +84,7 @@ public:
     }
 
   // test against the aircraft-dir property
-    const char* aircraftDir = fgGetString("/sim/aircraft-dir");
+    const std::string aircraftDir = fgGetString("/sim/aircraft-dir");
     string_list aircraftDirPieces(sgPathBranchSplit(aircraftDir));
     if (!aircraftDirPieces.empty() && (aircraftDirPieces.back() == pieces[1])) {
         // current aircraft-dir matches resource aircraft

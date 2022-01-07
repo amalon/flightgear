@@ -87,7 +87,7 @@ cJSON * JSON::valueToJson(SGPropertyNode_ptr n)
         }
 
         default:
-            return cJSON_CreateString(n->getStringValue());
+            return cJSON_CreateString(n->getStringValue().c_str());
     }
 }
 
@@ -96,7 +96,7 @@ cJSON * JSON::toJson(SGPropertyNode_ptr n, int depth, double timestamp )
 {
   cJSON * json = cJSON_CreateObject();
   cJSON_AddItemToObject(json, "path", cJSON_CreateString(n->getPath(true).c_str()));
-  cJSON_AddItemToObject(json, "name", cJSON_CreateString(n->getName()));
+  cJSON_AddItemToObject(json, "name", cJSON_CreateString(n->getNameString().c_str()));
   if( n->hasValue() ) {
     switch( n->getType() ) {
       case simgear::props::BOOL:
@@ -111,7 +111,7 @@ cJSON * JSON::toJson(SGPropertyNode_ptr n, int depth, double timestamp )
         break;
       }
       default:
-        cJSON_AddItemToObject(json, "value", cJSON_CreateString(n->getStringValue()));
+        cJSON_AddItemToObject(json, "value", cJSON_CreateString(n->getStringValue().c_str()));
         break;
     }
   }

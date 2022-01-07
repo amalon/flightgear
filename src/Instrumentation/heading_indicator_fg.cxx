@@ -31,7 +31,7 @@ HeadingIndicatorFG::HeadingIndicatorFG ( SGPropertyNode *node )
     int i;
     for ( i = 0; i < node->nChildren(); ++i ) {
         SGPropertyNode *child = node->getChild(i);
-        string cname = child->getName();
+        string cname = child->getNameString();
         string cval = child->getStringValue();
         if ( cname == "name" ) {
             name = cval;

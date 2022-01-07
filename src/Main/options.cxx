@@ -339,17 +339,17 @@ private:
     }
 
 
-    int getNumMaturity(const char * str)
+    int getNumMaturity(const std::string& str)
     {
         // Changes should also be reflected in $FG_ROOT/options.xml
         const char* levels[] = {"alpha","beta","early-production","production"};
 
-        if (!strcmp(str, "all")) {
+        if (str == "all") {
             return 0;
         }
 
         for (size_t i=0; i<(sizeof(levels)/sizeof(levels[0]));i++)
-            if (strcmp(str,levels[i])==0)
+            if (str == levels[i])
                 return i;
 
         return 0;
@@ -809,7 +809,7 @@ static int
 fgOptAltitude( const char *arg )
 {
     fgSetBool("/sim/presets/onground", false);
-    if ( !strcmp(fgGetString("/sim/startup/units"), "feet") )
+    if ( fgGetString("/sim/startup/units") == "feet" )
         fgSetDouble("/sim/presets/altitude-ft", atof( arg ));
     else
         fgSetDouble("/sim/presets/altitude-ft",
@@ -821,7 +821,7 @@ static int
 fgOptUBody( const char *arg )
 {
     fgSetString("/sim/presets/speed-set", "UVW");
-    if ( !strcmp(fgGetString("/sim/startup/units"), "feet") )
+    if ( fgGetString("/sim/startup/units") == "feet" )
 	fgSetDouble("/sim/presets/uBody-fps", atof( arg ));
     else
 	fgSetDouble("/sim/presets/uBody-fps",
@@ -833,7 +833,7 @@ static int
 fgOptVBody( const char *arg )
 {
     fgSetString("/sim/presets/speed-set", "UVW");
-    if ( !strcmp(fgGetString("/sim/startup/units"), "feet") )
+    if ( fgGetString("/sim/startup/units") == "feet" )
 	fgSetDouble("/sim/presets/vBody-fps", atof( arg ));
     else
 	fgSetDouble("/sim/presets/vBody-fps",
@@ -845,7 +845,7 @@ static int
 fgOptWBody( const char *arg )
 {
     fgSetString("/sim/presets/speed-set", "UVW");
-    if ( !strcmp(fgGetString("/sim/startup/units"), "feet") )
+    if ( fgGetString("/sim/startup/units") == "feet" )
 	fgSetDouble("/sim/presets/wBody-fps", atof(arg));
     else
 	fgSetDouble("/sim/presets/wBody-fps",
@@ -857,7 +857,7 @@ static int
 fgOptVNorth( const char *arg )
 {
     fgSetString("/sim/presets/speed-set", "NED");
-    if ( !strcmp(fgGetString("/sim/startup/units"), "feet") )
+    if ( fgGetString("/sim/startup/units") == "feet" )
 	fgSetDouble("/sim/presets/speed-north-fps", atof( arg ));
     else
 	fgSetDouble("/sim/presets/speed-north-fps",
@@ -869,7 +869,7 @@ static int
 fgOptVEast( const char *arg )
 {
     fgSetString("/sim/presets/speed-set", "NED");
-    if ( !strcmp(fgGetString("/sim/startup/units"), "feet") )
+    if ( fgGetString("/sim/startup/units") == "feet" )
 	fgSetDouble("/sim/presets/speed-east-fps", atof(arg));
     else
 	fgSetDouble("/sim/presets/speed-east-fps",
@@ -881,7 +881,7 @@ static int
 fgOptVDown( const char *arg )
 {
     fgSetString("/sim/presets/speed-set", "NED");
-    if ( !strcmp(fgGetString("/sim/startup/units"), "feet") )
+    if ( fgGetString("/sim/startup/units") == "feet" )
 	fgSetDouble("/sim/presets/speed-down-fps", atof(arg));
     else
 	fgSetDouble("/sim/presets/speed-down-fps",
@@ -1191,8 +1191,8 @@ fgOptViewOffset( const char *arg )
         FGViewer *pilot_view =
 	    (FGViewer *)globals->get_viewmgr()->get_view( 0 ); */
     // this will work without calls to the viewer...
-    fgSetDouble( "/sim/current-view/heading-offset-deg",
-                    default_view_offset  * SGD_RADIANS_TO_DEGREES );
+    fgSetDouble("/sim/view[0]/config/heading-offset-deg",
+                default_view_offset * SGD_RADIANS_TO_DEGREES);
     // $$$ end - added VS Renganathan, 14 Oct 2K
     return FG_OPTIONS_OK;
 }
@@ -1625,7 +1625,15 @@ fgOptLoadTape(const char* arg)
             SGPropertyNode_ptr arg = new SGPropertyNode();
             arg->setStringValue("tape", _tape.utf8Str() );
             arg->setBoolValue( "same-aircraft", 0 );
-            if (!replay->loadTape(_tape, false /*preview*/, *arg, _filerequest)) {
+            if (!replay->loadTape(
+                    _tape,
+                    false /*preview*/,
+                    fgGetBool("/sim/startup/load-tape/create-video"),
+                    fgGetDouble("/sim/startup/load-tape/fixed-dt", 0),
+                    *arg,
+                    _filerequest
+                    ))
+            {
                 // Force shutdown if we can't load tape specified on command-line.
                 SG_LOG(SG_GENERAL, SG_POPUP, "Exiting because unable to load fgtape: " << _tape.str());
                 flightgear::modalMessageBox("Exiting because unable to load fgtape", _tape.str(), "");
@@ -2002,6 +2010,8 @@ struct OptionDesc {
     {"no-default-config",            false, OPTION_IGNORE, "", false, "", 0},
     {"prop",                         true,  OPTION_FUNC | OPTION_MULTI,   "", false, "", fgOptSetProperty},
     {"load-tape",                    true,  OPTION_FUNC,   "", false, "", fgOptLoadTape },
+    {"load-tape-create-video",       true,  OPTION_BOOL,    "/sim/startup/load-tape/create-video", true, "", nullptr },
+    {"load-tape-fixed-dt",           true,  OPTION_DOUBLE, "/sim/startup/load-tape/fixed-dt", false, "", nullptr },
     {"developer",                    true,  OPTION_IGNORE | OPTION_BOOL, "", false, "", nullptr },
     {"jsbsim-output-directive-file", true,  OPTION_STRING, "/sim/jsbsim/output-directive-file", false, "", nullptr },
     {"disable-gui",                  false, OPTION_FUNC, "", false, "", fgOptDisableGUI },
@@ -2085,7 +2095,12 @@ public:
 
     switch ( desc->type & 0xffff ) {
       case OPTION_BOOL:
-        fgSetBool( desc->property, desc->b_param );
+        if (arg_value == "0" || arg_value == "false") {
+            SG_LOG( SG_GENERAL, SG_ALERT, "Ignoring bool option '" << desc->option << "' because value is " << arg_value);
+        }
+        else {
+            fgSetBool( desc->property, desc->b_param );
+        }
         break;
       case OPTION_STRING:
         if ( desc->has_param && !arg_value.empty() ) {
@@ -2401,7 +2416,7 @@ OptionResult Options::initAircraft()
   } else {
     SG_LOG(SG_INPUT, SG_INFO, "No user specified aircraft, using default" );
     // ensure aircraft-id is valid
-    fgSetString("/sim/aircraft-id", fgGetString("/sim/aircraft"));
+    fgSetString("/sim/aircraft-id", fgGetString("/sim/aircraft").c_str());
   }
 
   if (p->showAircraft) {

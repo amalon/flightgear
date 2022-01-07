@@ -383,7 +383,7 @@ bool FlipFlopImplementation::configure( SGPropertyNode& prop_root,
   for( int i = 0; i < cfg.nChildren(); ++i )
   {
     SGPropertyNode_ptr child = cfg.getChild(i);
-    string cname(child->getName());
+    string cname(child->getNameString());
 
     if( configure(*child, cname, prop_root) )
       continue;

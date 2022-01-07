@@ -1378,7 +1378,7 @@ FGMultiplayMgr::SendMyPosition(const FGExternalMotionData& motionInfo)
   else
       PosMsg->pad = 0;
 
-  strncpy(PosMsg->Model, fgGetString("/sim/model/path"), MAX_MODEL_NAME_LEN);
+  strncpy(PosMsg->Model, fgGetString("/sim/model/path").c_str(), MAX_MODEL_NAME_LEN-1);
   PosMsg->Model[MAX_MODEL_NAME_LEN - 1] = '\0';
   if (fgGetBool("/sim/freeze/replay-state", true)&&
       fgGetBool("/sim/multiplay/freeze-on-replay",true))
@@ -2163,13 +2163,13 @@ void FGMultiplayMgr::Send(double mpTime)
         {
             // FIXME: We assume unspecified are strings for the moment.
 
-            const char* cstr = it->second->getStringValue();
-            int len = strlen(cstr);
+            string cstr = it->second->getStringValue();
+            size_t len = cstr.length();
 
             if (len > 0)
             {
                 pData->string_value = new char[len + 1];
-                strcpy(pData->string_value, cstr);
+                strcpy(pData->string_value, cstr.c_str());
             }
             else
             {
@@ -2487,8 +2487,8 @@ FGMultiplayMgr::ProcessPosMsg(const FGMultiplayMgr::MsgBuf& Msg,
   // --test-motion-mp.
   //
   {
-    const char* callsign = pLogRawSpeedMultiplayer->getStringValue();
-    if (callsign && callsign[0] && !strcmp(callsign, MsgHdr->Callsign)) {
+    string callsign = pLogRawSpeedMultiplayer->getStringValue();
+    if (!callsign.empty() && callsign == string(MsgHdr->Callsign)) {
         static SGVec3d s_pos_prev;
         static double s_simtime_prev = -1;
         SGVec3d pos = motionInfo.position;
@@ -2753,7 +2753,7 @@ FGMultiplayMgr::addMultiplayer(const std::string& callsign,
           int config_children_n = config->nChildren();
           for (int i=0; i<config_children_n; ++i) {
             SGPropertyNode* node = config->getChild(i);
-            global_config->setDoubleValue(node->getName(), node->getDoubleValue());
+            global_config->setDoubleValue(node->getNameString(), node->getDoubleValue());
           }
         }
       }

@@ -20,6 +20,9 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //
 // $Id$
+
+#pragma once
+
 #include <osgDB/Registry>
 #include "airport.hxx"
 #include <simgear/scene/material/Effect.hxx>

@@ -306,13 +306,13 @@ void FGAIEscort::setStationSpeed(){
 
     // these are the AI rules for the manoeuvring of escorts
 
-    if (_MPControl && _tgtrange > 4 * _stn_limit){
+    if (_MPControl && _tgtrange > 4 * _stn_limit) {
         SG_LOG(SG_AI, SG_ALERT, "AIEscort: " << _name
             << " re-aligning to MP pos");
         pos = _tgtpos;
         speed = 0;
         angle = 0;
-    }else if ((_relbrg < -90 || _relbrg > 90) && _tgtrange > _stn_limit ){
+    } else if ((_relbrg < -90 || _relbrg > 90) && _tgtrange > _stn_limit) {
         angle =_relbrg;
 
         if(_tgtrange > 4 * _stn_limit)
@@ -320,7 +320,7 @@ void FGAIEscort::setStationSpeed(){
         else
             speed = -_stn_speed;
 
-    }else if ((_relbrg >= -90 || _relbrg <= 90) && _tgtrange > _stn_limit){
+    } else if ((_relbrg >= -90 && _relbrg <= 90) && _tgtrange > _stn_limit) {
         angle = _relbrg;
 
         if(_tgtrange > 4 * _stn_limit)
@@ -329,15 +329,13 @@ void FGAIEscort::setStationSpeed(){
             speed = _stn_speed;
 
     } else {
-
-        if(_patrol){
+        if (_patrol){
             angle = 15 * sg_random();
             speed =  5 * sg_random();
         } else {
             angle = 0;
             speed = 0;
         }
-
     }
 
     double station_speed = _parent_speed + speed;
@@ -348,7 +346,6 @@ void FGAIEscort::setStationSpeed(){
     AccelTo(station_speed);
     TurnTo(_parent_hdg + angle);
     ClimbTo(_stn_height);
-
 }
 
 void FGAIEscort::RunEscort(double dt){

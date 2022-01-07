@@ -52,7 +52,7 @@ public:
     virtual void update (double dt);
 
 protected:
-    void createTexture(const char* texture_name);
+    void createTexture(const std::string& texture_name);
 
     void addRunwayVertices(const FGRunwayBase* aRunway, double aTowerLat, double aTowerLon, double aScale, osg::Vec3Array* aVertices);
     osg::Geometry *addPavementGeometry(const FGPavement* aPavement, double aTowerLat, double aTowerLon, double aScale);

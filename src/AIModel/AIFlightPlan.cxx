@@ -372,18 +372,18 @@ void FGAIFlightPlan::IncrementWaypoint(bool eraseWaypoints )
     if (eraseWaypoints)
     {
         if (wpt_iterator == waypoints.begin())
-            wpt_iterator++;
+            ++wpt_iterator;
         else
         if (!waypoints.empty())
         {
             delete *(waypoints.begin());
             waypoints.erase(waypoints.begin());
             wpt_iterator = waypoints.begin();
-            wpt_iterator++;
+            ++wpt_iterator;
         }
     }
     else {
-      wpt_iterator++;
+      ++wpt_iterator;
     }
     // Calculate the angle of the next turn.
     if (wpt_iterator == waypoints.end()) 
@@ -412,7 +412,7 @@ void FGAIFlightPlan::DecrementWaypoint()
     if (empty())
         return;
 
-    wpt_iterator--;
+    --wpt_iterator;
 }
 
 void FGAIFlightPlan::eraseLastWaypoint()
@@ -423,7 +423,7 @@ void FGAIFlightPlan::eraseLastWaypoint()
     delete (waypoints.back());
     waypoints.pop_back();;
     wpt_iterator = waypoints.begin();
-    wpt_iterator++;
+    ++wpt_iterator;
 }
 
 // gives distance in meters from a position to a waypoint
@@ -493,7 +493,7 @@ double FGAIFlightPlan::getBearing(const SGGeod& aPos, FGAIWaypoint* wp) const
 
 void FGAIFlightPlan::deleteWaypoints()
 {
-  for (wpt_vector_iterator i = waypoints.begin(); i != waypoints.end();i++)
+  for (wpt_vector_iterator i = waypoints.begin(); i != waypoints.end(); ++i)
     delete (*i);
   waypoints.clear();
   wpt_iterator = waypoints.begin();
@@ -509,7 +509,7 @@ void FGAIFlightPlan::resetWaypoints()
 
   FGAIWaypoint* wpt = new FGAIWaypoint;
   wpt_vector_iterator i = waypoints.end();
-  i--;
+  --i;
   wpt->setName((*i)->getName());
   wpt->setPos((*i)->getPos());
   wpt->setCrossat((*i)->getCrossat());
@@ -574,11 +574,11 @@ double FGAIFlightPlan::checkTrackLength(const string& wptName) const {
     // skip the first two waypoints: first one is behind, second one is partially done;
     double trackDistance = 0;
     wpt_vector_iterator wptvec = waypoints.begin();
-    wptvec++;
-    wptvec++;
+    ++wptvec;
+    ++wptvec;
     while ((wptvec != waypoints.end()) && (!((*wptvec)->contains(wptName)))) {
            trackDistance += (*wptvec)->getTrackLength();
-           wptvec++;
+           ++wptvec;
     }
     if (wptvec == waypoints.end()) {
         trackDistance = 0; // name not found

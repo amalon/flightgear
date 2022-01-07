@@ -31,6 +31,8 @@
 #include <simgear/compiler.h>
 #include <simgear/scene/util/OsgMath.hxx>
 #include <simgear/props/props_io.hxx>
+#include <simgear/screen/video-encoder.hxx>
+#include <simgear/structure/commands.hxx>
 
 #include <Main/fg_props.hxx>
 #include "view.hxx"
@@ -164,6 +166,52 @@ FGViewMgr::unbind ()
     SviewClear();
 }
 
+static void videoEncodingPopup(const std::string& message, int delay)
+{
+    SGPropertyNode_ptr args(new SGPropertyNode);
+    args->setStringValue("label", message);
+    args->setIntValue("delay", (delay) ? delay : 15);
+    SG_LOG(SG_GENERAL, SG_ALERT, message);
+    globals->get_commands()->execute("show-message", args);
+}
+
+static void vidoEncodingUpdateStatus(const std::string& path)
+{
+    fgSetString("/sim/video/encoding-path", path);
+    bool encoding = (path != "");
+    SGPropertyNode* node = fgGetNode("/sim/menubar/default");
+    
+    /* Enable/disable menu items 'File/Video encode start' and 'File/Video
+    encode stop'. */
+    for (auto a: node->getChildren("menu"))
+    {
+        std::string name = a->getStringValue("name");
+        if (name == "file")
+        {
+            for (auto b: a->getChildren("item"))
+            {
+                std::string name = b->getStringValue("name");
+                if (name == "video-start")
+                {
+                    b->setBoolValue("enabled", !encoding);
+                }
+                if (name == "video-stop")
+                {
+                    b->setBoolValue("enabled", encoding);
+                }
+            }
+            break;
+        }
+    }
+}
+
+static void videoEncodingError(const std::string& message)
+{
+    globals->get_props()->setIntValue("/sim/video/error", 1);
+    vidoEncodingUpdateStatus("");
+    videoEncodingPopup(message, 15);
+}
+
 void
 FGViewMgr::update (double dt)
 {
@@ -172,10 +220,10 @@ FGViewMgr::update (double dt)
         return;
     }
 
-  // Update the current view
-  currentView->update(dt);
+    // Update the current view
+    currentView->update(dt);
 
-// update the camera now
+    // update the camera now
     osg::ref_ptr<flightgear::CameraGroup> cameraGroup = flightgear::CameraGroup::getDefault();
     if (cameraGroup) {
         cameraGroup->setCameraParameters(currentView->get_v_fov(),
@@ -185,6 +233,27 @@ FGViewMgr::update (double dt)
     }
 
     SviewUpdate(dt);
+
+    if (_video_encoder)
+    {
+        flightgear::CameraGroup* camera_group = flightgear::CameraGroup::getDefault();
+        
+        for (auto& camera_info : camera_group->getCameras())
+        {
+            if (camera_info->flags & flightgear::CameraInfo::GUI)   continue;
+            osg::GraphicsContext* gc = camera_info->compositor->getGraphicsContext();
+            try
+            {
+                _video_encoder->encode(dt, gc);
+            }
+            catch (std::exception& e)
+            {
+                videoEncodingError(e.what());
+                _video_encoder.reset();
+            }
+            break;
+        }
+    }
     
     std::string callsign = globals->get_props()->getStringValue("/sim/log-multiplayer-callsign");
     if (callsign != "")
@@ -326,6 +395,130 @@ FGViewMgr::add_view( flightgear::View * v )
 {
   views.push_back(v);
   v->init();
+}
+
+bool FGViewMgr::video_start(
+        const std::string& name_in,
+        const std::string& codec_in,
+        double quality,
+        double speed,
+        int bitrate
+        )
+{
+    SG_LOG(SG_GENERAL, SG_ALERT, "FGViewMgr::video_start():"
+            << " name_in=" << name_in
+            << " codec_in=" << codec_in
+            << " quality=" << quality
+            << " speed=" << speed
+            << " bitrate=" << bitrate
+            );
+    globals->get_props()->setIntValue("/sim/video/error", 0);
+    std::string name = name_in;
+    std::string codec = codec_in;
+    
+    std::string name_link = std::string("fgvideo-") + fgGetString("/sim/aircraft");
+    
+    if (name == "")
+    {
+        /* Use a default name containing current date and time. */
+        time_t calendar_time = time(NULL);
+        struct tm* local_tm = localtime(&calendar_time);
+        char buffer[256];
+        strftime(buffer, sizeof(buffer), "-%Y%m%d-%H%M%S", local_tm);
+        name = name_link + buffer;
+    }
+    size_t dot = name.find(".");
+    if (dot == std::string::npos)
+    {
+        /* No suffix specified. We need one because it determines the video
+        container format. */
+        std::string container = fgGetString("/sim/video/container", "mpeg");
+        name += "." + container;
+        name_link += "." + container;
+    }
+    else
+    {
+        // Give link the same suffix.
+        name_link += name.substr(dot);
+    }
+    SGPath  path = SGPath(fgGetString("/sim/video/directory"));
+    SGPath  path_link = path;
+    path.append(name);
+    if (path.exists())
+    {
+        videoEncodingError("Video encoding failure, output file already exists: " + path.str());
+        return false;
+    }
+    path_link.append(name_link);
+    path_link.remove();
+    bool ok = path_link.makeLink(path.file());
+    if (!ok)
+    {
+        SG_LOG(SG_SYSTEMS, SG_ALERT, "Failed to create link "
+                << path_link.c_str() << " => " << path.file()
+                );
+    }
+    
+    if (codec == "")    codec = fgGetString("/sim/video/codec");
+    if (quality == -1)  quality = fgGetDouble("/sim/video/quality");
+    if (speed == -1)    speed = fgGetDouble("/sim/video/speed");
+    if (bitrate == 0)   bitrate = fgGetInt("/sim/video/bitrate");
+    
+    std::string warning;
+    if (quality != -1 && (quality < 0 || quality > 1))
+    {
+        warning += "Ignoring quality=" + std::to_string(quality) + " because should be -1 or in range 0-1.\n";
+        quality = -1;
+    }
+    if (speed != -1 && (speed < 0 || speed > 1))
+    {
+        warning += "Ignoring speed=" + std::to_string(speed) + " because should be -1 or in range 0-1.\n";
+        speed = -1;
+    }
+    if (bitrate < 0)
+    {
+        warning += "Ignoring bitrate=" + std::to_string(bitrate) + " because should be >= 0.\n";
+        bitrate = 0;
+    }
+    if (warning != "")
+    {
+        videoEncodingPopup(warning, 10);
+    }
+    
+    SG_LOG(SG_SYSTEMS, SG_ALERT, "Starting video encoding."
+            << " codec=" << codec
+            << " quality=" << quality
+            << " speed=" << speed
+            << " bitrate=" << bitrate
+            << " path=" << path
+            << " path_link=" << path_link
+            );
+    try
+    {
+        _video_encoder.reset(new simgear::VideoEncoder(path.str(), codec, quality, speed, bitrate));
+    }
+    catch (std::exception& e)
+    {
+        videoEncodingError(e.what());
+        return false;
+    }
+    
+    vidoEncodingUpdateStatus(path.str());
+    return true;
+}
+
+void FGViewMgr::video_stop()
+{
+    if (_video_encoder)
+    {
+        _video_encoder.reset();
+        vidoEncodingUpdateStatus("");
+        videoEncodingPopup("Video encoding stopped", 5);
+    }
+    else
+    {
+        videoEncodingPopup("[Video encoding already stopped]", 5);
+    }
 }
 
 int FGViewMgr::getCurrentViewIndex() const

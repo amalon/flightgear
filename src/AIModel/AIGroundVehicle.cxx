@@ -431,14 +431,14 @@ void FGAIGroundVehicle::setTowSpeed(){
 
     if (_range_ft > _x_offset * 3) x = 50;
 
-    if (_relbrg < -90 || _relbrg > 90){
+    if (_relbrg < -90 || _relbrg > 90) {
         setSpeed(_parent_speed - 5 - x);
         //cout << _name << " case 1r _relbrg spd - 5 " << _relbrg << " " << diff << endl;
-    }else if (_range_ft > _x_offset + 0.25 && _relbrg >= -90 && _relbrg <= 90){
+    } else if (_range_ft > _x_offset + 0.25) {
         setSpeed(_parent_speed + 1 + x);
         //cout << _name << " case 2r _relbrg spd + 1 " << _relbrg << " "
         //    << diff << " range " << _range_ft << endl;
-    } else if (_range_ft < _x_offset - 0.25 && _relbrg >= -90 && _relbrg <= 90){
+    } else if (_range_ft < _x_offset - 0.25) {
         setSpeed(_parent_speed - 1 - x);
         //cout << _name << " case 3r _relbrg spd - 2 " << _relbrg << " "
         //    << diff << " " << _range_ft << endl;
@@ -446,7 +446,6 @@ void FGAIGroundVehicle::setTowSpeed(){
         setSpeed(_parent_speed);
         //cout << _name << " else r _relbrg " << _relbrg << " " << diff << endl;
     }
-
 }
 
 void FGAIGroundVehicle::RunGroundVehicle(double dt){

@@ -167,7 +167,7 @@ Autopilot::Autopilot( SGPropertyNode_ptr rootNode, SGPropertyNode_ptr configNode
   for( int i = 0; i < count; ++i )
   {
     SGPropertyNode_ptr node = configNode->getChild(i);
-    string childName = node->getName();
+    string childName = node->getNameString();
     if(    childName == "property"
         || childName == "property-root" )
       continue;

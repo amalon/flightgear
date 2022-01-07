@@ -154,13 +154,13 @@ void InputValue::parse( SGPropertyNode& prop_root,
   if( !valueNode )
   {
     // no <value>, <prop> or <expression> element, use text node
-    const char * textnode = cfg.getStringValue();
+    std::string textnode = cfg.getStringValue();
     char * endp = NULL;
     // try to convert to a double value. If the textnode does not start with a number
     // endp will point to the beginning of the string. We assume this should be
     // a property name
-    _value = strtod( textnode, &endp );
-    if( endp == textnode )
+    _value = strtod( textnode.c_str(), &endp );
+    if( endp == textnode.c_str() )
       _property = prop_root.getNode(textnode, true);
   }
 }

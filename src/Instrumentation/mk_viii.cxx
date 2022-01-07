@@ -1131,7 +1131,7 @@ MK_VIII::IOHandler::update_inputs ()
     {
         const char *mode;
 
-        mode = mk_node(autopilot_heading_lock)->getStringValue();
+        mode = mk_node(autopilot_heading_lock)->getStringValue().c_str();
         mk_dinput(autopilot_engaged) = mode && *mode;
     }
 
@@ -4625,7 +4625,7 @@ MK_VIII::MK_VIII (SGPropertyNode *node)
     for (int i = 0; i < node->nChildren(); ++i)
     {
         SGPropertyNode *child = node->getChild(i);
-        string cname = child->getName();
+        string cname = child->getNameString();
         string cval = child->getStringValue();
 
         if (cname == "name")

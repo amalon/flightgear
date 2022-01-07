@@ -175,7 +175,7 @@ compare_values (SGPropertyNode * value1, SGPropertyNode * value2)
     case simgear::props::DOUBLE:
         return (value1->getDoubleValue() == value2->getDoubleValue());
     default:
-        return !strcmp(value1->getStringValue(), value2->getStringValue());
+        return value1->getStringValue() == value2->getStringValue();
     }
 }
 
@@ -257,7 +257,7 @@ do_pause (const SGPropertyNode * arg, SGPropertyNode * root)
 static bool
 do_load (const SGPropertyNode * arg, SGPropertyNode * root)
 {
-    SGPath file(arg->getStringValue("file", "fgfs.sav"));
+    SGPath file(arg->getStringValue("file", "fgfs.sav").c_str());
 
     if (file.extension() != "sav")
         file.concat(".sav");
@@ -290,7 +290,7 @@ do_load (const SGPropertyNode * arg, SGPropertyNode * root)
 static bool
 do_save (const SGPropertyNode * arg, SGPropertyNode * root)
 {
-    SGPath file(arg->getStringValue("file", "fgfs.sav"));
+    SGPath file(arg->getStringValue("file", "fgfs.sav").c_str());
 
     if (file.extension() != "sav")
         file.concat(".sav");
@@ -433,6 +433,47 @@ do_view_new (const SGPropertyNode * arg, SGPropertyNode * root)
   return true;
 }
 
+/**
+ * Built-in command: video-start.
+ *
+ * If arg->name exists, we use it as the leafname of the generated video,
+ * appending '.'+{/sim/video/container} if it doesn't contain '.' already.
+ *
+ * Otherwise we use:
+ *      fgvideo-{/sim/aircraft}-YYMMDD-HHMMSS.{/sim/video/container}
+ *
+ * The video file is generated in directory {/sim/paths/screenshot-dir}.
+ *
+ * We also create a convenience link in the same directory called
+ * fgvideo-{/sim/aircraft}.<suffix> (where <suffix> is the same suffix as the
+ * recording file) that points to the video file.
+ */
+static bool
+do_video_start (const SGPropertyNode * arg, SGPropertyNode * root)
+{
+    auto view_mgr = globals->get_subsystem<FGViewMgr>();
+    if (!view_mgr) return false;
+    view_mgr->video_start(
+            arg->getStringValue("name"),
+            arg->getStringValue("codec"),
+            arg->getDoubleValue("quality", -1),
+            arg->getDoubleValue("speed", -1),
+            arg->getIntValue("bitrate", 0)
+            );
+    return true;
+}
+
+/**
+ * Built-in command: video-stop.
+ */
+static bool
+do_video_stop (const SGPropertyNode * arg, SGPropertyNode * root)
+{
+  auto view_mgr = globals->get_subsystem<FGViewMgr>();
+  if (!view_mgr) return false;
+  view_mgr->video_stop();
+  return true;
+}
 
 /**
  * Built-in command: toggle a bool property value.
@@ -506,7 +547,7 @@ do_property_adjust (const SGPropertyNode * arg, SGPropertyNode * root)
                 * arg->getDoubleValue("offset"));
 
   double unmodifiable, modifiable;
-  split_value(prop->getDoubleValue(), arg->getStringValue("mask", "all"),
+  split_value(prop->getDoubleValue(), arg->getStringValue("mask", "all").c_str(),
               &unmodifiable, &modifiable);
   modifiable += amount;
   limit_value(&modifiable, arg);
@@ -538,7 +579,7 @@ do_property_multiply (const SGPropertyNode * arg, SGPropertyNode * root)
   double factor = arg->getDoubleValue("factor", 1.0);
 
   double unmodifiable, modifiable;
-  split_value(prop->getDoubleValue(), arg->getStringValue("mask", "all"),
+  split_value(prop->getDoubleValue(), arg->getStringValue("mask", "all").c_str(),
               &unmodifiable, &modifiable);
   modifiable *= factor;
   limit_value(&modifiable, arg);
@@ -1105,6 +1146,9 @@ static struct {
 
     { "profiler-start", do_profiler_start },
     { "profiler-stop",  do_profiler_stop },
+    
+    { "video-start", do_video_start },
+    { "video-stop", do_video_stop },
 
     { "vr-mode-push", do_vr_mode_push },
     { "vr-mode-toggle", do_vr_mode_toggle },

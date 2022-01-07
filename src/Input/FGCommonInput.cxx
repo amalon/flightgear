@@ -38,7 +38,7 @@ void FGCommonInput::read_bindings (const SGPropertyNode * node, binding_list_t *
   PropertyList bindings = node->getChildren("binding");
   static string nasal = "nasal";
   for (unsigned int i = 0; i < bindings.size(); i++) {
-    const char *cmd = bindings[i]->getStringValue("command");
+    std::string cmd = bindings[i]->getStringValue("command");
     if (nasal.compare(cmd) == 0 && !module.empty())
       bindings[i]->setStringValue("module", module.c_str());
     binding_list[modifiers].push_back(new SGBinding(bindings[i], globals->get_props()));

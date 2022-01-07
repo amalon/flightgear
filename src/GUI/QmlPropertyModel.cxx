@@ -147,7 +147,7 @@ public:
 
             auto it = std::find(_directChildren.begin(), _directChildren.end(), child);
             if (it == _directChildren.end()) {
-                SG_LOG(SG_GUI, SG_DEV_ALERT, "Bug in QmlPropertyModel - child not found when removing:" << parent->getPath() << " - " << child->getName());
+                SG_LOG(SG_GUI, SG_DEV_ALERT, "Bug in QmlPropertyModel - child not found when removing:" << parent->getPath() << " - " << child->getNameString());
                 return;
             }
 

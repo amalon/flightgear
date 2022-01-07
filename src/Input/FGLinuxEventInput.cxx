@@ -290,8 +290,13 @@ static inline bool bitSet( unsigned char * buf, unsigned bit )
 bool FGLinuxInputDevice::Open()
 {
   if( fd != -1 ) return true;
-  if( (fd = ::open( devname.c_str(), O_RDWR )) == -1 ) { 
-    throw std::exception();
+  if( (fd = ::open( devname.c_str(), O_RDWR )) == -1 ) {
+    SG_LOG( SG_INPUT, SG_ALERT, "Cannot open devname='" << devname
+            << "'. errno=" << errno
+            << ": " << strerror(errno)
+            );
+    //throw std::exception();
+    return false;
   }
 
   if( GetGrab() && ioctl( fd, EVIOCGRAB, 2 ) == -1 ) {

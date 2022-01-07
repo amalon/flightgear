@@ -176,7 +176,7 @@ private:
     // closes.
     std::vector<void*> _info;
     struct PropertyObject {
-        PropertyObject(const char* name,
+        PropertyObject(std::string name,
                        puObject* object,
                        SGPropertyNode_ptr node);
         std::string name;

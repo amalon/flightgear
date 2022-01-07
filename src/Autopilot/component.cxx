@@ -47,7 +47,7 @@ bool Component::configure( SGPropertyNode& prop_root,
   for( int i = 0; i < cfg.nChildren(); ++i )
   {
     SGPropertyNode_ptr child = cfg.getChild(i);
-    std::string cname(child->getName());
+    std::string cname(child->getNameString());
 
     if(    !configure(*child, cname, prop_root)
         && cname != "params" ) // 'params' is usually used to specify parameters

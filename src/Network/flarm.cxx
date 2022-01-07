@@ -393,7 +393,7 @@ void FGFlarm::parse_message(const std::vector<std::string>& tokens)
         {
             // reply with config data
             snprintf( nmea, 256, "$PFLAC,A,%s,%s",
-                    keyword.c_str(), configNode->getStringValue());
+                    keyword.c_str(), configNode->getStringValue().c_str());
             add_with_checksum(nmea, 256);
             Error = false;
         }
@@ -447,7 +447,7 @@ void FGFlarm::parse_message(const std::vector<std::string>& tokens)
 
                 // reply
                 snprintf( nmea, 256, "$PFLAC,A,%s,%s",
-                        keyword.c_str(), configNode->getStringValue());
+                        keyword.c_str(), configNode->getStringValue().c_str());
                 add_with_checksum(nmea, 256);
             }
         }

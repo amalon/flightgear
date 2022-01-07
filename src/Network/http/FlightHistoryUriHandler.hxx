@@ -29,7 +29,7 @@ namespace http {
 
 class FlightHistoryUriHandler : public URIHandler {
 public:
-	FlightHistoryUriHandler( const char * uri = "/flighthistory/" ) : URIHandler( uri  ) {}
+	FlightHistoryUriHandler( const std::string& uri = "/flighthistory/" ) : URIHandler( uri  ) {}
   virtual bool handleRequest( const HTTPRequest & request, HTTPResponse & response, Connection * connection );
 private:
 };

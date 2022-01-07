@@ -107,7 +107,7 @@ Normal recordings are written as a compressed gzip stream using `simgear::gzCont
         * uint8_t flags.
             * Bit 0: this frame has signals.
             * Bit 1: this frame has multiplayer information.
-            * Bit 2: this frame has extrap properties.
+            * Bit 2: this frame has extra properties.
         * uint32_t compressed-size.
 
     * Frame data (can be compressed): a list of ordered `<length:32><data>` items as described by the `data[]` nodes in the header. This format allows Flightgear to skip data items that it doesn't understand if loading a recording that was created by a newer version.

@@ -106,7 +106,7 @@ WeatherScenariosModel::WeatherScenariosModel(QObject *pr) :
         int nChildren = scenarios->nChildren();
         for (int i = 0; i < nChildren; i++) {
             SGPropertyNode_ptr scenario = scenarios->getChild(i);
-            if (strcmp(scenario->getName(), "scenario") != 0) {
+            if (scenario->getNameString() != "scenario") {
                 continue;
             }
 

@@ -115,7 +115,7 @@ readTexture (const SGPropertyNode * node)
 			     node->getFloatValue("y1"),
 			     node->getFloatValue("x2", 1.0),
 			     node->getFloatValue("y2", 1.0));
-    SG_LOG(SG_COCKPIT, SG_DEBUG, "Read texture " << node->getName());
+    SG_LOG(SG_COCKPIT, SG_DEBUG, "Read texture " << node->getNameString());
     return texture;
 }
 
@@ -255,7 +255,7 @@ readTransformation (const SGPropertyNode * node, float w_scale, float h_scale)
 {
   FGPanelTransformation * t = new FGPanelTransformation;
 
-  string name = node->getName();
+  string name = node->getNameString();
   string type = node->getStringValue("type");
   string propName = node->getStringValue("property", "");
   SGPropertyNode * target = 0;
@@ -454,7 +454,7 @@ readLayer (const SGPropertyNode * node, float w_scale, float h_scale)
     layer = new FGGroupLayer();
     for (int i = 0; i < node->nChildren(); i++) {
       const SGPropertyNode * child = node->getChild(i);
-      if (!strcmp(child->getName(), "layer"))
+      if (child->getNameString() == "layer")
 	((FGGroupLayer *)layer)->addLayer(readLayer(child, w_scale, h_scale));
     }
   }
@@ -483,12 +483,12 @@ readLayer (const SGPropertyNode * node, float w_scale, float h_scale)
       int nChunks = chunk_group->nChildren();
       for (int i = 0; i < nChunks; i++) {
 	const SGPropertyNode * node = chunk_group->getChild(i);
-	if (!strcmp(node->getName(), "chunk")) {
+	if (node->getNameString() == "chunk") {
 	  FGTextLayer::Chunk * chunk = readTextChunk(node);
 	  if (chunk != 0)
 	    tlayer->addChunk(chunk);
 	} else {
-	  SG_LOG( SG_COCKPIT, SG_INFO, "Skipping " << node->getName()
+	  SG_LOG( SG_COCKPIT, SG_INFO, "Skipping " << node->getNameString()
                   << " in chunks" );
 	}
       }
@@ -501,7 +501,7 @@ readLayer (const SGPropertyNode * node, float w_scale, float h_scale)
     layer = new FGSwitchLayer();
     for (int i = 0; i < node->nChildren(); i++) {
       const SGPropertyNode * child = node->getChild(i);
-      if (!strcmp(child->getName(), "layer"))
+      if (child->getNameString() == "layer")
 	((FGGroupLayer *)layer)->addLayer(readLayer(child, w_scale, h_scale));
     }
   }
@@ -542,12 +542,12 @@ readLayer (const SGPropertyNode * node, float w_scale, float h_scale)
     int nTransformations = trans_group->nChildren();
     for (int i = 0; i < nTransformations; i++) {
       const SGPropertyNode * node = trans_group->getChild(i);
-      if (!strcmp(node->getName(), "transformation")) {
+      if (node->getNameString() == "transformation") {
 	FGPanelTransformation * t = readTransformation(node, w_scale, h_scale);
 	if (t != 0)
 	  layer->addTransformation(t);
       } else {
-	SG_LOG( SG_COCKPIT, SG_INFO, "Skipping " << node->getName()
+        SG_LOG( SG_COCKPIT, SG_INFO, "Skipping " << node->getNameString()
                 << " in transformations" );
       }
     }
@@ -611,12 +611,12 @@ readInstrument (const SGPropertyNode * node, const SGPath& path)
     int nActions = action_group->nChildren();
     for (int i = 0; i < nActions; i++) {
       const SGPropertyNode * node = action_group->getChild(i);
-      if (!strcmp(node->getName(), "action")) {
+      if (node->getNameString() == "action") {
 	FGPanelAction * action = readAction(node, w_scale, h_scale);
 	if (action != 0)
 	  instrument->addAction(action);
       } else {
-	SG_LOG( SG_COCKPIT, SG_INFO, "Skipping " << node->getName()
+        SG_LOG( SG_COCKPIT, SG_INFO, "Skipping " << node->getNameString()
                 << " in actions" );
       }
     }
@@ -630,12 +630,12 @@ readInstrument (const SGPropertyNode * node, const SGPath& path)
     int nLayers = layer_group->nChildren();
     for (int i = 0; i < nLayers; i++) {
       const SGPropertyNode * node = layer_group->getChild(i);
-      if (!strcmp(node->getName(), "layer")) {
+      if (node->getNameString() == "layer") {
 	FGInstrumentLayer * layer = readLayer(node, w_scale, h_scale);
 	if (layer != 0)
 	  instrument->addLayer(layer);
       } else {
-	SG_LOG( SG_COCKPIT, SG_INFO, "Skipping " << node->getName()
+        SG_LOG( SG_COCKPIT, SG_INFO, "Skipping " << node->getNameString()
                 << " in layers" );
       }
     }
@@ -741,11 +741,11 @@ readPanel (const SGPropertyNode * root, const SGPath& path)
     int nInstruments = instrument_group->nChildren();
     for (int i = 0; i < nInstruments; i++) {
       const SGPropertyNode * node = instrument_group->getChild(i);
-      if (!strcmp(node->getName(), "instrument")) {
+      if (node->getNameString() == "instrument") {
         FGPanelInstrument * instrument = readInstrument(node, path);
         if (instrument != 0)
           panel->addInstrument(instrument);
-      } else if (!strcmp(node->getName(), "special-instrument")) {
+      } else if (node->getNameString() == "special-instrument") {
         //cout << "Special instrument found in instruments section!\n";
         const string name = node->getStringValue("name");
         if (name == "KLN89 GPS") {
@@ -791,7 +791,7 @@ readPanel (const SGPropertyNode * root, const SGPath& path)
           SG_LOG( SG_COCKPIT, SG_WARN, "Unknown special instrument found" );
         }
       } else {
-        SG_LOG( SG_COCKPIT, SG_WARN, "Skipping " << node->getName()
+        SG_LOG( SG_COCKPIT, SG_WARN, "Skipping " << node->getNameString()
         << " in instruments section" );
       }
     }

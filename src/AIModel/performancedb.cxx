@@ -118,10 +118,10 @@ void PerformanceDB::load(const SGPath& filename)
     SGPropertyNode * node = root.getNode("performancedb");
     for (int i = 0; i < node->nChildren(); i++) {
         SGPropertyNode * db_node = node->getChild(i);
-        if (!strcmp(db_node->getName(), "aircraft")) {
+        if (db_node->getNameString() == "aircraft") {
             PerformanceData* data = NULL;
             if (db_node->hasChild("base")) {
-              const string& baseName = db_node->getStringValue("base");
+              std::string baseName = db_node->getStringValue("base");
               PerformanceData* baseData = _db[baseName];
               if (!baseData) {
                 SG_LOG(SG_AI, SG_ALERT,
@@ -136,21 +136,21 @@ void PerformanceDB::load(const SGPath& filename)
             }
 
             data->initFromProps(db_node);
-            const string& name  = db_node->getStringValue("type", "heavy_jet");
+            std::string name = db_node->getStringValue("type", "heavy_jet");
             registerPerformanceData(name, data);
-        } else if (!strcmp(db_node->getName(), "alias")) {
-            const string& alias(db_node->getStringValue("alias"));
+        } else if (db_node->getNameString() == "alias") {
+            std::string alias = db_node->getStringValue("alias");
             if (alias.empty()) {
                 SG_LOG(SG_AI, SG_ALERT, "performance DB alias entry with no <alias> definition");
                 continue;
             }
 
             for (auto matchNode : db_node->getChildren("match")) {
-                const string& match(matchNode->getStringValue());
+                std::string match = matchNode->getStringValue();
                 _aliases.push_back(StringPair(match, alias));
             }
         } else {
-            SG_LOG(SG_AI, SG_ALERT, "unrecognized performance DB entry:" << db_node->getName());
+            SG_LOG(SG_AI, SG_ALERT, "unrecognized performance DB entry:" << db_node->getNameString());
         }
     } // of nodes iteration
 }

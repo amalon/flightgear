@@ -71,7 +71,7 @@ NewGUI::~NewGUI ()
 //
 static void findAllLeafValues(SGPropertyNode* node, const std::string& leaf, std::vector<std::string>& out)
 {
-    const char* name = node->getName();
+    string name = node->getNameString();
     if (name == leaf) {
         out.push_back(node->getStringValue());
     }
@@ -121,7 +121,7 @@ NewGUI::init ()
     SGPath p(globals->get_fg_root(), "gui/dialogs");
     readDir(p);
     
-    SGPath aircraftDialogDir(string(fgGetString("/sim/aircraft-dir")), "gui/dialogs");
+    SGPath aircraftDialogDir(fgGetString("/sim/aircraft-dir"), "gui/dialogs");
     if (aircraftDialogDir.exists()) {
         readDir(aircraftDialogDir);
     }
@@ -414,12 +414,11 @@ NewGUI::setMenuBarOverlapHide(bool hide)
 void
 NewGUI::newDialog (SGPropertyNode* props)
 {
-    const char* cname = props->getStringValue("name");
-    if(!cname) {
+    string name = props->getStringValue("name", "");
+    if(name.empty()) {
         SG_LOG(SG_GENERAL, SG_ALERT, "New dialog has no <name> property");
         return;
     }
-    string name = cname;
   
     if(_active_dialogs.find(name) == _active_dialogs.end()) {
         _dialog_props[name] = props;
@@ -566,7 +565,7 @@ NewGUI::setStyle (void)
 
     for (int i = 0; i < n->nChildren(); i++) {
         SGPropertyNode *child = n->getChild(i);
-        _colors[child->getName()] = new FGColor(child);
+        _colors[child->getNameString()] = new FGColor(child);
     }
 
     FGColor *c = _colors["background"];

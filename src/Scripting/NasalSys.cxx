@@ -464,8 +464,8 @@ static naRef f_getprop(naContext c, naRef me, int argc, naRef* args)
     case props::UNSPECIFIED:
         {
             naRef nastr = naNewString(c);
-            const char* val = p->getStringValue();
-            naStr_fromdata(nastr, (char*)val, strlen(val));
+            std::string val = p->getStringValue();
+            naStr_fromdata(nastr, val.c_str(), val.length());
             return nastr;
         }
     case props::ALIAS: // <--- FIXME, recurse?
@@ -1370,7 +1370,7 @@ void FGNasalSys::loadPropertyScripts(SGPropertyNode* n)
 {
     bool is_loaded = false;
 
-    const char* module = n->getName();
+    std::string module = n->getNameString();
     if(n->hasChild("module"))
         module = n->getStringValue("module");
     if (n->getBoolValue("enabled",true))
@@ -1383,7 +1383,7 @@ void FGNasalSys::loadPropertyScripts(SGPropertyNode* n)
         bool ok=true;
         while((fn = n->getChild("file", j)) != NULL) {
             file_specified = true;
-            const char* file = fn->getStringValue();
+            std::string file = fn->getStringValue();
             SGPath p(file);
             if (!p.isAbsolute() || !p.exists())
             {
@@ -1396,16 +1396,16 @@ void FGNasalSys::loadPropertyScripts(SGPropertyNode* n)
                              string{"Missing nasal file for module:"} + module, sg_location{file});
                 }
             }
-            ok &= p.isNull() ? false : loadModule(p, module);
+            ok &= p.isNull() ? false : loadModule(p, module.c_str());
             j++;
         }
 
-        const char* src = n->getStringValue("script");
-        if(!n->hasChild("script")) src = 0; // Hrm...
-        if(src)
-            createModule(module, n->getPath().c_str(), src, strlen(src));
+        std::string src = n->getStringValue("script");
+        if(!n->hasChild("script")) src = ""; // Hrm...
+        if(!src.empty())
+            createModule(module.c_str(), n->getPath().c_str(), src.c_str(), src.length());
 
-        if(!file_specified && !src)
+        if(!file_specified && src.empty())
         {
             // module no longer exists - clear the archived "enable" flag
             n->setAttribute(SGPropertyNode::USERARCHIVE,false);
@@ -1640,12 +1640,12 @@ bool FGNasalSys::handleCommand( const char* moduleName,
 
 bool FGNasalSys::handleCommand(const SGPropertyNode * arg, SGPropertyNode * root)
 {
-  const char* src = arg->getStringValue("script");
-  const char* moduleName = arg->getStringValue("module");
+  std::string src = arg->getStringValue("script");
+  std::string moduleName = arg->getStringValue("module");
 
-  return handleCommand( moduleName,
+  return handleCommand( moduleName.c_str(),
                         arg->getPath(true).c_str(),
-                        src,
+                        src.c_str(),
                         arg,
                         root);
 }

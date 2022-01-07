@@ -1080,7 +1080,7 @@ struct SviewViewEyeTarget : SviewView
     :
     SviewView(view)
     {
-        if (!strcmp(config->getStringValue("type"), "legacy"))
+        if (config->getStringValue("type") == "legacy")
         {
             /* Legacy view. */
             std::string callsign = config->getStringValue("callsign");
@@ -1091,7 +1091,7 @@ struct SviewViewEyeTarget : SviewView
                 SG_LOG(SG_VIEW, SG_INFO, "eye-fixed");
                 m_steps.m_name = std::string() + "legacy tower" + callsign_desc;
                 
-                if (!strcmp(config->getStringValue("view/type"), "lookat")) {
+                if (config->getStringValue("view/type") == "lookat") {
                     /* E.g. Tower view or Tower view AGL. */
 
                     /* Add a step to move to centre of aircraft. target offsets appear
@@ -1167,7 +1167,7 @@ struct SviewViewEyeTarget : SviewView
                 SGPropertyNode* global_sim_view = globals->get_props()
                         ->getNode("sim/view", config->getIntValue("view-number-raw"));
 
-                if (!strcmp(global_sim_view->getStringValue("type"), "lookat")) {
+                if (global_sim_view->getStringValue("type") == "lookat") {
                     /* E.g. Helicopter view and Chase views. */
                     m_steps.m_name = std::string() + "legacy helicopter/chase" + callsign_desc;
                     m_steps.add_step(new SviewStepAircraft(callsign));
@@ -1287,39 +1287,39 @@ struct SviewViewEyeTarget : SviewView
                 throw std::runtime_error(std::string() + "No steps specified");
             }
             for (SGPropertyNode* step: steps) {
-                const char* type = step->getStringValue("type");
+                std::string type = step->getStringValue("type");
                 if (0) {}
-                else if (!strcmp(type, "aircraft")) {
+                else if (type == "aircraft") {
                     std::string callsign = step->getStringValue("callsign");
                     m_steps.add_step(new SviewStepAircraft(callsign));
                     if (callsign != "") {
                         m_steps.m_name += " callsign=" + callsign;
                     }
                 }
-                else if (!strcmp(type, "move")) {
+                else if (type == "move") {
                     m_steps.add_step(new SviewStepMove(
                             step->getDoubleValue("forward"),
                             step->getDoubleValue("up"),
                             step->getDoubleValue("right")
                             ));
                 }
-                else if (!strcmp(type, "direction-multiply")) {
+                else if (type == "direction-multiply") {
                     m_steps.add_step(new SviewStepDirectionMultiply(
                             step->getDoubleValue("heading"),
                             step->getDoubleValue("pitch"),
                             step->getDoubleValue("roll")
                             ));
                }
-               else if (!strcmp(type, "copy-to-target")) {
+               else if (type == "copy-to-target") {
                     m_steps.add_step(new SviewStepCopyToTarget);
                 }
-                else if (!strcmp(type, "nearest-tower")) {
+                else if (type == "nearest-tower") {
                     std::string callsign = step->getStringValue("callsign");
                     m_steps.add_step(new SviewStepNearestTower(callsign));
                     m_steps.m_name += " tower";
                     if (callsign != "") m_steps.m_name += " callsign=" + callsign;
                 }
-                else if (!strcmp(type, "rotate")) {
+                else if (type == "rotate") {
                     m_steps.add_step(new SviewStepRotate(
                             step->getDoubleValue("heading"),
                             step->getDoubleValue("pitch"),
@@ -1329,26 +1329,26 @@ struct SviewViewEyeTarget : SviewView
                             step->getDoubleValue("damping-roll")
                             ));
                 }
-                else if (!strcmp(type, "rotate-current-view")) {
+                else if (type == "rotate-current-view") {
                     m_steps.add_step(new SviewStepRotate(
                             globals->get_props()->getDoubleValue("heading"),
                             globals->get_props()->getDoubleValue("pitch"),
                             globals->get_props()->getDoubleValue("roll")
                             ));
                 }
-                else if (!strcmp(type, "mouse-drag"))
+                else if (type == "mouse-drag")
                 {
                     m_steps.add_step(new SviewStepMouseDrag(
                             step->getDoubleValue("heading-scale", 1),
                             step->getDoubleValue("pitch-scale", 1)
                             ));
                 }
-                else if (!strcmp(type, "double")) {
+                else if (type == "double") {
                     m_steps.add_step(new SviewStepDouble(step));
                     m_steps.m_name += " double";
                 }
-                else if (!strcmp(type, "agl")) {
-                    const char* callsign = step->getStringValue("callsign");
+                else if (type == "agl") {
+                    std::string callsign = step->getStringValue("callsign");
                     double damping_time = step->getDoubleValue("damping-time");
                     m_steps.add_step(new SviewStepAGL(callsign, damping_time));
                 }
@@ -1371,11 +1371,11 @@ struct SviewViewEyeTarget : SviewView
     :
     SviewView(view)
     {
-        const char* type = config->getStringValue("type");
-        if (!type) {
+        std::string type = config->getStringValue("type");
+        if (type.empty()) {
             throw std::runtime_error("double-type not specified");
         }
-        if (!strcmp(type, "last_pair") || !strcmp(type, "last_pair_double"))
+        if (type == "last_pair" || type == "last_pair_double")
         {
             /* Copy steps from <b> that will set .target. */
             for (auto step: b.m_steps)
@@ -1404,7 +1404,7 @@ struct SviewViewEyeTarget : SviewView
                 m_steps.add_step(step);
             }
             
-            if (!strcmp(type, "last_pair_double"))
+            if (type == "last_pair_double")
             {
                 /* We need a final SviewStepDouble step. */
                 m_steps.add_step(new SviewStepDouble);
@@ -1633,17 +1633,17 @@ std::shared_ptr<SviewView> SviewCreate(SGPropertyNode* config)
     
     std::shared_ptr<SviewView>  sview_view;
     
-    const char* type = config->getStringValue("type");
+    std::string type = config->getStringValue("type");
     SG_LOG(SG_VIEW, SG_DEBUG, "type=" << type);
     if (0) {
     }
-    else if (!strcmp(type, "current")) {
+    else if (type == "current") {
         SGPropertyNode_ptr config2 = SviewConfigForCurrentView();
         copyProperties(config, config2);
         config2->setStringValue("type", "legacy"); /* restore it after copy() sets to "current". */
         sview_view.reset(new SviewViewEyeTarget(view, config2));
     }
-    else if (!strcmp(type, "last_pair")) {
+    else if (type == "last_pair") {
         if (s_recent_views.size() < 2) {
             SG_LOG(SG_VIEW, SG_ALERT, "Need two pushed views");
             return nullptr;
@@ -1653,7 +1653,7 @@ std::shared_ptr<SviewView> SviewCreate(SGPropertyNode* config)
         std::shared_ptr<SviewViewEyeTarget> eye    = *(--it);
         sview_view.reset(new SviewViewEyeTarget(view, config, eye->m_steps, target->m_steps));
     }
-    else if (!strcmp(type, "last_pair_double")) {
+    else if (type == "last_pair_double") {
         if (s_recent_views.size() < 2) {
             SG_LOG(SG_VIEW, SG_ALERT, "Need two pushed views");
             return nullptr;

@@ -13,8 +13,10 @@ set(SOURCES
   NasalString.cxx
   NasalModelData.cxx
   NasalSGPath.cxx
-  NasalUnitTesting.cxx
   NasalFlightPlan.cxx
+  # we don't add this here becuase we need to exclude it the testSuite
+  # so it can't go nto fgfsObjects library
+  #   NasalUnitTesting.cxx
 )
 
 set(HEADERS

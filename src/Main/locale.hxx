@@ -96,7 +96,7 @@ public:
     /**
      * Obtain default font for current locale.
      */
-    const char* getDefaultFont      (const char* fallbackFont);
+    std::string getDefaultFont      (const char* fallbackFont);
 
     /**
      * Obtain a message string, from a localized resource ID, and use it as

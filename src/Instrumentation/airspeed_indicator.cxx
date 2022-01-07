@@ -137,9 +137,9 @@ AirspeedIndicator::computeMach()
     return;
   }
   
-  FGEnvironment env(_environmentManager->getEnvironment());
+    const auto env = _environmentManager->getAircraftEnvironment();
   
-  double oatK = env.get_temperature_degc() + SG_T0_K - 15.0 ;         // OAT in Kelvin
+  double oatK = env->get_temperature_degc() + SG_T0_K - 15.0 ;         // OAT in Kelvin
   oatK = std::max( oatK , 0.001 );                                // should never happen, but just in case someone flies into space...
   double c = sqrt(SG_gamma * SG_R_m2_p_s2_p_K * oatK);                 // speed-of-sound in m/s at aircraft position
   double pt = _total_pressure_node->getDoubleValue() * SG_INHG_TO_PA;  // total pressure in Pa

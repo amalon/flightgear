@@ -195,8 +195,8 @@ FGPUIMenuBar::make_menu (SGPropertyNode * node)
         FGLocale::utf8toLatin1(label);
 
         // append the keyboard hint to the menu entry
-        const char* key = item_nodes[i]->getStringValue("key", 0);
-        if (key)
+        string key = item_nodes[i]->getStringValue("key", "");
+        if (!key.empty())
         {
             label.append("           <");
             label.append(key);

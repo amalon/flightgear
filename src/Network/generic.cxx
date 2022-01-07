@@ -357,8 +357,8 @@ bool FGGeneric::gen_message_binary() {
         }
 
         default: // SG_STRING
-            const char *strdata = _out_message[i].prop->getStringValue();
-            int32_t strlength = strlen(strdata);
+            string strdata = _out_message[i].prop->getStringValue();
+            size_t strlength = strdata.length();
 
             if (binary_byte_order == BYTE_ORDER_NEEDS_CONVERSION) {
                 SG_LOG( SG_IO, SG_ALERT, "Generic protocol: "
@@ -372,7 +372,7 @@ bool FGGeneric::gen_message_binary() {
             }
             memcpy(&buf[length], &strlength, sizeof(int32_t));
             length += sizeof(int32_t);
-            strncpy(&buf[length], strdata, strlength);
+            strncpy(&buf[length], strdata.c_str(), strlength);
             length += strlength; 
             /* FIXME padding for alignment? Something like: 
              * length += (strlength % 4 > 0 ? sizeof(int32_t) - strlength % 4 : 0;
@@ -455,7 +455,7 @@ bool FGGeneric::gen_message_ascii() {
 
         default: // SG_STRING
             snprintf(tmp, 255, format.c_str(),
-                                   _out_message[i].prop->getStringValue());
+                                   _out_message[i].prop->getStringValue().c_str());
         }
 
         generic_sentence += tmp;

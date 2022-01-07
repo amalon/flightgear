@@ -208,7 +208,7 @@ bool FGMouseCursor::setCursorCommand(const SGPropertyNode* arg, SGPropertyNode*)
     }
 
 
-    Cursor c = cursorFromString(arg->getStringValue("cursor"));
+    Cursor c = cursorFromString(arg->getStringValue("cursor").c_str());
     setCursor(c);
     return true;
 }

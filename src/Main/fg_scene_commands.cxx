@@ -472,12 +472,12 @@ do_presets_commit (const SGPropertyNode * arg, SGPropertyNode * root)
 static bool
 do_press_cockpit_button (const SGPropertyNode * arg, SGPropertyNode * root)
 {
-  const char *prefix = arg->getStringValue("prefix");
+  const string prefix = arg->getStringValue("prefix");
 
-  if (arg->getBoolValue("guarded") && fgGetDouble((string(prefix) + "-guard").c_str()) < 1)
+  if (arg->getBoolValue("guarded") && fgGetDouble((prefix + "-guard").c_str()) < 1)
     return true;
 
-  string prop = string(prefix) + "-button";
+  string prop = prefix + "-button";
   double value;
 
   if (arg->getBoolValue("latching"))
@@ -494,10 +494,10 @@ do_press_cockpit_button (const SGPropertyNode * arg, SGPropertyNode * root)
 static bool
 do_release_cockpit_button (const SGPropertyNode * arg, SGPropertyNode * root)
 {
-  const char *prefix = arg->getStringValue("prefix");
+  const string prefix = arg->getStringValue("prefix");
 
   if (arg->getBoolValue("guarded")) {
-    string prop = string(prefix) + "-guard";
+    string prop = prefix + "-guard";
     if (fgGetDouble(prop.c_str()) < 1) {
       fgSetDouble(prop.c_str(), 1);
       return true;
@@ -505,7 +505,7 @@ do_release_cockpit_button (const SGPropertyNode * arg, SGPropertyNode * root)
   }
 
   if (! arg->getBoolValue("latching")) {
-    fgSetDouble((string(prefix) + "-button").c_str(), 0);
+    fgSetDouble((prefix + "-button").c_str(), 0);
     fgSetBool(arg->getStringValue("discrete"), false);
   }
 

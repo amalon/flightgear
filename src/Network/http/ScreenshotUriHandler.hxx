@@ -28,7 +28,7 @@ namespace http {
 
 class ScreenshotUriHandler : public URIHandler {
 public:
-  ScreenshotUriHandler( const char * uri = "/screenshot/" );
+  ScreenshotUriHandler( const std::string& uri = "/screenshot/" );
   ~ScreenshotUriHandler();
   virtual bool handleGetRequest( const HTTPRequest & request, HTTPResponse & response, Connection * connection );
   virtual bool poll( Connection * connection );

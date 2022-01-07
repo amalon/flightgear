@@ -260,7 +260,7 @@ void FGAIBase::readFromScenario(SGPropertyNode* scFileNode)
         return;
 
     setPath(scFileNode->getStringValue("model",
-            fgGetString("/sim/multiplay/default-model", default_model)));
+            fgGetString("/sim/multiplay/default-model", default_model).c_str()).c_str());
 
     setFallbackModelIndex(scFileNode->getIntValue("fallback-model-index", 0));
 

@@ -628,6 +628,8 @@ WayptVec Via::expandToWaypoints(WayptRef aPreceeding) const
         throw sg_exception("invalid preceeding waypoint");
     }
 
+  // this waypoint is noly used for the search, it's not part
+  // of the result, so we don't need to set the owner
     WayptRef toWp = new NavaidWaypoint(_to, nullptr);
     return _airway->via(aPreceeding, toWp);
 }

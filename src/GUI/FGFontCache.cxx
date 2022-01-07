@@ -164,7 +164,7 @@ FGFontCache::get(SGPropertyNode *node)
     if (!node)
         return get("Helvetica.txf", 15.0, 0.0);
 
-    const char *name = node->getStringValue("name", "Helvetica.txf");
+    std::string name = node->getStringValue("name", "Helvetica.txf");
     float size = node->getFloatValue("size", 15.0);
     float slant = node->getFloatValue("slant", 0.0);
 

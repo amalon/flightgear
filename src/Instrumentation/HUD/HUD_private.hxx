@@ -73,7 +73,7 @@ public:
         return _property->getBoolValue();
     }
 
-    const char *getStringValue() const {
+    std::string getStringValue() const {
         assert(_property);
         return _property->getStringValue();
     }

@@ -120,7 +120,7 @@ void mkDialog (const char *txt)
         if (!msg->getNode(name.c_str(), false))
             break;
 
-        if (!strcmp(txt, msg->getNode(name.c_str())->getStringValue("message"))) {
+        if (!strcmp(txt, msg->getNode(name.c_str())->getStringValue("message").c_str())) {
             SG_LOG(SG_GENERAL, SG_WARN, "mkDialog(): duplicate of message " << txt);
             return;
         }
@@ -397,11 +397,11 @@ void fgHiResDump()
     glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
     glHint(GL_POINT_SMOOTH_HINT, GL_DONT_CARE);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_DONT_CARE);
-    if ( (!strcmp(fgGetString("/sim/rendering/fog"), "disabled")) ||
+    if ( fgGetString("/sim/rendering/fog") == "disabled" ||
          (!fgGetBool("/sim/rendering/shading"))) {
         // if fastest fog requested, or if flat shading force fastest
         glHint ( GL_FOG_HINT, GL_FASTEST );
-    } else if ( !strcmp(fgGetString("/sim/rendering/fog"), "nicest") ) {
+    } else if ( fgGetString("/sim/rendering/fog") == "nicest" ) {
         glHint ( GL_FOG_HINT, GL_DONT_CARE );
     }
 

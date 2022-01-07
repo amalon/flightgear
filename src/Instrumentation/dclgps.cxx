@@ -280,8 +280,8 @@ void DCLGPS::update(double dt) {
 
 	// Check if an alarm timer has expired
 	if(_alarmSet) {
-		if(_alarmTime.hr() == atoi(fgGetString("/instrumentation/clock/indicated-hour"))
-		&& _alarmTime.min() == atoi(fgGetString("/instrumentation/clock/indicated-min"))) {
+		if(_alarmTime.hr() == atoi(fgGetString("/instrumentation/clock/indicated-hour").c_str())
+		&& _alarmTime.min() == atoi(fgGetString("/instrumentation/clock/indicated-min").c_str())) {
 			_messageStack.push_back("*Timer Expired");
 			_alarmSet = false;
 		}
@@ -971,8 +971,8 @@ void DCLGPS::SetPowerOnTimer() {
 }
 
 void DCLGPS::ResetPowerOnTimer() {
-	_powerOnTime.set_hr(atoi(fgGetString("/instrumentation/clock/indicated-hour")));
-	_powerOnTime.set_min(atoi(fgGetString("/instrumentation/clock/indicated-min")));
+	_powerOnTime.set_hr(atoi(fgGetString("/instrumentation/clock/indicated-hour").c_str()));
+	_powerOnTime.set_min(atoi(fgGetString("/instrumentation/clock/indicated-min").c_str()));
 	_powerOnTimerSet = true;
 }
 

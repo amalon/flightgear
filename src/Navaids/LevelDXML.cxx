@@ -76,6 +76,16 @@ void NavdataVisitor::startElement(const char* name, const XMLAttributes &atts)
     _ident = atts.getValue("Name");
     _waypoints.clear();
     ProcedureType ty = PROCEDURE_APPROACH_RNAV;
+
+    // if the name of the procedure starts with the correct name, set the procedure type
+    if (_ident.find("ILS") == 0) {
+        ty = PROCEDURE_APPROACH_ILS;
+    } else if (_ident.find("VOR") == 0 || _ident.find("VDM") == 0) {
+        ty = PROCEDURE_APPROACH_VOR;
+    } else if (_ident.find("NDB") == 0 || _ident.find("NDM") == 0) {
+        ty = PROCEDURE_APPROACH_NDB;
+    }
+
     _approach = new Approach(_ident, ty);
     _procedure = _approach;
   } else if ((tag == "Sid_Transition") || 

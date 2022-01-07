@@ -110,7 +110,7 @@ void MPServersModel::onRefreshMPServersDone(simgear::HTTP::Request*)
 
     for (int i=0; i<targetnode->nChildren(); ++i) {
         SGPropertyNode* c = targetnode->getChild(i);
-        if (c->getName() != std::string("server")) {
+        if (c->getNameString() != "server") {
             continue;
         }
 

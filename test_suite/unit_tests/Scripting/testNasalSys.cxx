@@ -227,3 +227,17 @@ void NasalSysTests::testRoundFloor()
     )");
     CPPUNIT_ASSERT(ok);
 }
+
+void NasalSysTests::testRange()
+{
+    auto nasalSys = globals->get_subsystem<FGNasalSys>();
+    nasalSys->getAndClearErrorList();
+
+    bool ok = FGTestApi::executeNasal(R"(
+        unitTest.assert_equal(range(5), [0, 1, 2, 3, 4]);
+        unitTest.assert_equal(range(2, 8), [2, 3, 4, 5, 6, 7]);
+        unitTest.assert_equal(range(2, 10, 3), [2, 5, 8]);
+
+    )");
+    CPPUNIT_ASSERT(ok);
+}

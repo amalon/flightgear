@@ -113,7 +113,7 @@ void FGNasalModelData::load()
 
   SG_LOG(SG_NASAL, SG_DEBUG, "Loading nasal module " << _module.c_str());
 
-  const char *s = _load ? _load->getStringValue() : "";
+  const string s = _load ? _load->getStringValue() : "";
   FGNasalSys* nasalSys = (FGNasalSys*) globals->get_subsystem("nasal");
 
   // Add _module_id to script local hash to allow placing canvasses on objects
@@ -128,7 +128,7 @@ void FGNasalModelData::load()
   naRef arg[2];
   arg[0] = nasalSys->propNodeGhost(_root);
   arg[1] = nasalSys->propNodeGhost(_prop);
-  nasalSys->createModule(_module.c_str(), _path.c_str(), s, strlen(s),
+  nasalSys->createModule(_module.c_str(), _path.c_str(), s.c_str(), s.length(),
                          _root, 2, arg);
 }
 
@@ -149,8 +149,8 @@ void FGNasalModelData::unload()
 
     if (_unload)
     {
-        const char *s = _unload->getStringValue();
-        nasalSys->createModule(_module.c_str(), _module.c_str(), s, strlen(s), _root);
+        const string s = _unload->getStringValue();
+        nasalSys->createModule(_module.c_str(), _module.c_str(), s.c_str(), s.length(), _root);
     }
 
     nasalSys->deleteModule(_module.c_str());

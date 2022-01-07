@@ -173,8 +173,8 @@ View* View::createFromProperties(SGPropertyNode_ptr config, int view_index)
 
     View* v = nullptr;
     // supporting two types "lookat" = 1 and "lookfrom" = 0
-    const char *type = config->getParent()->getStringValue("type");
-    if (!strcmp(type, "lookat")) {
+    std::string type = config->getParent()->getStringValue("type");
+    if (type == "lookat") {
         bool at_model = config->getBoolValue("at-model");
         int at_model_index = config->getIntValue("at-model-idx");
 

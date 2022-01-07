@@ -63,7 +63,7 @@ private:
  */
 class URIHandler : public SGReferenced {
 public:
-  URIHandler( const char * uri ) : _uri(uri) {}
+  URIHandler( const std::string& uri ) : _uri(uri) {}
   virtual ~URIHandler()  {}
 
   /**

@@ -225,9 +225,9 @@ string ATISEncoder::processTokens( SGPropertyNode_ptr node )
 
 string ATISEncoder::processToken( SGPropertyNode_ptr token ) 
 {
-  HandlerMap::iterator it = handlerMap.find( token->getName());
+  HandlerMap::iterator it = handlerMap.find( token->getNameString());
   if( it == handlerMap.end() ) {
-    SG_LOG(SG_ATC, SG_WARN, "ATISEncoder: unknown token: " << token->getName() );
+    SG_LOG(SG_ATC, SG_WARN, "ATISEncoder: unknown token: " << token->getNameString() );
     return EMPTY;
   }
   handler_t h = it->second;
@@ -416,11 +416,11 @@ string ATISEncoder::getTakeoffRunway( SGPropertyNode_ptr p )
   return getLandingRunway( p );
 }
 
-string ATISEncoder::getTransitionLevel( SGPropertyNode_ptr )
+string ATISEncoder::getTransitionLevel(SGPropertyNode_ptr)
 {
-  double hPa = _atis->getQnh();
+    double hPa = _atis->getQnh();
 
-  /* Transition level is the flight level above which aircraft must use standard pressure and below
+    /* Transition level is the flight level above which aircraft must use standard pressure and below
    * which airport pressure settings must be used.
    * Following definitions are taken from German ATIS:
    *      QNH <=  977 hPa: TRL 80
@@ -428,26 +428,26 @@ string ATISEncoder::getTransitionLevel( SGPropertyNode_ptr )
    *      QNH >  1013 hPa: TRL 60
    * (maybe differs slightly for other countries...)
    */
-  int tl;
-  if (hPa <= 978) {
-    tl = 80;
-  } else if( hPa > 978 && hPa <= 1013 ) {
-    tl = 70;
-  } else if( hPa > 1013 && hPa <= 1046 ) {
-    tl = 60;
-  } else {
-    tl = 50;
-  }
+    int tl;
+    if (hPa <= 978) {
+        tl = 80;
+    } else if (hPa <= 1013) {
+        tl = 70;
+    } else if (hPa <= 1046) {
+        tl = 60;
+    } else {
+        tl = 50;
+    }
 
-  // add an offset to the transition level for high altitude airports (just guessing here,
-  // seems reasonable)
-  int e = int(airport->getElevation() / 1000.0);
-  if (e >= 3) {
-    // TL steps in 10(00)ft
-    tl += (e-2)*10;
-  }
+    // add an offset to the transition level for high altitude airports (just guessing here,
+    // seems reasonable)
+    int e = int(airport->getElevation() / 1000.0);
+    if (e >= 3) {
+        // TL steps in 10(00)ft
+        tl += (e - 2) * 10;
+    }
 
-  return getSpokenNumber(tl);
+    return getSpokenNumber(tl);
 }
 
 string ATISEncoder::getWindDirection( SGPropertyNode_ptr )
@@ -525,10 +525,12 @@ string ATISEncoder::getClouds( SGPropertyNode_ptr )
 
   ATISInformationProvider::CloudEntries cloudEntries = _atis->getClouds();
 
-  for( ATISInformationProvider::CloudEntries::iterator it = cloudEntries.begin(); it != cloudEntries.end(); it++ ) {
-    if( !reply.empty() ) reply.SPACE;
+  for (ATISInformationProvider::CloudEntries::iterator it = cloudEntries.begin(); it != cloudEntries.end(); ++it) {
+    if (!reply.empty())
+      reply.SPACE;
     reply.append( it->second ).SPACE.append( getSpokenAltitude(it->first).SPACE.append( FEET ) );
   }
+
   return reply;
 }
 
@@ -538,10 +540,12 @@ string ATISEncoder::getCloudsBrief( SGPropertyNode_ptr )
 
   ATISInformationProvider::CloudEntries cloudEntries = _atis->getClouds();
 
-  for( ATISInformationProvider::CloudEntries::iterator it = cloudEntries.begin(); it != cloudEntries.end(); it++ ) {
-    if( !reply.empty() ) reply.append(",").SPACE;
+  for (ATISInformationProvider::CloudEntries::iterator it = cloudEntries.begin(); it != cloudEntries.end(); ++it) {
+    if (!reply.empty())
+      reply.append(",").SPACE;
     reply.append( it->second ).SPACE.append( getSpokenAltitude(it->first) );
   }
+
   return reply;
 }
 

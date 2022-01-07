@@ -413,11 +413,13 @@ FGRunwayRef FGAirport::getActiveRunwayForUsage() const
   double hdg = 270;
 
   if (envMgr) {
-    FGEnvironment stationWeather(envMgr->getEnvironment(geod()));
+      // FIXME : this should use the weather at the airport, not the player's
+      // location.
+      const auto stationWeather = envMgr->getAircraftEnvironment();
 
-    double windSpeed = stationWeather.get_wind_speed_kt();
+    double windSpeed = stationWeather->get_wind_speed_kt();
     if (windSpeed > 0.0) {
-      hdg = stationWeather.get_wind_from_heading_deg();
+      hdg = stationWeather->get_wind_from_heading_deg();
     }
   }
 

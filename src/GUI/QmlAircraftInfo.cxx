@@ -400,7 +400,7 @@ QString QmlAircraftInfo::authors() const
         QString html = "<ul>\n";
         for (auto a : structuredAuthors->getChildren("author")) {
             html += "<li>";
-            html += a->getStringValue("name");
+            html += QString::fromStdString(a->getStringValue("name"));
             if (a->hasChild("nick")) {
                 html += QStringLiteral(" '") + QString::fromStdString(a->getStringValue("nick")) + QStringLiteral("'");
             }

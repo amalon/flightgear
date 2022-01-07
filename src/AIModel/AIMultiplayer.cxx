@@ -455,8 +455,8 @@ void FGAIMultiplayer::update(double dt)
     //
     bool motion_logging = false;
     {
-        const char* callsign = mLogRawSpeedMultiplayer->getStringValue();
-        if (callsign && callsign[0] && this->_callsign == callsign)
+        string callsign = mLogRawSpeedMultiplayer->getStringValue();
+        if (!callsign.empty() && this->_callsign == callsign)
         {
             motion_logging = true;
         }

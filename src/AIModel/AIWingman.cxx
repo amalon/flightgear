@@ -280,16 +280,12 @@ void FGAIWingman::formateToAC(double dt){
 
     if(p_agl <= 10 || p_wow == 1) {
         _height = p_ht;
-        //cout << "ht case1 " ;
-    } else if (p_agl > 10 && p_agl <= 150 ) {
+    } else if (p_agl <= 150 ) {
         setHt(p_ht, dt, 1.0);
-        //cout << "ht case2 " ;
-    } else if (p_agl > 150 && p_agl <= 250) {
-        setHt(_offsetpos.getElevationFt()+ h_feet, dt, 0.75);
-        //cout << "ht case3 " ;
+    } else if (p_agl <= 250) {
+        setHt(_offsetpos.getElevationFt() + h_feet, dt, 0.75);
     } else{
-        setHt(_offsetpos.getElevationFt()+ h_feet, dt, 0.5);
-        //cout << "ht case4 " ;
+        setHt(_offsetpos.getElevationFt() + h_feet, dt, 0.5);
     }
 
     pos.setElevationFt(_height);
@@ -404,7 +400,7 @@ void FGAIWingman::Join(double dt) {
             setPch(angle, dt, _coeff_pch);
             //cout << _name << " backing up HEADING " << hdg
             //    << " RANGE " << range;
-        } else if (rel_brg >= -5 || rel_brg <= 5) {
+        } else if (rel_brg >= -5 && rel_brg <= 5) {
             // station is in front of us - slow down
             setSpeed(parent_spd + ((frm_spd/100) * range));
             //SGMiscd::clip

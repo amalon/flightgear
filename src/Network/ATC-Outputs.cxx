@@ -441,7 +441,7 @@ bool FGATCOutput::do_analog_out() {
             // read the next config entry from the property tree
 
             SGPropertyNode *child = analog_out_node->getChild(i);
-            string cname = child->getName();
+            string cname = child->getNameString();
             int index = child->getIndex();
             string name = "";
             string type = "";
@@ -510,7 +510,7 @@ bool FGATCOutput::do_lamps() {
             // read the next config entry from the property tree
 
             SGPropertyNode *child = lamps_out_node->getChild(i);
-            string cname = child->getName();
+            string cname = child->getNameString();
             int index = child->getIndex();
             string name = "";
             string type = "";

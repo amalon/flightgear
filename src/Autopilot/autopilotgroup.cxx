@@ -187,7 +187,7 @@ void FGXMLAutopilotGroupImplementation::initFrom( SGPropertyNode_ptr rootNode,
 
 void FGXMLAutopilotGroup::addAutopilotFromFile( const std::string& name,
                                                 SGPropertyNode_ptr apNode,
-                                                const char* path )
+                                                const std::string& path )
 {
   SGPath config = globals->resolve_maybe_aircraft_path(path);
   if( config.isNull() )

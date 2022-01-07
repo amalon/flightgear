@@ -73,8 +73,8 @@ HUD::Input::Input(const SGPropertyNode *n, float factor, float offset,
   _coeff = 1.0 - 1.0 / powf(10, fabs(n->getFloatValue("damp", 0.0)));
   SGPropertyNode *p = ((SGPropertyNode *)n)->getNode("property", false);
   if (p) {
-    const char *path = p->getStringValue();
-    if (path && path[0]) {
+    string path = p->getStringValue();
+    if (!path.empty()) {
       _property = fgGetNode(path, true);
       _valid = true;
     }
@@ -395,52 +395,52 @@ int HUD::load(const char *file, float x, float y, int level, const string& inden
 
     for (int i = 0; i < root.nChildren(); i++) {
         SGPropertyNode *n = root.getChild(i);
-        const char *d = n->getStringValue("name", 0);
+        string d = n->getStringValue("name", "");
         string desc;
-        if (d)
+        if (!d.empty())
             desc = string(": \"") + d + '"';
 
-        const char *name = n->getName();
-        if (!strcmp(name, "name")) {
+        const string name = n->getNameString();
+        if (name == "name") {
             continue;
 
-        } else if (!strcmp(name, "enable3d")) {
+        } else if (name == "enable3d") {
             // set in the tree so that valueChanged() picks it up
             _3DenabledN->setBoolValue(n->getBoolValue());
             continue;
 
-        } else if (!strcmp(name, "import")) {
-            const char *fn = n->getStringValue("path", "");
+        } else if (name == "import") {
+            string fn = n->getStringValue("path", "");
             float xoffs = n->getFloatValue("x-offset", 0.0f);
             float yoffs = n->getFloatValue("y-offset", 0.0f);
 
             SG_LOG(SG_INPUT, TREE, indent << "|__import " << fn << desc);
 
             string ind = indent + string(i + 1 < root.nChildren() ? "|    " : "     ");
-            ret |= load(fn, x + xoffs, y + yoffs, level + 1, ind);
+            ret |= load(fn.c_str(), x + xoffs, y + yoffs, level + 1, ind);
             continue;
         }
 
         SG_LOG(SG_INPUT, TREE, indent << "|__" << name << desc);
 
         Item *item;
-        if (!strcmp(name, "label")) {
+        if (name == "label") {
             item = static_cast<Item *>(new Label(this, n, x, y));
-        } else if (!strcmp(name, "gauge")) {
+        } else if (name == "gauge") {
             item = static_cast<Item *>(new Gauge(this, n, x, y));
-        } else if (!strcmp(name, "tape")) {
+        } else if (name == "tape") {
             item = static_cast<Item *>(new Tape(this, n, x, y));
-        } else if (!strcmp(name, "dial")) {
+        } else if (name == "dial") {
             item = static_cast<Item *>(new Dial(this, n, x, y));
-        } else if (!strcmp(name, "turn-bank-indicator")) {
+        } else if (name == "turn-bank-indicator") {
             item = static_cast<Item *>(new TurnBankIndicator(this, n, x, y));
-        } else if (!strcmp(name, "ladder")) {
+        } else if (name == "ladder") {
             item = static_cast<Item *>(new Ladder(this, n, x, y));
             _ladders.insert(_ladders.begin(), item);
             continue;
-        } else if (!strcmp(name, "runway")) {
+        } else if (name == "runway") {
             item = static_cast<Item *>(new Runway(this, n, x, y));
-        } else if (!strcmp(name, "aiming-reticle")) {
+        } else if (name == "aiming-reticle") {
             item = static_cast<Item *>(new AimingReticle(this, n, x, y));
         } else {
             SG_LOG(SG_INPUT, TREE, indent << "      \\...unsupported!");
@@ -466,7 +466,7 @@ void HUD::valueChanged(SGPropertyNode *node)
       loadNow = true;
     }
 
-    if (!strcmp(node->getName(), "current-path") && _visible) {
+    if (node->getNameString() == "current-path" && _visible) {
       loadNow = true;
     }
 
@@ -483,7 +483,7 @@ void HUD::valueChanged(SGPropertyNode *node)
       load(path.c_str());
     }
 
-    if (!strcmp(node->getName(), "current-color")) {
+    if (node->getNameString() == "current-color") {
         currentColorChanged();
     }
 
@@ -501,7 +501,7 @@ void HUD::valueChanged(SGPropertyNode *node)
     _a = clamp(_alpha->getFloatValue());
     _cl = clamp(_alpha_clamp->getFloatValue());
 
-    _units = strcmp(_unitsN->getStringValue(), "feet") ? METER : FEET;
+    _units = _unitsN->getStringValue() != "feet" ? METER : FEET;
     _listener_active = false;
 }
 

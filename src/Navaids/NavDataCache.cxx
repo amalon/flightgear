@@ -1437,9 +1437,9 @@ bool NavDataCache::isRebuildRequired()
       d->isCachedFileModified(d->carrierDatPath, true) ||
 // since POI loading is disabled on Windows, don't check for it
 // this caused: https://code.google.com/p/flightgear-bugs/issues/detail?id=1227
-#ifndef SG_WINDOWS
+//ifndef SG_WINDOWS
       d->isCachedFileModified(d->poiDatPath, true) ||
-#endif
+//#endif
       d->isCachedFileModified(d->airwayDatPath, true))
   {
     SG_LOG(SG_NAVCACHE, SG_INFO, "NavCache: main cache rebuild required");
@@ -1708,7 +1708,7 @@ void NavDataCache::doRebuild()
         SG_LOG(SG_NAVCACHE, SG_INFO, "stage 1 commit took:" << st.elapsedMSec());
     }
 
-#ifdef SG_WINDOWS
+#if 0
       SG_LOG(SG_NAVCACHE, SG_MANDATORY_INFO, "SKIPPING POI load on Windows");
 #else
       {

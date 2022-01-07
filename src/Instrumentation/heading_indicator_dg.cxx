@@ -32,7 +32,7 @@ HeadingIndicatorDG::HeadingIndicatorDG ( SGPropertyNode *node ) :
     int i;
     for ( i = 0; i < node->nChildren(); ++i ) {
         SGPropertyNode *child = node->getChild(i);
-        std::string cname = child->getName();
+        std::string cname = child->getNameString();
         std::string cval = child->getStringValue();
         if ( cname == "name" ) {
             name = cval;

@@ -569,9 +569,9 @@ struct SGLogDeltasListener : SGPropertyChangeListener
 {
     void valueChanged(SGPropertyNode* node) override
     {
-        const char* value = node->getStringValue();
+        std::string value = node->getStringValue();
         std::cerr << __FILE__ << ":" << __LINE__ << ": sglogdeltas value=" << value << "\n";
-        logDeltaSet(value);
+        logDeltaSet(value.c_str());
     }
 };
 static SGLogDeltasListener s_sglogdeltas_listener;

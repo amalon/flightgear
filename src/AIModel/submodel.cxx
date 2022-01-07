@@ -625,8 +625,8 @@ void FGSubmodelMgr::setData(int id, const string& path, bool serviceable, const 
         if (sm->contents_node != 0)
             sm->contents = sm->contents_node->getDoubleValue();
 
-        const char *trigger_path = entry_node->getStringValue("trigger", 0);
-        if (trigger_path) {
+        string trigger_path = entry_node->getStringValue("trigger", "");
+        if (!trigger_path.empty()) {
             sm->trigger_node = fgGetNode(trigger_path, true);
             sm->trigger_node->setBoolValue(sm->trigger_node->getBoolValue());
         }

@@ -115,7 +115,7 @@ int jsInput::getInput() {
     }
     if(button_bits != 0) {
         for(int i=0;i<=31;i++) {
-            if( ( button_bits & (1 << i) ) > 0 ) {
+            if( ( button_bits & (1u << i) ) > 0 ) {
                 button=i;
                 break;
             }

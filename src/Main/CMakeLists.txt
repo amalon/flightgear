@@ -59,6 +59,9 @@ flightgear_component(Main "${SOURCES}" "${HEADERS}" sentryIntegration.cxx)
 # the main() function
 set(MAIN_SOURCE
     bootstrap.cxx
+    # we only want this file when building FGFS, so it can't be
+    # part of fgfsObjects
+    ${CMAKE_SOURCE_DIR}/src/Scripting/NasalUnitTesting.cxx
 )
 
 # Set up the embedded resources.

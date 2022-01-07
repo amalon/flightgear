@@ -22,7 +22,7 @@ VacuumSystem::VacuumSystem ( SGPropertyNode *node )
 {
     for ( int i = 0; i < node->nChildren(); ++i ) {
         SGPropertyNode *child = node->getChild(i);
-        if (!strcmp(child->getName(), "rpm"))
+        if (child->getNameString() == "rpm")
             _rpms.push_back(child->getStringValue());
     }
 }

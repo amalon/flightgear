@@ -196,7 +196,7 @@ bool FGGroundController::checkTransmissionState(int minState, int maxState, Traf
                 // PopupCallback(n);
                 SG_LOG(SG_ATC, SG_DEBUG, "Selected transmission message " << n);
                 //FGATCManager *atc = (FGATCManager*) globals->get_subsystem("atc");
-                FGATCDialogNew::instance()->removeEntry(1);
+                //FGATCDialogNew::instance()->removeEntry(1);
             } else {
                 SG_LOG(SG_ATC, SG_DEBUG, "creating message for " << i->getAircraft()->getCallSign());
                 transmit(&(*i), dynamics, msgId, msgDir, false);
@@ -608,7 +608,8 @@ bool FGGroundController::checkForCircularWaits(int id)
     } else {
         return false;
     }
-    if (i == activeTraffic.end() || (trafficSize == 0)) {
+
+    if (i == activeTraffic.end()) {
         SG_LOG(SG_GENERAL, SG_ALERT,
                "AI error: Trying to access non-existing aircraft in FGGroundNetwork::checkForCircularWaits at " << SG_ORIGIN);
     }
@@ -623,12 +624,10 @@ bool FGGroundController::checkForCircularWaits(int id)
         return false;
     }
 
-
     while ((target > 0) && (target != id) && counter++ < trafficSize) {
         //printed = true;
         TrafficVectorIterator i = activeTraffic.begin();
         if (trafficSize) {
-            //while ((i->getId() != id) && i != activeTraffic.end())
             while (i != activeTraffic.end()) {
                 if (i->getId() == target) {
                     break;
@@ -638,40 +637,23 @@ bool FGGroundController::checkForCircularWaits(int id)
         } else {
             return false;
         }
-        if (i == activeTraffic.end() || (trafficSize == 0)) {
+
+        if (i == activeTraffic.end()) {
             SG_LOG(SG_ATC, SG_DEBUG, "[Waiting for traffic at Runway: DONE] ");
             // The target id is not found on the current network, which means it's at the tower
             SG_LOG(SG_ATC, SG_ALERT, "AI error: Trying to access non-existing aircraft in FGGroundNetwork::checkForCircularWaits");
             return false;
         }
+
         other = i;
         target = other->getWaitsForId();
 
         // actually this trap isn't as impossible as it first seemed:
         // the setWaitsForID(id) is set to current when the aircraft
         // is waiting for the user controlled aircraft.
-        //if (current->getId() == other->getId()) {
-        //    SG_LOG(SG_ATC, SG_DEBUG, "Caught the impossible trap");
-        //    SG_LOG(SG_ATC, SG_DEBUG, "Current = " << current->getId());
-        //    SG_LOG(SG_ATC, SG_DEBUG, "Other   = " << other  ->getId());
-        //    for (TrafficVectorIterator at = activeTraffic.begin();
-        //          at != activeTraffic.end();
-        //          at++) {
-        //          SG_LOG(SG_ATC, SG_BULK, "currently active aircraft : " << at->getCallSign() << " with Id " << at->getId() << " waits for " << at->getWaitsForId());
-        //    }
-        //    exit(1);
         if (current->getId() == other->getId())
             return false;
-        //}
-        //SG_LOG(SG_ATC, SG_DEBUG, current->getCallSign() << " (" << current->getId()  << ") " << " -> " << other->getCallSign()
-        //     << " (" << other->getId()  << "); ");
-        //current = other;
     }
-
-
-
-
-
 
     //if (printed)
         SG_LOG(SG_ATC, SG_DEBUG, "[done] ");

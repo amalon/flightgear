@@ -508,6 +508,7 @@ void MapWidget::setProperty(SGPropertyNode_ptr prop)
     
   createPropertyIfRequired(_root, "centre-on-aircraft", true);
   createPropertyIfRequired(_root, "draw-data", false);
+  createPropertyIfRequired(_root, "draw-pois", true);
   createPropertyIfRequired(_root, "draw-flight-history", false);
   createPropertyIfRequired(_root, "magnetic-headings", true);
   createPropertyIfRequired(_root, "key-pan", true);
@@ -714,18 +715,22 @@ void MapWidget::update()
         newItemsToDraw.insert(newItemsToDraw.end(), navs.begin(), navs.end());
     }
 
-    FGPositioned::TypeFilter tf(FGPositioned::COUNTRY);
-    if (_cachedZoom <= SHOW_DETAIL_ZOOM) {
-        tf.addType(FGPositioned::CITY);
+    const bool drawPOIs = _root->getBoolValue("draw-pois");
+    if (drawPOIs) {
+      FGPositioned::TypeFilter tf(FGPositioned::COUNTRY);
+
+      if (_cachedZoom <= SHOW_DETAIL_ZOOM) {
+          tf.addType(FGPositioned::CITY);
+      }
+      
+      if (_cachedZoom <= SHOW_DETAIL2_ZOOM) {
+          tf.addType(FGPositioned::TOWN);
+      }
+      
+      FGPositionedList poi = FGPositioned::findWithinRange(_projectionCenter, _drawRangeNm, &tf);
+      newItemsToDraw.insert(newItemsToDraw.end(), poi.begin(), poi.end());
     }
-    
-    if (_cachedZoom <= SHOW_DETAIL2_ZOOM) {
-        tf.addType(FGPositioned::TOWN);
-    }
-    
-    FGPositionedList poi = FGPositioned::findWithinRange(_projectionCenter, _drawRangeNm, &tf);
-    newItemsToDraw.insert(newItemsToDraw.end(), poi.begin(), poi.end());
-    
+
     _itemsToDraw.swap(newItemsToDraw);
     
     updateAIObjects();
@@ -2068,7 +2073,7 @@ MapWidget::DrawAIObject::DrawAIObject(SGPropertyNode* m, const SGGeod& g) :
         
         char buffer[1024];
         ::snprintf(buffer, 1024, "%s\n%dkts",
-                   model->getStringValue("name", "<>"),
+                   model->getStringValue("name", "<>").c_str(),
                    speedKts);
         legend = buffer;
     }

@@ -74,7 +74,7 @@ private:
   class CompareNodes {
   public:
     bool operator() (const SGPropertyNode *a, const SGPropertyNode *b) const {
-        int r = strcmp(a->getName(), b->getName());
+        int r = strcmp(a->getNameString().c_str(), b->getNameString().c_str());
         return r ? r < 0 : a->getIndex() < b->getIndex();
     }
   };

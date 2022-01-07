@@ -278,7 +278,12 @@ void initSentry()
     
     const auto buildString = std::to_string(JENKINS_BUILD_NUMBER);
     sentry_options_set_dist(options, buildString.c_str());
-    
+
+    // for dev / nightly builds, put Sentry in debug mode
+    if (strcmp(FG_BUILD_TYPE, "Release")) {
+        sentry_options_set_debug(options, 1);
+    }
+
     SGPath dataPath = fgHomePath() / "sentry_db";
 #if defined(SG_WINDOWS)
     const auto homePathString = dataPath.wstr();
@@ -320,19 +325,22 @@ void initSentry()
         f << uuid << endl;
     }
 
-    sentry_init(options);
-    static_sentryEnabled = true;
+    if (sentry_init(options) == 0) {
+        static_sentryEnabled = true;
+        sentry_value_t user = sentry_value_new_object();
+        sentry_value_t userUuidV = sentry_value_new_string(uuid.c_str());
+        sentry_value_set_by_key(user, "id", userUuidV);
+        sentry_set_user(user);
 
-    sentry_value_t user = sentry_value_new_object();
-    sentry_value_t userUuidV = sentry_value_new_string(uuid.c_str());
-    sentry_value_set_by_key(user, "id", userUuidV);
-    sentry_set_user(user);
+        sglog().addCallback(new SentryLogCallback);
+        setThrowCallback(sentryTraceSimgearThrow);
+        simgear::setErrorReportCallback(sentrySimgearReportCallback);
 
-    sglog().addCallback(new SentryLogCallback);
-    setThrowCallback(sentryTraceSimgearThrow);
-    simgear::setErrorReportCallback(sentrySimgearReportCallback);
-
-    std::set_new_handler(sentryReportBadAlloc);
+        std::set_new_handler(sentryReportBadAlloc);
+    } else {
+        SG_LOG(SG_GENERAL, SG_WARN, "Failed to init Sentry reporting");
+        static_sentryEnabled = false;
+    }
 }
 
 void delayedSentryInit()

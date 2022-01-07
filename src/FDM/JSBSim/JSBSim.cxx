@@ -118,7 +118,7 @@ private:
 };
 
 // FG uses a squared normalized magnitude for turbulence
-// this lookup table maps fg's severity levels 
+// this lookup table maps fg's severity levels
 // none(0), light(1/3), moderate(2/3) and severe(3/3)
 // to the POE table indexes 0, 3, 4 and 7
 class FGTurbulenceSeverityTable : public FGTable {
@@ -335,6 +335,7 @@ FGJSBsim::FGJSBsim( double dt )
     release_hook = fgGetNode("/fdm/jsbsim/systems/hook/tailhook-release-cmd", true);
 
     altitude = fgGetNode("/position/altitude-ft");
+    precipitation = fgGetNode("/environment/rain-norm", true);
     temperature = fgGetNode("/environment/temperature-degc",true);
     pressure = fgGetNode("/environment/pressure-inhg",true);
     pressureSL = fgGetNode("/environment/pressure-sea-level-inhg",true);
@@ -634,7 +635,7 @@ bool FGJSBsim::copy_to_JSBsim()
 
         if (ab_brake_engaged->getBoolValue()) {
             left_brake = ab_brake_left_pct->getDoubleValue();
-            right_brake = ab_brake_right_pct->getDoubleValue(); 
+            right_brake = ab_brake_right_pct->getDoubleValue();
         }
 
         FCS->SetLBrake(FMAX(left_brake, parking_brake));
@@ -1386,14 +1387,38 @@ FGJSBsim::get_agl_ft(double t, const FGColumnVector3& loc, double alt_off,
   {
     static bool material_valid = false;
     if (material) {
-      GroundReactions->SetStaticFFactor((*material).get_friction_factor());
-      GroundReactions->SetRollingFFactor((*material).get_rolling_friction()/0.02);
-      // 1 Pascal = 0.00014503773800721815 lbs/in^2
-      double pressure = (*material).get_load_resistance(); // N/m^2 (or Pascal)
+      // Traction Coefficient factors for Tires vs Dry Asphalt:
+      // Dry Asphalt   1.0             Wet Asphalt     0.75
+      // Dry Ice/Snow  0.375           Wet Ice         0.125
+      bool rain = (precipitation->getDoubleValue() > 0.0);
+      bool is_lake = (*material).solid_is_prop();
+      bool solid = (*material).get_solid();
+      double friction_fact, pressure;
+      if (is_lake && solid) { // on ice
+        GroundReactions->SetBumpiness(0.1);
+        if (rain) {
+          if (temperature->getDoubleValue() > 0.0) { // Wet Ice
+            GroundReactions->SetRollingFFactor(0.05);
+            friction_fact = 0.125*(*material).get_friction_factor();
+          } else { // Snow
+            GroundReactions->SetRollingFFactor(0.15);
+            friction_fact = 0.375*(*material).get_friction_factor();
+          }
+        } else { // Dry Ice
+          GroundReactions->SetRollingFFactor(0.05);
+          friction_fact = 0.375*(*material).get_friction_factor();
+        }
+        pressure = (*material).get_load_resistance()*1000;
+      } else { // not on ice
+        GroundReactions->SetRollingFFactor((*material).get_rolling_friction()/0.02);
+        GroundReactions->SetBumpiness((*material).get_bumpiness());
+        friction_fact = (*material).get_friction_factor();
+        if (rain) friction_fact *= 0.75;
+        pressure = (*material).get_load_resistance();
+      }
+      GroundReactions->SetStaticFFactor(friction_fact);
       GroundReactions->SetMaximumForce(pressure*0.00014503773800721815);
-
-      GroundReactions->SetBumpiness((*material).get_bumpiness());
-      GroundReactions->SetSolid((*material).get_solid());
+      GroundReactions->SetSolid(solid);
       GroundReactions->SetPosition(pt);
       material_valid = true;
     } else {
@@ -1418,7 +1443,7 @@ static double angle_diff(double a, double b)
 {
     double diff = fabs(a - b);
     if (diff > 180) diff = 360 - diff;
-    
+
     return diff;
 }
 
@@ -1431,7 +1456,7 @@ static void check_hook_solution(const FGColumnVector3& ground_normal_body, doubl
 	cos_fis[*points] = cos_fi_guess;
 	fis[*points] = atan2(sin_fi_guess, cos_fi_guess) * SG_RADIANS_TO_DEGREES;
 	(*points)++;
-    } 
+    }
 }
 
 
@@ -1452,15 +1477,15 @@ void FGJSBsim::update_external_forces(double t_off)
     const FGMatrix33& Tl2b = Propagate->GetTl2b();
     const FGLocation& Location = Propagate->GetLocation();
     const FGMatrix33& Tec2l = Location.GetTec2l();
-        
+
     double hook_area[4][3];
-    
+
     FGColumnVector3 hook_root_body = MassBalance->StructuralToBody(hook_root_struct);
     FGColumnVector3 hook_root = Location.LocalToLocation(Tb2l *   hook_root_body);
     hook_area[1][0] = hook_root(1);
     hook_area[1][1] = hook_root(2);
     hook_area[1][2] = hook_root(3);
-    
+
     hook_length = fgGetDouble("/fdm/jsbsim/systems/hook/tailhook-length-ft", 6.75);
     double fi_min = fgGetDouble("/fdm/jsbsim/systems/hook/tailhook-pos-min-deg", -18);
     double fi_max = fgGetDouble("/fdm/jsbsim/systems/hook/tailhook-pos-max-deg", 30);
@@ -1470,7 +1495,7 @@ void FGJSBsim::update_external_forces(double t_off)
 
     FGColumnVector3 hook_tip_body = hook_root_body;
     hook_tip_body(1) -= hook_length * cos_fi;
-    hook_tip_body(3) += hook_length * sin_fi;    
+    hook_tip_body(3) += hook_length * sin_fi;
     if (!arrestor_wire_engaged_hook->getBoolValue()) {
       double contact[3];
       double ground_normal[3];
@@ -1585,7 +1610,7 @@ void FGJSBsim::update_external_forces(double t_off)
                 arrestor_wire_engaged_hook->setBoolValue(true);
         }
     }
-    
+
     // save actual position as old position ...
     last_hook_tip[0] = hook_area[0][0];
     last_hook_tip[1] = hook_area[0][1];
@@ -1593,7 +1618,7 @@ void FGJSBsim::update_external_forces(double t_off)
     last_hook_root[0] = hook_area[1][0];
     last_hook_root[1] = hook_area[1][1];
     last_hook_root[2] = hook_area[1][2];
-    
+
     fgSetDouble("/fdm/jsbsim/systems/hook/tailhook-pos-deg", fi);
 
     if (_ai_wake_enabled->getBoolValue()) {

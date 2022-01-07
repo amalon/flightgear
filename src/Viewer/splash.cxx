@@ -59,7 +59,7 @@
 #include <sstream>
 
 
-static const char* LICENSE_URL_TEXT = "Licensed under the GNU GPL. See http://www.flightgear.org for more information";
+static const char* LICENSE_URL_TEXT = "Licensed under the GNU GPL. See https://www.flightgear.org for more information";
 
 using namespace std::string_literals;
 using namespace simgear;
@@ -148,10 +148,13 @@ void SplashScreen::createNodes()
     _splashFBOCamera->addChild(geode);
     geode->addDrawable(geometry);
 
+    // get localized GPL licence text to be displayed at splash screen startup
+    std::string licenseUrlText = globals->get_locale()->getLocalizedString("license-url", "sys", LICENSE_URL_TEXT);
+
     if (_legacySplashScreenMode) {
         addText(geode, osg::Vec2(0.025f, 0.025f), 0.03,
                 "FlightGear "s + fgGetString("/sim/version/flightgear") +
-                " "s + std::string(LICENSE_URL_TEXT),
+                " "s + licenseUrlText,
                 osgText::Text::LEFT_TOP,
                 nullptr,
                 0.9);
@@ -160,7 +163,7 @@ void SplashScreen::createNodes()
 
         // order here is important so we can re-write first item with the
         // startup tip.
-        addText(geode, osg::Vec2(0.025f, 0.15f), 0.03, LICENSE_URL_TEXT,
+        addText(geode, osg::Vec2(0.025f, 0.15f), 0.03, licenseUrlText,
                 osgText::Text::LEFT_TOP,
                 nullptr,
                 0.6);
@@ -682,6 +685,13 @@ void fgSplashProgress( const char *identifier, unsigned int percent )
   }
 
     if (!strcmp(identifier,"downloading-scenery")) {
+
+        // get localized texts for units
+        std::string kbytesUnitText = globals->get_locale()->getLocalizedString("units-kbytes", "sys", "KB");
+        std::string mbytesUnitText = globals->get_locale()->getLocalizedString("units-mbytes", "sys", "MB");
+        std::string kbytesPerSecUnitText = globals->get_locale()->getLocalizedString("units-kbytes-per-sec", "sys", "KB/s");
+        std::string mbytesPerSecUnitText = globals->get_locale()->getLocalizedString("units-mbytes-per-sec", "sys", "MB/s");
+
         std::ostringstream oss;
         unsigned int kbytesPerSec = fgGetInt("/sim/terrasync/transfer-rate-bytes-sec") / 1024;
         unsigned int kbytesPending = fgGetInt("/sim/terrasync/pending-kbytes");
@@ -689,26 +699,26 @@ void fgSplashProgress( const char *identifier, unsigned int percent )
         if (kbytesPending > 0) {
             if (kbytesPending > 1024) {
                 int mBytesPending = kbytesPending >> 10;
-                oss << " " << mBytesPending << "MB";
+                oss << " " << mBytesPending << " "s << mbytesUnitText;
             } else {
-                oss << " " << kbytesPending << "KB";
+                oss << " " << kbytesPending << " "s << kbytesUnitText;
             }
         }
 
         if (kbytesPerSec > 100) {
             double mbytesPerSec = kbytesPerSec / 1024.0;
-            oss << " - " << std::fixed << std::setprecision(1) << mbytesPerSec << "MB/sec";
+            oss << " - " << std::fixed << std::setprecision(1) << mbytesPerSec << " "s << mbytesPerSecUnitText;
         } else if (kbytesPerSec > 0) {
-            oss << " - " << kbytesPerSec << " KB/sec";
+            oss << " - " << kbytesPerSec << " "s << kbytesPerSecUnitText;
         } else if (kbytesPendingExtract > 0) {
             const string extractText = globals->get_locale()->getLocalizedString("scenery-extract", "sys");
             std::ostringstream os2;
 
             if (kbytesPendingExtract > 1024) {
                 int mBytesPendingExtract = kbytesPendingExtract >> 10;
-                os2 << mBytesPendingExtract << "MB";
+                os2 << mBytesPendingExtract << " "s << mbytesUnitText;
             } else {
-                os2 << kbytesPendingExtract << "KB";
+                os2 << kbytesPendingExtract << " "s << kbytesUnitText;
             }
             auto finalText = simgear::strutils::replace(extractText, "[VALUE]", os2.str());
             oss << " - " << finalText;
@@ -717,15 +727,20 @@ void fgSplashProgress( const char *identifier, unsigned int percent )
     }
 
     if (!strcmp(identifier, "loading-scenery")) {
+
+        // get localized texts for units
+        std::string kbytesUnitText = globals->get_locale()->getLocalizedString("units-kbytes", "sys", "KB");
+        std::string mbytesUnitText = globals->get_locale()->getLocalizedString("units-mbytes", "sys", "MB");
+
         unsigned int kbytesPendingExtract = fgGetInt("/sim/terrasync/extract-pending-kbytes");
         if (kbytesPendingExtract > 0) {
             const string extractText = globals->get_locale()->getLocalizedString("scenery-extract", "sys");
             std::ostringstream oss;
             if (kbytesPendingExtract > 1024) {
                 int mBytesPendingExtract = kbytesPendingExtract >> 10;
-                oss << mBytesPendingExtract << "MB";
+                oss << mBytesPendingExtract << " "s << mbytesUnitText;
             } else {
-                oss << kbytesPendingExtract << "KB";
+                oss << kbytesPendingExtract << " "s << kbytesUnitText;
             }
 
             auto finalText = simgear::strutils::replace(extractText, "[VALUE]", oss.str());

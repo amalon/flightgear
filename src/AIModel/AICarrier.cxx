@@ -173,7 +173,7 @@ void FGAICarrier::update(double dt) {
 
     //automatic turn into wind with a target wind of 25 kts otd
     //SG_LOG(SG_AI, SG_ALERT, "AICarrier: MPControl " << MPControl << " AIControl " << AIControl);
-    if (strcmp(_ai_latch_node->getStringValue(), "")) {
+    if (_ai_latch_node->getStringValue() != "") {
         SG_LOG(SG_AI, SG_DEBUG, "FGAICarrier::update(): not updating because ai-latch=" << _ai_latch_node->getStringValue());
     }
     else if (!_MPControl && _AIControl){
@@ -268,16 +268,16 @@ void FGAICarrier::update(double dt) {
 
         // the distance from the eyepoint to the flols
         double dist_tdp = norm(eyeWrtFlols_tdp);
-        double angle_tdp = 0;
+        //double angle_tdp = 0;
 
         // now the angle, positive angles are upwards
         if (fabs(dist_tdp) < SGLimits<double>::min()) {
-            angle_tdp = 0;
+            //angle_tdp = 0;
         }
         else {
             double sAngle = -eyeWrtFlols_tdp(2) / dist_tdp;
             sAngle = SGMiscd::min(1, SGMiscd::max(-1, sAngle));
-            angle_tdp = SGMiscd::rad2deg(asin(sAngle));
+            //angle_tdp = SGMiscd::rad2deg(asin(sAngle));
         }
 //        printf("angle %5.2f td angle %5.2f \n", _flols_angle, angle_tdp);
         //angle += 1.481; // adjust for FLOLS offset (measured on Nimitz class)
@@ -712,11 +712,12 @@ void FGAICarrier::UpdateElevator(double dt) {
     _elevator_pos_norm = (_elevator_pos_norm_raw * _elevator_time_constant) + (_elevator_pos_norm * (1 - _elevator_time_constant));
 
     //sanitise the output
-    if (_elevator_pos_norm_raw >= 1) {
-        _elevator_pos_norm_raw = 1;
-    } else if (_elevator_pos_norm_raw <= 0) {
-        _elevator_pos_norm_raw = 0;
+    if (_elevator_pos_norm_raw >= 1.0) {
+        _elevator_pos_norm_raw = 1.0;
+    } else if (_elevator_pos_norm_raw <= 0.0) {
+        _elevator_pos_norm_raw = 0.0;
     }
+
     return;
 
 } // end UpdateElevator
@@ -754,10 +755,10 @@ void FGAICarrier::UpdateJBD(double dt) {
     _jbd_elevator_pos_norm = (_jbd_elevator_pos_norm_raw * _jbd_time_constant) + (_jbd_elevator_pos_norm * (1 - _jbd_time_constant));
 
     //sanitise the output
-    if (_jbd_elevator_pos_norm >= 1) {
-        _jbd_elevator_pos_norm = 1;
-    } else if (_jbd_elevator_pos_norm <= 0) {
-        _jbd_elevator_pos_norm = 0;
+    if (_jbd_elevator_pos_norm >= 1.0) {
+        _jbd_elevator_pos_norm = 1.0;
+    } else if (_jbd_elevator_pos_norm <= 0.0) {
+        _jbd_elevator_pos_norm = 0.0;
     }
 
     return;

@@ -25,7 +25,7 @@
 
 #include <simgear/props/props.hxx>
 #include <MultiPlayer/multiplaymgr.hxx>
-#include "replay.hxx"
+#include "replay-internal.hxx"
 
 namespace FlightRecorder
 {

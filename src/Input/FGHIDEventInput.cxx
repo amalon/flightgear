@@ -820,12 +820,12 @@ void FGHIDDevice::defineReport(SGPropertyNode_ptr reportNode)
     for (int c=0; c < nChildren; ++c) {
         const auto nd = reportNode->getChild(c);
         const int size = nd->getIntValue("size", 1); // default to a single bit
-        if (!strcmp(nd->getName(), "unused-bits")) {
+        if (nd->getNameString() == "unused-bits") {
             bitCount += size;
             continue;
         }
 
-        if (!strcmp(nd->getName(), "type") || !strcmp(nd->getName(), "id")) {
+        if (nd->getNameString() == "type" || nd->getNameString() == "id") {
             continue; // already handled above
         }
 

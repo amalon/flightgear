@@ -103,7 +103,7 @@ void RouteManagerTests::testBasic()
     rm->setFlightPlan(fp1);
     
     auto gpsNode = globals->get_props()->getNode("instrumentation/gps", true);
-    CPPUNIT_ASSERT(!strcmp("obs", gpsNode->getStringValue("mode")));
+    CPPUNIT_ASSERT(gpsNode->getStringValue("mode") == "obs");
 
     rm->activate();
     
@@ -112,25 +112,25 @@ void RouteManagerTests::testBasic()
     // Nasal deleagte should have placed GPS into leg mode
     auto rmNode = globals->get_props()->getNode("autopilot/route-manager", true);
     
-    CPPUNIT_ASSERT(!strcmp("leg", gpsNode->getStringValue("mode")));
+    CPPUNIT_ASSERT(gpsNode->getStringValue("mode") == "leg");
 
-    CPPUNIT_ASSERT(!strcmp("EGLC", rmNode->getStringValue("departure/airport")));
-    CPPUNIT_ASSERT(!strcmp("27", rmNode->getStringValue("departure/runway")));
-    CPPUNIT_ASSERT(!strcmp("", rmNode->getStringValue("departure/sid")));
-    CPPUNIT_ASSERT(!strcmp("London City", rmNode->getStringValue("departure/name")));
+    CPPUNIT_ASSERT(rmNode->getStringValue("departure/airport") == "EGLC");
+    CPPUNIT_ASSERT(rmNode->getStringValue("departure/runway") == "27");
+    CPPUNIT_ASSERT(rmNode->getStringValue("departure/sid") == "");
+    CPPUNIT_ASSERT(rmNode->getStringValue("departure/name") == "London City");
 
-    CPPUNIT_ASSERT(!strcmp("EHAM", rmNode->getStringValue("destination/airport")));
-    CPPUNIT_ASSERT(!strcmp("06", rmNode->getStringValue("destination/runway")));
+    CPPUNIT_ASSERT(rmNode->getStringValue("destination/airport") == "EHAM");
+    CPPUNIT_ASSERT(rmNode->getStringValue("destination/runway") == "06");
     
     CPPUNIT_ASSERT_EQUAL(360, rmNode->getIntValue("cruise/flight-level"));
     CPPUNIT_ASSERT_EQUAL(false, rmNode->getBoolValue("airborne"));
 
     CPPUNIT_ASSERT_EQUAL(0, rmNode->getIntValue("current-wp"));
     auto wp0Node = rmNode->getNode("wp");
-    CPPUNIT_ASSERT(!strcmp("EGLC-27", wp0Node->getStringValue("id")));
+    CPPUNIT_ASSERT(wp0Node->getStringValue("id") == "EGLC-27");
     
     auto wp1Node = rmNode->getNode("wp[1]");
-    CPPUNIT_ASSERT(!strcmp("CLN", wp1Node->getStringValue("id")));
+    CPPUNIT_ASSERT(wp1Node->getStringValue("id") == "CLN");
 
     FGPositioned::TypeFilter f{FGPositioned::VOR};
     auto clactonVOR = fgpositioned_cast<FGNavRecord>(FGPositioned::findClosestWithIdent("CLN", SGGeod::fromDeg(0.0, 51.0), &f));
@@ -181,8 +181,8 @@ void RouteManagerTests::testBasic()
     
     // check where we are - should be heading to RIVER from VALKO
     CPPUNIT_ASSERT_EQUAL(5, rmNode->getIntValue("current-wp"));
-    CPPUNIT_ASSERT(!strcmp("RIVER", wp0Node->getStringValue("id")));
-    CPPUNIT_ASSERT(!strcmp("RTM", wp1Node->getStringValue("id")));
+    CPPUNIT_ASSERT(wp0Node->getStringValue("id") == "RIVER");
+    CPPUNIT_ASSERT(wp1Node->getStringValue("id") == "RTM");
     // slightly rapid descent 
     pilot->setTargetAltitudeFtMSL(3000);
 
@@ -194,8 +194,7 @@ void RouteManagerTests::testBasic()
     
     // run until the GPS reverts to OBS mode at the end of the flight plan
     ok = FGTestApi::runForTimeWithCheck(6000.0, [gpsNode] () {
-        std::string mode = gpsNode->getStringValue("mode");
-        if (mode == "obs") return true;
+        if (gpsNode->getStringValue("mode") == "obs") return true;
         return false;
     });
     
@@ -240,7 +239,7 @@ void RouteManagerTests::testDirectToLegOnFlightplanAndResume()
     auto gpsNode = globals->get_props()->getNode("instrumentation/gps", true);
     auto rmNode = globals->get_props()->getNode("autopilot/route-manager", true);
 
-    CPPUNIT_ASSERT(!strcmp("obs", gpsNode->getStringValue("mode")));
+    CPPUNIT_ASSERT(gpsNode->getStringValue("mode") == "obs");
     rm->activate();
     
     CPPUNIT_ASSERT(fp1->isActive());
@@ -248,15 +247,15 @@ void RouteManagerTests::testDirectToLegOnFlightplanAndResume()
     FGTestApi::setPosition(fp1->departureRunway()->pointOnCenterline(0.0));
     FGTestApi::runForTime(10.0); // let the GPS stabilize
 
-    CPPUNIT_ASSERT_EQUAL(std::string{"leg"}, std::string{gpsNode->getStringValue("mode")});
-    CPPUNIT_ASSERT_EQUAL(std::string{"EBBR-07L"}, std::string{gpsNode->getStringValue("wp/wp[1]/ID")});
+    CPPUNIT_ASSERT_EQUAL(std::string{"leg"}, gpsNode->getStringValue("mode"));
+    CPPUNIT_ASSERT_EQUAL(std::string{"EBBR-07L"}, gpsNode->getStringValue("wp/wp[1]/ID"));
     
     CPPUNIT_ASSERT_EQUAL(0, rmNode->getIntValue("current-wp"));
     auto wp0Node = rmNode->getNode("wp");
-    CPPUNIT_ASSERT(!strcmp("EBBR-07L", wp0Node->getStringValue("id")));
+    CPPUNIT_ASSERT(wp0Node->getStringValue("id") == "EBBR-07L");
     
     auto wp1Node = rmNode->getNode("wp[1]");
-    CPPUNIT_ASSERT(!strcmp("NIK", wp1Node->getStringValue("id")));
+    CPPUNIT_ASSERT(wp1Node->getStringValue("id") == "NIK");
 
     // initiate a direct to
     SGGeod p2 = fp1->departureRunway()->pointOnCenterline(5.0* SG_NM_TO_METER);
@@ -272,7 +271,7 @@ void RouteManagerTests::testDirectToLegOnFlightplanAndResume()
     gpsNode->setDoubleValue("scratch/longitude-deg", doverVOR->geod().getLongitudeDeg());
     gpsNode->setDoubleValue("scratch/latitude-deg", doverVOR->geod().getLatitudeDeg());
     gpsNode->setStringValue("command", "direct");
-    CPPUNIT_ASSERT_EQUAL(std::string{"dto"}, std::string{gpsNode->getStringValue("mode")});
+    CPPUNIT_ASSERT_EQUAL(std::string{"dto"}, gpsNode->getStringValue("mode"));
     
     // check that upon reaching DOVER, we sequence to TAWNY and resume leg mode
     // this is handled by the default delegate in Nasal
@@ -293,7 +292,7 @@ void RouteManagerTests::testDirectToLegOnFlightplanAndResume()
     });
     
     CPPUNIT_ASSERT(ok);
-    CPPUNIT_ASSERT_EQUAL(std::string{"leg"}, std::string{gpsNode->getStringValue("mode")});
+    CPPUNIT_ASSERT_EQUAL(std::string{"leg"}, gpsNode->getStringValue("mode"));
 }
 
 void RouteManagerTests::testSequenceDiscontinuityAndResume()
@@ -317,12 +316,12 @@ void RouteManagerTests::testSequenceDiscontinuityAndResume()
     FGTestApi::setPosition(pos);
     FGTestApi::runForTime(10.0); // let the GPS stabilize
     
-     CPPUNIT_ASSERT(!strcmp("obs", gpsNode->getStringValue("mode")));
+     CPPUNIT_ASSERT(gpsNode->getStringValue("mode") == "obs");
      rm->activate();
      
      CPPUNIT_ASSERT(fp1->isActive());
 
-    CPPUNIT_ASSERT(std::string{"leg"} == gpsNode->getStringValue("mode"));
+    CPPUNIT_ASSERT(gpsNode->getStringValue("mode") == "leg");
     fp1->setCurrentIndex(2);
     
     auto pilot = SGSharedPtr<FGTestApi::TestPilot>(new FGTestApi::TestPilot);
@@ -332,7 +331,7 @@ void RouteManagerTests::testSequenceDiscontinuityAndResume()
     pilot->flyGPSCourse(m_gps);
     
     bool ok = FGTestApi::runForTimeWithCheck(180.0, [gpsNode] () {
-        return (gpsNode->getStringValue("mode") == std::string{"obs"});
+        return (gpsNode->getStringValue("mode") == "obs");
     });
     
     CPPUNIT_ASSERT(ok);
@@ -352,7 +351,7 @@ void RouteManagerTests::testSequenceDiscontinuityAndResume()
    gpsNode->setDoubleValue("scratch/longitude-deg", murenPos.getLongitudeDeg());
    gpsNode->setDoubleValue("scratch/latitude-deg", murenPos.getLatitudeDeg());
    gpsNode->setStringValue("command", "direct");
-   CPPUNIT_ASSERT_EQUAL(std::string{"dto"}, std::string{gpsNode->getStringValue("mode")});
+   CPPUNIT_ASSERT_EQUAL(std::string{"dto"}, gpsNode->getStringValue("mode"));
 
     pilot->resetAtPosition(pos2);
     pilot->flyGPSCourse(m_gps);
@@ -365,7 +364,7 @@ void RouteManagerTests::testSequenceDiscontinuityAndResume()
     });
     
     CPPUNIT_ASSERT(ok);
-    CPPUNIT_ASSERT_EQUAL(std::string{"leg"}, std::string{gpsNode->getStringValue("mode")});
+    CPPUNIT_ASSERT_EQUAL(std::string{"leg"}, gpsNode->getStringValue("mode"));
     CPPUNIT_ASSERT_EQUAL(5, fp1->currentIndex());
     
     FGTestApi::runForTime(30.0);
@@ -388,7 +387,7 @@ void RouteManagerTests::testHiddenWaypoints()
     rm->setFlightPlan(fp1);
     
     auto gpsNode = globals->get_props()->getNode("instrumentation/gps", true);
-    CPPUNIT_ASSERT(!strcmp("obs", gpsNode->getStringValue("mode")));
+    CPPUNIT_ASSERT(gpsNode->getStringValue("mode") == "obs");
     
     // FIXME: use real Nasal test macros soon
     auto testNode = globals->get_props()->getNode("test-data", true);
@@ -424,7 +423,7 @@ void RouteManagerTests::testHiddenWaypoints()
     
     CPPUNIT_ASSERT(ok);
     CPPUNIT_ASSERT_EQUAL(7, testNode->getIntValue("a"));
-    CPPUNIT_ASSERT_EQUAL(std::string{"WN"}, std::string{testNode->getStringValue("b")});
+    CPPUNIT_ASSERT_EQUAL(std::string{"WN"}, testNode->getStringValue("b"));
     
     ok = FGTestApi::executeNasal(R"(
         var fp = flightplan(); # retrieve the global flightplan
@@ -435,7 +434,7 @@ void RouteManagerTests::testHiddenWaypoints()
     )");
     
     CPPUNIT_ASSERT(ok);
-    CPPUNIT_ASSERT_EQUAL(std::string{"ALADA"}, std::string{testNode->getStringValue("c")});
+    CPPUNIT_ASSERT_EQUAL(std::string{"ALADA"}, testNode->getStringValue("c"));
     CPPUNIT_ASSERT_EQUAL(true, testNode->getBoolValue("d"));
 }
 
@@ -456,12 +455,12 @@ void RouteManagerTests::testHoldFromNasal()
   //  FGTestApi::writeFlightPlanToKML(fp1);
 
     auto gpsNode = globals->get_props()->getNode("instrumentation/gps", true);
-    CPPUNIT_ASSERT(!strcmp("obs", gpsNode->getStringValue("mode")));
+    CPPUNIT_ASSERT(gpsNode->getStringValue("mode") == "obs");
     
     rm->activate();
     
     CPPUNIT_ASSERT(fp1->isActive());
-    CPPUNIT_ASSERT(!strcmp("leg", gpsNode->getStringValue("mode")));
+    CPPUNIT_ASSERT(gpsNode->getStringValue("mode") == "leg");
 
     SGGeod posEnrouteToWB = fp1->pointAlongRoute(3, -10.0);
     FGTestApi::setPositionAndStabilise(posEnrouteToWB);
@@ -501,7 +500,7 @@ void RouteManagerTests::testHoldFromNasal()
     
     // check we upgraded to a hold controller internally, and are flying to it :)
     auto statusNode = gpsNode->getNode("rnav-controller-status");
-    CPPUNIT_ASSERT_EQUAL(std::string{"leg-to-hold"}, std::string{statusNode->getStringValue()});
+    CPPUNIT_ASSERT_EQUAL(std::string{"leg-to-hold"}, statusNode->getStringValue());
     
     // check we're on the leg
     CPPUNIT_ASSERT_EQUAL(std::string{"NELSON VOR-DME"}, fp1->legAtIndex(2)->waypoint()->source()->name());
@@ -518,22 +517,19 @@ void RouteManagerTests::testHoldFromNasal()
     
     // fly into the hold, should be teardrop entry
     ok = FGTestApi::runForTimeWithCheck(600.0, [statusNode] () {
-        std::string s = statusNode->getStringValue();
-        if (s == "entry-teardrop") return true;
+        if (statusNode->getStringValue() == "entry-teardrop") return true;
         return false;
     });
     
     CPPUNIT_ASSERT(ok);
     
     ok = FGTestApi::runForTimeWithCheck(600.0, [statusNode] () {
-        std::string s = statusNode->getStringValue();
-        if (s == "hold-inbound") return true;
+        if (statusNode->getStringValue() == "hold-inbound") return true;
         return false;
     });
     
     ok = FGTestApi::runForTimeWithCheck(600.0, [statusNode] () {
-        std::string s = statusNode->getStringValue();
-        if (s == "hold-outbound") return true;
+        if (statusNode->getStringValue() == "hold-outbound") return true;
         return false;
     });
     CPPUNIT_ASSERT(ok);
@@ -547,12 +543,11 @@ void RouteManagerTests::testHoldFromNasal()
     CPPUNIT_ASSERT(ok);
 
     // no change yet
-    CPPUNIT_ASSERT_EQUAL(std::string{"hold-outbound"}, std::string{statusNode->getStringValue()});
+    CPPUNIT_ASSERT_EQUAL(std::string{"hold-outbound"}, statusNode->getStringValue());
     
     // then we fly inbound
     ok = FGTestApi::runForTimeWithCheck(600.0, [statusNode] () {
-        std::string s = statusNode->getStringValue();
-        if (s == "hold-inbound") return true;
+        if (statusNode->getStringValue() == "hold-inbound") return true;
         return false;
     });
     CPPUNIT_ASSERT(ok);

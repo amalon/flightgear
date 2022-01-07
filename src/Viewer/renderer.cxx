@@ -135,12 +135,12 @@ public:
     assert(dynamic_cast<osg::Hint*>(stateAttribute));
     osg::Hint* hint = static_cast<osg::Hint*>(stateAttribute);
 
-    const char* value = mConfigNode->getStringValue();
-    if (!value)
+    std::string value = mConfigNode->getStringValue();
+    if (value.empty())
       hint->setMode(GL_DONT_CARE);
-    else if (0 == strcmp(value, "nicest"))
+    else if (value == "nicest")
       hint->setMode(GL_NICEST);
-    else if (0 == strcmp(value, "fastest"))
+    else if (value == "fastest")
       hint->setMode(GL_FASTEST);
     else
       hint->setMode(GL_DONT_CARE);
@@ -302,7 +302,7 @@ public:
   { }
   virtual void operator()(osg::StateSet* stateSet, osg::NodeVisitor*)
   {
-    if (strcmp(mFogEnabled->getStringValue(), "disabled") == 0) {
+    if (mFogEnabled->getStringValue() == "disabled") {
       stateSet->setMode(GL_FOG, osg::StateAttribute::OFF);
     } else {
       stateSet->setMode(GL_FOG, osg::StateAttribute::ON);
@@ -523,18 +523,20 @@ FGRenderer::init( void )
     addChangeListener(new DistanceAttenuationListener, "/sim/rendering/distance-attenuation");
     addChangeListener(new DirectionalLightsListener, "/sim/rendering/triangle-directional-lights");
 
-    if (const char* tc = fgGetString("/sim/rendering/texture-compression", NULL)) {
-      if (strcmp(tc, "false") == 0 || strcmp(tc, "off") == 0 ||
-          strcmp(tc, "0") == 0 || strcmp(tc, "no") == 0 ||
-          strcmp(tc, "none") == 0) {
+    std::string tc = fgGetString("/sim/rendering/texture-compression");
+    if (!tc.empty()) {
+      if (tc == "false" || tc == "off" ||
+          tc == "0" || tc == "no" ||
+          tc == "none"
+      ) {
         SGSceneFeatures::instance()->setTextureCompression(SGSceneFeatures::DoNotUseCompression);
-      } else if (strcmp(tc, "arb") == 0) {
+      } else if (tc == "arb") {
         SGSceneFeatures::instance()->setTextureCompression(SGSceneFeatures::UseARBCompression);
-      } else if (strcmp(tc, "dxt1") == 0) {
+      } else if (tc == "dxt1") {
         SGSceneFeatures::instance()->setTextureCompression(SGSceneFeatures::UseDXT1Compression);
-      } else if (strcmp(tc, "dxt3") == 0) {
+      } else if (tc == "dxt3") {
         SGSceneFeatures::instance()->setTextureCompression(SGSceneFeatures::UseDXT3Compression);
-      } else if (strcmp(tc, "dxt5") == 0) {
+      } else if (tc == "dxt5") {
         SGSceneFeatures::instance()->setTextureCompression(SGSceneFeatures::UseDXT5Compression);
       } else {
         SG_LOG(SG_VIEW, SG_WARN, "Unknown texture compression setting!");

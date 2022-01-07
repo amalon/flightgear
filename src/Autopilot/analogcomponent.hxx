@@ -91,9 +91,9 @@ protected:
      * @param prop_root Property root for all relative paths
      * @return true if the node was handled, false otherwise.
      */
-    virtual bool configure( SGPropertyNode& cfg_node,
+    bool configure( SGPropertyNode& cfg_node,
                             const std::string& cfg_name,
-                            SGPropertyNode& prop_root );
+                            SGPropertyNode& prop_root ) override;
 
     /**
      * @brief clamp the given value if &lt;min&gt; and/or &lt;max&gt; inputs were given
@@ -107,7 +107,7 @@ protected:
     *        is disabled. Analog components feed back it's output value to the active
              input value if disabled and feedback-if-disabled is true
     */
-    virtual void disabled( double dt );
+     void disabled( double dt ) override;
 
     /**
      * @brief return the current double value of the output property

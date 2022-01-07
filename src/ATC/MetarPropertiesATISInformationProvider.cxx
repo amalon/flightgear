@@ -104,7 +104,7 @@ ATISInformationProvider::CloudEntries MetarPropertiesATISInformationProvider::ge
   using simgear::PropertyList;
   PropertyList layers = _metar->getNode("clouds", true )->getChildren("layer");
   for( PropertyList::iterator it = layers.begin(); it != layers.end(); ++it ) {
-    const char * coverage = (*it)->getStringValue("coverage","clear");
+    std::string coverage = (*it)->getStringValue("coverage", "clear");
     double elevation = (*it)->getDoubleValue("elevation-ft", -9999 );
     if( elevation > 0 ) {
       reply[elevation] = coverage;

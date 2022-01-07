@@ -43,29 +43,29 @@ HUD::Label::Label(HUD *hud, const SGPropertyNode *n, float x, float y) :
     if (node)
        _blink_condition = sgReadCondition(globals->get_props(), node);
 
-    const char *halign = n->getStringValue("halign", "center");
-    if (!strcmp(halign, "left"))
+    string halign = n->getStringValue("halign", "center");
+    if (halign == "left")
         _halign = LEFT;
-    else if (!strcmp(halign, "right"))
+    else if (halign == "right")
         _halign = RIGHT;
     else
         _halign = HCENTER;
 
     _halign |= VCENTER;
 
-    const char *pre = n->getStringValue("prefix", 0);
-    const char *post = n->getStringValue("postfix", 0);
-    const char *fmt = n->getStringValue("format", 0);
+    string pre = n->getStringValue("prefix", "");
+    string post = n->getStringValue("postfix", "");
+    string fmt = n->getStringValue("format", "");
 
-    if (pre)
+    if (!pre.empty())
         _format = pre;
 
-    if (fmt)
+    if (!fmt.empty())
         _format += fmt;
     else
         _format += "%s";
 
-    if (post)
+    if (!post.empty())
         _format += post;
 
     _mode = check_format(_format.c_str());
@@ -148,7 +148,7 @@ void HUD::Label::draw(void)
     if (_mode == NONE)
         snprintf(buf, BUFSIZE, _format.c_str(), 0);
     else if (_mode == STRING)
-        snprintf(buf, BUFSIZE, _format.c_str(), _input.getStringValue());
+        snprintf(buf, BUFSIZE, _format.c_str(), _input.getStringValue().c_str());
     else if (_mode == INT)
         snprintf(buf, BUFSIZE, _format.c_str(), int(_input.getFloatValue()));
     else if (_mode == LONG)

@@ -291,7 +291,7 @@ TACAN::valueChanged(SGPropertyNode *prop)
     int index = prop->getIndex();
     std::string channel = _channel;
 
-    if (std::string("selected-mhz") == prop->getName())
+    if (std::string("selected-mhz") == prop->getNameString())
     {
         FGTACANRecord *rec= globals->get_channellist()->findByFrequency(prop->getDoubleValue()*1000);
         if (rec != nullptr) {

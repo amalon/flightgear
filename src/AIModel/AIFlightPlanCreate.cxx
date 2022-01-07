@@ -369,7 +369,7 @@ bool FGAIFlightPlan::createTakeoffTaxi(FGAIAircraft * ac, bool firstFlight,
     // These can probably be generated on the fly however. 
     while (taxiRoute.next(node, &route)) {
         char buffer[10];
-        snprintf(buffer, 10, "%d", node->getIndex());
+        snprintf(buffer, sizeof(buffer), "%d", node->getIndex());
         FGAIWaypoint *wpt =
             createOnGround(ac, buffer, node->geod(), apt->getElevation(),
                            ac->getPerformance()->vTaxi());
@@ -871,7 +871,7 @@ bool FGAIFlightPlan::createDescent(FGAIAircraft * ac, FGAirport * apt,
         double currentDist = i * (newDistance / nPoints);
         double currentAltitude = alt - (i * (dAlt / nPoints));
         SGGeodesy::direct(origin, azimuth, currentDist, result, dummyAz2);
-        snprintf(buffer, 16, "descent%03d", i);
+        snprintf(buffer, sizeof(buffer), "descent%03d", i);
         wpt = createInAir(ac, buffer, result, currentAltitude, vDescent);
         wpt->setCrossat(currentAltitude);
         wpt->setTrackLength((newDistance / nPoints));
@@ -923,7 +923,7 @@ bool FGAIFlightPlan::createDescent(FGAIAircraft * ac, FGAirport * apt,
         
         SGGeodesy::direct(secondaryTarget, i,
                           initialTurnRadius, result, dummyAz2);
-        snprintf(buffer, 16, "turn%03d", i);
+        snprintf(buffer, sizeof(buffer), "turn%03d", i);
         wpt = createInAir(ac, buffer, result, currentAltitude, vDescent);
         wpt->setCrossat(currentAltitude);
         wpt->setTrackLength(trackLength);
@@ -1011,7 +1011,7 @@ bool FGAIFlightPlan::createLanding(FGAIAircraft * ac, FGAirport * apt,
     double vTaxiMetric      = vTaxi       * SG_KT_TO_MPS;
     double decelMetric      = decel       * SG_KT_TO_MPS;
 
-    char buffer[12];
+    char buffer[20];
     if (!apt->hasRunwayWithIdent(activeRunway)) {
         SG_LOG(SG_AI, SG_WARN, "FGAIFlightPlan::createLanding: No such runway " << activeRunway << " at " << apt->ident());
         return false;
@@ -1065,7 +1065,7 @@ bool FGAIFlightPlan::createLanding(FGAIAircraft * ac, FGAirport * apt,
   
     int nPoints = (int)(rolloutDistance/30);
     for (int i = 1; i < nPoints; i++) {
-        snprintf(buffer, 12, "landing%03d", i);
+        snprintf(buffer, sizeof(buffer), "landing%03d", i);
         double t = ((double) i) / nPoints;
         coord = rwy->pointOnCenterline(touchdownDistance + (rolloutDistance * t));
         double vel = (vTouchdownMetric * (1.0 - t)) + (vTaxiMetric * t);

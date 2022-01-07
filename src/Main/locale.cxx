@@ -316,8 +316,8 @@ FGLocale::loadResource(SGPropertyNode* localeNode, const char* resource)
         return true;
     }
 
-    const char* path_str = resourceNode->getStringValue();
-    if (!path_str)
+    string path_str = resourceNode->getStringValue();
+    if (path_str.empty())
     {
         SG_LOG(SG_GENERAL, SG_WARN, "No path in " << stringNode->getPath() << "/" << resource << ".");
         return false;
@@ -494,21 +494,21 @@ FGLocale::getLocalizedStrings(const char* id, const char* resource)
 }
 
 // Check for localized font
-const char*
+std::string
 FGLocale::getDefaultFont(const char* fallbackFont)
 {
     assert(_inited);
-    const char* font = nullptr;
+    std::string font;
     if (_currentLocale)
     {
         font = _currentLocale->getStringValue("font", "");
-        if (font[0] != 0)
+        if (!font.empty())
             return font;
     }
     if (_defaultLocale)
     {
         font = _defaultLocale->getStringValue("font", "");
-        if (font[0] != 0)
+        if (!font.empty())
             return font;
     }
 

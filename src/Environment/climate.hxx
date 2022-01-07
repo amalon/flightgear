@@ -174,6 +174,7 @@ private:
 
     // environment
     bool _environment_adjust = false;	// enable automatic adjestments
+    bool _inland_ice_cover = false;	// inland water bodies get frozen over
     double _snow_level = -99999.0;	// in meters
     double _snow_thickness = -99999.0;	// 0.0 = thin, 1.0 = thick
     double _ice_cover = -99999.0;	// 0.0 = none, 1.0 = thick

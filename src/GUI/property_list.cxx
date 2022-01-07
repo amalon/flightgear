@@ -86,7 +86,7 @@ static void dumpProperties(const SGPropertyNode *node)
             continue;
 
         int index = c->getIndex();
-        cout << std::setw(11) << getValueTypeString(c) << "  " << c->getName();
+        cout << std::setw(11) << getValueTypeString(c) << "  " << c->getNameString();
         if (index > 0)
             cout << '[' << index << ']';
         cout << " = ";
@@ -409,7 +409,7 @@ int PropertyList::nodeNameCompare(const void *p1, const void *p2)
     const SGPropertyNode *n1 = (*(const NodeData *)p1).node;
     const SGPropertyNode *n2 = (*(const NodeData *)p2).node;
 
-    int diff = strcmp(n1->getName(), n2->getName());
+    int diff = strcmp(n1->getNameString().c_str(), n2->getNameString().c_str());
     return diff ? diff : n1->getIndex() - n2->getIndex();
 }
 

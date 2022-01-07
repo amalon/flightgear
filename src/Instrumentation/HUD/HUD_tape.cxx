@@ -43,15 +43,14 @@ HUD::Tape::Tape(HUD *hud, const SGPropertyNode *n, float x, float y) :
 {
     _half_width_units = range_to_show() / 2.0;
 
-    const char *s;
-    s = n->getStringValue("pointer-type");
-    _pointer_type = strcmp(s, "moving") ? FIXED : MOVING;    // "fixed", "moving"
+    string s = n->getStringValue("pointer-type");
+    _pointer_type = s != "moving" ? FIXED : MOVING;    // "fixed", "moving"
 
     s = n->getStringValue("tick-type");
-    _tick_type = strcmp(s, "bullet") ? LINE : CIRCLE;        // "bullet", "line"
+    _tick_type = s != "bullet" ? LINE : CIRCLE;        // "bullet", "line"
 
     s = n->getStringValue("tick-length");                    // "variable", "constant"
-    _tick_length = strcmp(s, "constant") ? VARIABLE : CONSTANT;
+    _tick_length = s != "constant" ? VARIABLE : CONSTANT;
 
     _label_fmt = check_format(_format.c_str());
     if (_label_fmt != INT && _label_fmt != LONG

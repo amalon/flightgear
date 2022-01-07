@@ -51,11 +51,16 @@ Args:
 '''
 
 import os
-import resource
 import signal
 import subprocess
 import sys
 import time
+
+try:
+    import resource
+except Exception:
+    # We don't mind if 'resource' module is not available, e.g. on Windows.
+    resource = None
 
 import FlightGear
 
@@ -141,12 +146,15 @@ class Fg:
         #
         log(f'Command is: {args}')
         log(f'Running: {args2}')
-        def preexec():
-            try:
-                resource.setrlimit(resource.RLIMIT_CORE, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
-            except Exception as e:
-                log(f'*** preexec failed with e={e}')
-                raise
+        if resource:
+            def preexec():
+                try:
+                    resource.setrlimit(resource.RLIMIT_CORE, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
+                except Exception as e:
+                    log(f'*** preexec failed with e={e}')
+                    raise
+        else:
+            preexec = None
         if out:
             out = open(out, 'w')
         self.child = subprocess.Popen(

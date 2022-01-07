@@ -403,20 +403,47 @@ void FPNasalTests::testAirwaysAPI()
 {
     bool ok = FGTestApi::executeNasal(R"(
         var airwayIdent = "L620";
-        var airwayStore = airway(airwayIdent);
+        var airwayStore = airway(airwayIdent, "low");
         unitTest.assert(airwayStore != nil, "Airway " ~ airwayIdent ~ " not found");
         unitTest.assert(airwayStore.id == airwayIdent, "Incorrect airway found");
-        
+        unitTest.assert_equal(airwayStore.level, 'low', "Incorrect airway found");
+        unitTest.assert_equal(airwayStore.level_code, Airway.LOW, "Incorrect airway found");
+
         airwayIdent = "UL620";
         var cln = findNavaidsByID("CLN", "VOR")[0];
         airwayStore = airway(airwayIdent, cln);
         unitTest.assert(airwayStore != nil, "Airway " ~ airwayIdent ~ " not found");
         unitTest.assert(airwayStore.id == airwayIdent, "Incorrect airway found");
-        
+        unitTest.assert_equal(airwayStore.level_code, Airway.HIGH, "Incorrect airway found");
+
         airwayIdent = "J547";
         airwayStore = airway(airwayIdent);
         unitTest.assert(airwayStore != nil, "Airway " ~ airwayIdent ~ " not found");
         unitTest.assert(airwayStore.id == airwayIdent, "Incorrect airway found");
+    )");
+
+    CPPUNIT_ASSERT(ok);
+
+    ok = FGTestApi::executeNasal(R"(
+    
+        var airwayIdent = "L620";
+        var airwayStore = airway(airwayIdent, Airway.LOW);
+        var cln = findNavaidsByID("CLN", "VOR")[0];
+
+        var v1 = createViaTo(airwayIdent, "CLN");
+        unitTest.assert_equal(v1.wp_type, "via");
+        unitTest.assert_equal(v1.airway.id, 'L620');
+        unitTest.assert_equal(v1.airway.level_code, Airway.LOW);
+
+        var v2 = createViaTo(airwayStore, "TULIP");
+        unitTest.assert_equal(v2.wp_type, "via");
+        unitTest.assert_equal(v2.airway.id, airwayIdent);
+
+        var v3 = createViaFromTo(cln, "L620", 'low', "TULIP");
+        unitTest.assert_equal(v3.airway.id, 'L620');
+    
+        var v4 = createViaFromTo(cln, "L620", "REDFA");
+        unitTest.assert_equal(v4.airway.level_code, Airway.LOW);
     )");
 
     CPPUNIT_ASSERT(ok);

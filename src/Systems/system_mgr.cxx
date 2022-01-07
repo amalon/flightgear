@@ -73,7 +73,7 @@ bool FGSystemMgr::build (SGPropertyNode* config_props)
     int count = config_props->nChildren();
     for ( i = 0; i < count; ++i ) {
         node = config_props->getChild(i);
-        string name = node->getName();
+        string name = node->getNameString();
         std::ostringstream temp;
         temp << i;
         if ( name == "electrical" ) {

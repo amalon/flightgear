@@ -51,24 +51,24 @@ HUD::Item::Item(HUD *hud, const SGPropertyNode *n, float x, float y) :
 
     vector<SGPropertyNode_ptr> opt = n->getChildren("option");
     for (unsigned int i = 0; i < opt.size(); i++) {
-        const char *o = opt[i]->getStringValue();
-        if (!strcmp(o, "vertical"))
+        string o = opt[i]->getStringValue();
+        if (o == "vertical")
             _options |= VERTICAL;
-        else if (!strcmp(o, "horizontal"))
+        else if (o == "horizontal")
             _options |= HORIZONTAL;
-        else if (!strcmp(o, "top"))
+        else if (o == "top")
             _options |= TOP;
-        else if (!strcmp(o, "left"))
+        else if (o == "left")
             _options |= LEFT;
-        else if (!strcmp(o, "bottom"))
+        else if (o == "bottom")
             _options |= BOTTOM;
-        else if (!strcmp(o, "right"))
+        else if (o == "right")
             _options |= RIGHT;
-        else if (!strcmp(o, "both"))
+        else if (o == "both")
             _options |= (LEFT|RIGHT);
-        else if (!strcmp(o, "noticks"))
+        else if (o == "noticks")
             _options |= NOTICKS;
-        else if (!strcmp(o, "notext"))
+        else if (o == "notext")
             _options |= NOTEXT;
         else
             SG_LOG(SG_INPUT, SG_WARN, "HUD: unsupported option: " << o);

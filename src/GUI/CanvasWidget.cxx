@@ -81,14 +81,14 @@ CanvasWidget::CanvasWidget( int x, int y,
   SGPropertyNode *load = nasal->getNode("load");
   if( load )
   {
-    const char *s = load->getStringValue();
+    const std::string s = load->getStringValue();
     // avoid crash FLIGHTGEAR-5FQ
-    if (!s) {
+    if (s.empty()) {
         SG_LOG(SG_GUI, SG_ALERT, "Empty 'load' script for Canvas widget:" << cprops->getStringValue("name"));
         return;
     }
 
-    nas->handleCommand(module.c_str(), file.c_str(), s, cprops);
+    nas->handleCommand(module.c_str(), file.c_str(), s.c_str(), cprops);
   }
 }
 

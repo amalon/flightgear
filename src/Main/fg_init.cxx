@@ -365,7 +365,7 @@ private:
     
     vector<SGPropertyNode_ptr> cache = _cache->getChildren("aircraft");
     for (unsigned int i = 0; i < cache.size(); i++) {
-      const char *name = cache[i]->getStringValue("file", "");
+      const std::string name = cache[i]->getStringValue("file", "");
       if (!simgear::strutils::iequals(_searchAircraft, name)) {
         continue;
       }
@@ -1288,7 +1288,7 @@ void fgStartNewReset()
     // hack fix for many reset crashes relating to the static instance
     // of this class. Will be fixed better for future versions by making
     // this a proper subsystem.
-    FGATCDialogNew::hackyReset();
+    //FGATCDialogNew::hackyReset();
     
     // remove most subsystems, with a few exceptions.
     for (int g=0; g<SGSubsystemMgr::MAX_GROUPS; ++g) {
@@ -1349,7 +1349,7 @@ void fgStartNewReset()
     globals->set_matlib(NULL);
     
     flightgear::unregisterMainLoopProperties();
-    FGReplayData::resetStatisticsProperties();
+    FGReplay::resetStatisticsProperties();
 
     simgear::clearSharedTreeGeometry();
     simgear::clearEffectCache();

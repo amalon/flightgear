@@ -1184,7 +1184,7 @@ TCAS::TCAS(SGPropertyNode* pNode) :
     for (int i = 0; i < pNode->nChildren(); ++i)
     {
         SGPropertyNode* pChild = pNode->getChild(i);
-        string cname = pChild->getName();
+        string cname = pChild->getNameString();
         string cval = pChild->getStringValue();
         int cintval = pChild->getIntValue();
 

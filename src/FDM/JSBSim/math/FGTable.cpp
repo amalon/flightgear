@@ -394,7 +394,9 @@ FGTable::~FGTable()
   // instance of FGTable after the destruction is completed.
   if (!Name.empty() && !internal) {
     string tmp = mkPropertyName(nullptr, "");
-    PropertyManager->Untie(tmp);
+    FGPropertyNode* node = PropertyManager->GetNode(tmp);
+    if (node->isTied())
+      PropertyManager->Untie(tmp);
   }
 
   if (nTables > 0) {

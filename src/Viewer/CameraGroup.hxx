@@ -206,6 +206,9 @@ public:
 
     CameraInfo *getGUICamera() const;
 
+    typedef std::vector<osg::ref_ptr<CameraInfo>> CameraList;
+    const CameraList& getCameras();
+
 protected:
     friend CameraGroupListener;
     friend bool computeIntersections(const CameraGroup* cgroup,
@@ -214,7 +217,6 @@ protected:
                                      intersections);
     friend void reloadCompositors(CameraGroup *cgroup);
 
-    typedef std::vector<osg::ref_ptr<CameraInfo>> CameraList;
     CameraList _cameras;
     osg::ref_ptr<osgViewer::View> _viewer;
     static osg::ref_ptr<CameraGroup> _defaultGroup;

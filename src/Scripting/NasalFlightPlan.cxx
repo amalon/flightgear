@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <optional>
 
 #include "NasalFlightPlan.hxx"
 
@@ -132,6 +133,33 @@ static naRef wayptFlagToNasal(naContext c, unsigned int flags)
     if (flags & WPT_MISS) return stringToNasal(c, "missed");
     if (flags & WPT_APPROACH) return stringToNasal(c, "approach");
     return naNil();
+}
+
+static std::optional<Airway::Level> airwayLevelFromNasal(naRef na)
+{
+    if (naIsString(na)) {
+        const char* s = naStr_data(na);
+        if (!strcmp(s, "both")) return {Airway::Both};
+        if (!strcmp(s, "high")) return {Airway::HighLevel};
+        if (!strcmp(s, "low")) return {Airway::LowLevel};
+        return {};
+    }
+
+    if (!naIsNum(na)) {
+        return {};
+    }
+
+    const int num = static_cast<int>(na.num);
+    switch (num) {
+    case Airway::HighLevel: return {Airway::HighLevel};
+    case Airway::LowLevel: return {Airway::LowLevel};
+    case Airway::Both: return {Airway::Both};
+    default:
+        break;
+        // fall through
+    }
+
+    return {}; // fail
 }
 
 Waypt* wayptGhost(naRef r)
@@ -1028,6 +1056,8 @@ static const char* airwayGhostGetMember(naContext c, void* g, naRef field, naRef
     } else if (!strcmp(fieldName, "id"))
         *out = stringToNasal(c, awy->ident());
     else if (!strcmp(fieldName, "level")) {
+        // James was dumb, returning a string here since we didn't have the
+        // constant values exposed.
         const auto level = awy->level();
         switch (level) {
         case Airway::HighLevel: *out = stringToNasal(c, "high"); break;
@@ -1035,6 +1065,10 @@ static const char* airwayGhostGetMember(naContext c, void* g, naRef field, naRef
         case Airway::Both: *out = stringToNasal(c, "both"); break;
         default: *out = naNil();
         }
+    } else if (!strcmp(fieldName, "level_code")) {
+        // so expose the numerical values here
+        const auto level = awy->level();
+        *out = naNum(static_cast<int>(level));
     } else {
         return 0;
     }
@@ -1341,9 +1375,18 @@ static naRef f_findAirway(naContext c, naRef me, int argc, naRef* args)
     FGPositionedRef pos;
     Airway::Level   level = Airway::Both;
     if (argc >= 2) {
-        pos = positionedFromArg(args[1]);
-        if (naIsString(args[1])) {
-            // level spec,
+        int posArgIndex = 1;
+
+        // try next arg as a level specifier first: this means you can't use
+        // a string navaid ident which is 'high', 'low' or 'both'.
+        auto maybeLevel = airwayLevelFromNasal(args[1]);
+        if (maybeLevel.has_value()) {
+            level = maybeLevel.value_or(Airway::Both);
+            ++posArgIndex; // worked, so increment index
+        }
+
+        if (argc > posArgIndex) {
+            pos = positionedFromArg(args[posArgIndex]);
         }
     }
 
@@ -1419,28 +1462,49 @@ static naRef f_createWPFrom(naContext c, naRef me, int argc, naRef* args)
 
 static naRef f_createViaTo(naContext c, naRef me, int argc, naRef* args)
 {
-    if (argc != 2) {
-        naRuntimeError(c, "createViaTo: needs exactly two arguments");
+    if ((argc < 2) || (argc > 3)) {
+        naRuntimeError(c, "createViaTo: needs two or three arguments");
     }
 
-    std::string airwayName = naStr_data(args[0]);
-    AirwayRef   airway = Airway::findByIdent(airwayName, Airway::Both);
+    AirwayRef airway = airwayGhost(args[0]);
+    naRef toArg = args[1];
+    if (!airway && naIsString(args[0])) {
+        std::string airwayName = naStr_data(args[0]);
+        auto level = Airway::Both;
+        if (argc == 3) {
+            // this means second arg is high / low select
+            auto l = airwayLevelFromNasal(args[1]);
+            toArg = args[2];
+            if (!l) {
+                naRuntimeError(c, "createViaTo: level argument is not accepted");
+            }
+
+            level = l.value_or(Airway::Both);
+        }
+
+
+        airway = Airway::findByIdent(airwayName, level);
+        if (!airway) {
+            naRuntimeError(c, "createViaTo: couldn't find airway with provided name: %s",
+                           naStr_data(args[0]));
+        }
+    }
+
     if (!airway) {
-        naRuntimeError(c, "createViaTo: couldn't find airway with provided name: %s",
-                       naStr_data(args[0]));
+        naRuntimeError(c, "createViaTo: invalid airway");
     }
 
     FGPositionedRef nav;
-    if (naIsString(args[1])) {
-        WayptRef enroute = airway->findEnroute(naStr_data(args[1]));
+    if (naIsString(toArg)) {
+        WayptRef enroute = airway->findEnroute(naStr_data(toArg));
         if (!enroute) {
             naRuntimeError(c, "unknown waypoint on airway %s: %s",
-                           naStr_data(args[0]), naStr_data(args[1]));
+                           naStr_data(args[0]), naStr_data(toArg));
         }
 
         nav = enroute->source();
     } else {
-        nav = positionedGhost(args[1]);
+        nav = positionedGhost(toArg);
         if (!nav) {
             naRuntimeError(c, "createViaTo: arg[1] is not a navaid");
         }
@@ -1456,8 +1520,8 @@ static naRef f_createViaTo(naContext c, naRef me, int argc, naRef* args)
 
 static naRef f_createViaFromTo(naContext c, naRef me, int argc, naRef* args)
 {
-    if (argc != 3) {
-        naRuntimeError(c, "createViaFromTo: needs exactly three arguments");
+    if ((argc < 3) || (argc > 4)) {
+        naRuntimeError(c, "createViaFromTo: needs three or four arguments");
     }
 
     auto from = positionedFromArg(args[0]);
@@ -1465,27 +1529,47 @@ static naRef f_createViaFromTo(naContext c, naRef me, int argc, naRef* args)
         naRuntimeError(c, "createViaFromTo: from wp not found");
     }
 
-    std::string airwayName = naStr_data(args[1]);
-    AirwayRef   airway = Airway::findByIdentAndNavaid(airwayName, from);
+    AirwayRef airway = airwayGhost(args[1]);
+    naRef toArg = args[2];
+    if (!airway && naIsString(args[1])) {
+        std::string airwayName = naStr_data(args[1]);
+        auto level = Airway::Both;
+        if (argc == 4) {
+            // this means third arg is high / low select
+            auto l = airwayLevelFromNasal(args[2]);
+            toArg = args[3];
+            if (!l) {
+                naRuntimeError(c, "createViaFromTo: level argument is not accepted");
+            }
+
+            level = l.value_or(Airway::Both);
+        }
+
+
+        airway = Airway::findByIdent(airwayName, level);
+        if (!airway) {
+            naRuntimeError(c, "createViaFromTo: couldn't find airway with provided name: %s",
+                           naStr_data(args[1]));
+        }
+    }
+
     if (!airway) {
-        naRuntimeError(c, "createViaFromTo: couldn't find airway with provided name: %s from wp %s",
-                       naStr_data(args[0]),
-                       from->ident().c_str());
+        naRuntimeError(c, "createViaFromTo: invalid airway");
     }
 
     FGPositionedRef nav;
-    if (naIsString(args[2])) {
-        WayptRef enroute = airway->findEnroute(naStr_data(args[2]));
+    if (naIsString(toArg)) {
+        WayptRef enroute = airway->findEnroute(naStr_data(toArg));
         if (!enroute) {
             naRuntimeError(c, "unknown waypoint on airway %s: %s",
-                           naStr_data(args[1]), naStr_data(args[2]));
+                           naStr_data(args[1]), naStr_data(toArg));
         }
 
         nav = enroute->source();
     } else {
-        nav = positionedFromArg(args[2]);
+        nav = positionedFromArg(toArg);
         if (!nav) {
-            naRuntimeError(c, "createViaFromTo: arg[2] is not a navaid");
+            naRuntimeError(c, "createViaFromTo: final arg is not a navaid");
         }
     }
 
@@ -2149,6 +2233,11 @@ naRef initNasalFlightPlan(naRef globals, naContext c)
     airwayPrototype = naNewHash(c);
     naSave(c, airwayPrototype);
     hashset(c, airwayPrototype, "contains", naNewFunc(c, naNewCCode(c, f_airway_contains)));
+    hashset(c, airwayPrototype, "HIGH", naNum(Airway::HighLevel));
+    hashset(c, airwayPrototype, "LOW", naNum(Airway::LowLevel));
+    hashset(c, airwayPrototype, "BOTH", naNum(Airway::Both));
+
+    hashset(c, globals, "Airway", airwayPrototype);
 
     for (int i = 0; funcs[i].name; i++) {
         hashset(c, globals, funcs[i].name,

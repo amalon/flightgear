@@ -124,3 +124,8 @@ naRef initNasalUnitTestCppUnit(naRef nasalGlobals, naContext c)
     
   return naNil();
 }
+
+void shutdownNasalUnitTestInSim()
+{
+    // stub
+}

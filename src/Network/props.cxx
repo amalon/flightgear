@@ -554,7 +554,7 @@ FGProps::PropsChannel::foundTerminator()
                     } else {
                         // generic parsing
                         for ( unsigned int i = 2; i < tokens.size(); ++i ) {
-                            const auto pieces = simgear::strutils::split(tokens.at(i), "=");
+                            const auto pieces = simgear::strutils::split(tokens.at(i), "=", 1);
                             if (pieces.size() != 2) {
                                 SG_LOG(SG_NETWORK, SG_WARN, "malformed argument to Props protocol run:" << tokens.at(i));
                                 continue;

@@ -407,7 +407,7 @@ bool FGATCInput::do_analog_in() {
             // read the next config entry from the property tree
 
             SGPropertyNode *child = analog_in_node->getChild(i);
-            string cname = child->getName();
+            string cname = child->getNameString();
             int index = child->getIndex();
             string name = "";
             string type = "";
@@ -680,7 +680,7 @@ bool FGATCInput::do_switches() {
             // read the next config entry from the property tree
 
             SGPropertyNode *child = switches_node->getChild(i);
-            string cname = child->getName();
+            string cname = child->getNameString();
             string name = "";
             string type = "";
             vector <SGPropertyNode *> output_nodes;
@@ -881,7 +881,7 @@ bool FGATCInput::do_radio_switches() {
             // read the next config entry from the property tree
 
             SGPropertyNode *child = radio_in_node->getChild(i);
-            string cname = child->getName();
+            string cname = child->getNameString();
 
             if ( cname == "switch" ) {
                 string name = "";

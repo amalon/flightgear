@@ -77,7 +77,7 @@ bool AircraftItem::initFromFile(QDir dir, QString filePath)
     LocalizedStrings ls;
     ls.locale = "en";
     ls.strings["name"] = QString::fromStdString(sim->getStringValue("description")).trimmed();
-    authors = sim->getStringValue("author");
+    authors = QString::fromStdString(sim->getStringValue("author"));
 
     if (sim->hasChild("rating")) {
         SGPropertyNode_ptr ratingsNode = sim->getNode("rating");
@@ -88,11 +88,11 @@ bool AircraftItem::initFromFile(QDir dir, QString filePath)
 
     if (sim->hasChild("long-description")) {
         // clean up any XML whitspace in the text.
-        ls.strings["desc"] = QString(sim->getStringValue("long-description")).simplified();
+        ls.strings["desc"] = QString::fromStdString(sim->getStringValue("long-description")).simplified();
     }
 
     if (sim->hasChild("variant-of")) {
-        variantOf = sim->getStringValue("variant-of");
+        variantOf = QString::fromStdString(sim->getStringValue("variant-of"));
     } else {
         isPrimary = true;
     }
@@ -106,16 +106,16 @@ bool AircraftItem::initFromFile(QDir dir, QString filePath)
         int nChildren = tagsNode->nChildren();
         for (int i = 0; i < nChildren; i++) {
             const SGPropertyNode* c = tagsNode->getChild(i);
-            if (strcmp(c->getName(), "tag") == 0) {
-                const char* tagName = c->getStringValue();
-                usesHeliports |= (strcmp(tagName, "helicopter") == 0);
+            if (c->getNameString() == "tag") {
+                std::string tagName = c->getStringValue();
+                usesHeliports |= (tagName == "helicopter");
                 // could also consider vtol tag?
-                usesSeaports |= (strcmp(tagName, "seaplane") == 0);
-                usesSeaports |= (strcmp(tagName, "floats") == 0);
-                needsMaintenance |= (strcmp(tagName, "needs-maintenance") == 0);
+                usesSeaports |= (tagName == "seaplane");
+                usesSeaports |= (tagName == "floats");
+                needsMaintenance |= (tagName == "needs-maintenance");
 
                 // and actually store the tags
-                tags.push_back(QString::fromUtf8(tagName));
+                tags.push_back(QString::fromStdString(tagName));
             }
         } // of tags iteration
     } // of set-xml has tags
@@ -148,13 +148,13 @@ bool AircraftItem::initFromFile(QDir dir, QString filePath)
     }
 
     if (sim->hasChild("thumbnail")) {
-        thumbnailPath = sim->getStringValue("thumbnail");
+        thumbnailPath = QString::fromStdString(sim->getStringValue("thumbnail"));
     } else {
         thumbnailPath = "thumbnail.jpg";
     }
 
     if (sim->hasChild("minimum-fg-version")) {
-        minFGVersion = sim->getStringValue("minimum-fg-version");
+        minFGVersion = QString::fromStdString(sim->getStringValue("minimum-fg-version"));
     }
 
     homepageUrl = QUrl(QString::fromStdString(sim->getStringValue("urls/home-page")));

@@ -254,7 +254,7 @@ void GUIInfo::apply_format(SGPropertyNode* n)
     else if (fmt_type == f_DOUBLE)
         snprintf(buf, FORMAT_BUFSIZE, format.c_str(), n->getDoubleValue());
     else
-        snprintf(buf, FORMAT_BUFSIZE, format.c_str(), n->getStringValue());
+        snprintf(buf, FORMAT_BUFSIZE, format.c_str(), n->getStringValue().c_str());
 
     buf[FORMAT_BUFSIZE] = '\0';
     text = buf;
@@ -686,8 +686,8 @@ FGPUIDialog::FGPUIDialog(SGPropertyNode* props) : FGDialog(props),
         _nasal_close = nasal->getNode("close");
         SGPropertyNode* open = nasal->getNode("open");
         if (open) {
-            const char* s = open->getStringValue();
-            nas->createModule(_module.c_str(), _module.c_str(), s, strlen(s), props);
+            string s = open->getStringValue();
+            nas->createModule(_module.c_str(), _module.c_str(), s.c_str(), s.length(), props);
         }
     }
     display(props);
@@ -703,8 +703,8 @@ FGPUIDialog::~FGPUIDialog()
     auto nas = globals->get_subsystem<FGNasalSys>();
     if (nas) {
         if (_nasal_close) {
-            const char* s = _nasal_close->getStringValue();
-            nas->createModule(_module.c_str(), _module.c_str(), s, strlen(s), _props);
+            string s = _nasal_close->getStringValue();
+            nas->createModule(_module.c_str(), _module.c_str(), s.c_str(), s.length(), _props);
         }
         nas->deleteModule(_module.c_str());
     }
@@ -890,7 +890,7 @@ FGPUIDialog::makeObject(SGPropertyNode* props, int parentWidth, int parentHeight
     int height = props->getIntValue("height", parentHeight);
     int x = props->getIntValue("x", (parentWidth - width) / 2);
     int y = props->getIntValue("y", (parentHeight - height) / 2);
-    string type = props->getName();
+    string type = props->getNameString();
 
     if (type.empty())
         type = "dialog";
@@ -989,11 +989,11 @@ FGPUIDialog::makeObject(SGPropertyNode* props, int parentWidth, int parentHeight
 
     } else if (type == "button") {
         puButton* obj;
-        const char* legend = props->getStringValue("legend", "[none]");
+        string legend = props->getStringValue("legend", "[none]");
         if (props->getBoolValue("one-shot", true))
-            obj = new puOneShot(x, y, legend);
+            obj = new puOneShot(x, y, legend.c_str());
         else
-            obj = new puButton(x, y, legend);
+            obj = new puButton(x, y, legend.c_str());
         if (presetSize)
             obj->setSize(width, height);
         setupObject(obj, props);
@@ -1149,14 +1149,14 @@ void FGPUIDialog::setupObject(puObject* object, SGPropertyNode* props)
         _conditionalObjects.push_back(cnd);
     }
 
-    string type = props->getName();
+    string type = props->getNameString();
     if (type == "input" && props->getBoolValue("live"))
         object->setDownCallback(action_callback);
 
     if (type == "text") {
-        const char* format = props->getStringValue("format", 0);
-        if (format) {
-            info->fmt_type = validate_format(format);
+        string format = props->getStringValue("format", "");
+        if (!format.empty()) {
+            info->fmt_type = validate_format(format.c_str());
             if (info->fmt_type != f_INVALID)
                 info->format = format;
             else
@@ -1165,10 +1165,8 @@ void FGPUIDialog::setupObject(puObject* object, SGPropertyNode* props)
     }
 
     if (props->hasValue("property")) {
-        const char* name = props->getStringValue("name");
-        if (name == 0)
-            name = "";
-        const char* propname = props->getStringValue("property");
+        string name = props->getStringValue("name", "");
+        string propname = props->getStringValue("property");
         SGPropertyNode_ptr node = fgGetNode(propname, true);
         if (type == "map") {
             // mapWidget binds to a sub-tree of properties, and
@@ -1189,12 +1187,12 @@ void FGPUIDialog::setupObject(puObject* object, SGPropertyNode* props)
     if (!bindings.empty()) {
         info->key = props->getIntValue("keynum", -1);
         if (props->hasValue("key"))
-            info->key = getKeyCode(props->getStringValue("key", ""));
+            info->key = getKeyCode(props->getStringValue("key", "").c_str());
 
 
         for (auto bindingNode : bindings) {
-            const char* cmd = bindingNode->getStringValue("command");
-            if (!strcmp(cmd, "nasal")) {
+            string cmd = bindingNode->getStringValue("command");
+            if (cmd == "nasal") {
                 // we need to clone the binding node, so we can unique the
                 // Nasal module. Otherwise we always modify the global dialog
                 // definition, and cloned dialogs use the same Nasal module for
@@ -1235,7 +1233,7 @@ void FGPUIDialog::setupGroup(puGroup* group, SGPropertyNode* props,
 
 void FGPUIDialog::setColor(puObject* object, SGPropertyNode* props, int which)
 {
-    string type = props->getName();
+    string type = props->getNameString();
     if (type.empty())
         type = "dialog";
     if (type == "textbox" && props->getBoolValue("editable"))
@@ -1470,7 +1468,7 @@ void FGPUIDialog::applySize(puObject* object)
 // Implementation of FGDialog::PropertyObject.
 ////////////////////////////////////////////////////////////////////////
 
-FGPUIDialog::PropertyObject::PropertyObject(const char* n,
+FGPUIDialog::PropertyObject::PropertyObject(string n,
                                             puObject* o, SGPropertyNode_ptr p) : name(n),
                                                                                  object(o),
                                                                                  node(p)
@@ -1502,11 +1500,11 @@ fgValueList::~fgValueList()
 void fgValueList::make_list()
 {
     SGPropertyNode_ptr values = _props;
-    const char* vname = "value";
+    string vname = "value";
 
     if (_props->hasChild("properties")) {
         // dynamic values, read from a property's children
-        const char* path = _props->getStringValue("properties");
+        string path = _props->getStringValue("properties");
         values = fgGetNode(path, true);
     }
 
@@ -1518,7 +1516,7 @@ void fgValueList::make_list()
     _list = new char*[value_nodes.size() + 1];
     unsigned int i;
     for (i = 0; i < value_nodes.size(); i++) {
-        _list[i] = strdup((char*)value_nodes[i]->getStringValue());
+        _list[i] = strdup((char*)value_nodes[i]->getStringValue().c_str());
     }
     _list[i] = 0;
 }

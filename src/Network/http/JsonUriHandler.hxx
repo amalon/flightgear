@@ -29,7 +29,7 @@ namespace http {
 
 class JsonUriHandler : public URIHandler {
 public:
-  JsonUriHandler( const char * uri = "/json/" ) : URIHandler( uri  ) {}
+  JsonUriHandler( const std::string& uri = "/json/" ) : URIHandler( uri  ) {}
   virtual bool handleRequest( const HTTPRequest & request, HTTPResponse & response, Connection * connection );
 private:
   SGPropertyNode_ptr getRequestedNode(const HTTPRequest & request);

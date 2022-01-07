@@ -90,7 +90,7 @@ FGElectricalSupplier::FGElectricalSupplier ( SGPropertyNode *node ) {
     for ( i = 0; i < node->nChildren(); ++i ) {
         SGPropertyNode *child = node->getChild(i);
         // cout << " scanning: " << child->getName() << endl;
-        if ( !strcmp(child->getName(), "prop") ) {
+        if ( child->getNameString() == "prop" ) {
             string prop = child->getStringValue();
             // cout << "  Adding prop = " << prop << endl;
             add_prop( prop );
@@ -209,7 +209,7 @@ FGElectricalBus::FGElectricalBus ( SGPropertyNode *node ) {
     int i;
     for ( i = 0; i < node->nChildren(); ++i ) {
         SGPropertyNode *child = node->getChild(i);
-        if ( !strcmp(child->getName(), "prop") ) {
+        if ( child->getNameString() == "prop" ) {
             string prop = child->getStringValue();
             add_prop( prop );
         }
@@ -231,7 +231,7 @@ FGElectricalOutput::FGElectricalOutput ( SGPropertyNode *node ) {
     int i;
     for ( i = 0; i < node->nChildren(); ++i ) {
         SGPropertyNode *child = node->getChild(i);
-        if ( !strcmp(child->getName(), "prop") ) {
+        if ( child->getNameString() == "prop" ) {
             string prop = child->getStringValue();
             add_prop( prop );
         }
@@ -248,7 +248,7 @@ FGElectricalSwitch::FGElectricalSwitch( SGPropertyNode *node ) :
     int i;
     for ( i = 0; i < node->nChildren(); ++i ) {
         SGPropertyNode *child = node->getChild(i);
-        string cname = child->getName();
+        string cname = child->getNameString();
         string cval = child->getStringValue();
         if ( cname == "prop" ) {
             switch_node = fgGetNode( cval.c_str(), true );
@@ -277,7 +277,7 @@ FGElectricalConnector::FGElectricalConnector ( SGPropertyNode *node,
     int i;
     for ( i = 0; i < node->nChildren(); ++i ) {
         SGPropertyNode *child = node->getChild(i);
-        string cname = child->getName();
+        string cname = child->getNameString();
         string cval = child->getStringValue();
         // cout << "  " << cname << " = " << cval << endl;
         if ( cname == "input" ) {
@@ -600,7 +600,7 @@ bool FGElectricalSystem::build (SGPropertyNode* config_props) {
     int count = config_props->nChildren();
     for ( i = 0; i < count; ++i ) {
         node = config_props->getChild(i);
-        string name = node->getName();
+        string name = node->getNameString();
         // cout << name << endl;
         if ( name == "supplier" ) {
             FGElectricalSupplier *s =

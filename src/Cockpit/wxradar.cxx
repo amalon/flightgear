@@ -96,7 +96,7 @@ wxRadarBg::wxRadarBg(SGPropertyNode *node) :
     branch = "/instrumentation/" + _name;
     _Instrument = fgGetNode(branch.c_str(), _num, true);
 
-    const char *tacan_source = node->getStringValue("tacan-source", "/instrumentation/tacan");
+    string tacan_source = node->getStringValue("tacan-source", "/instrumentation/tacan");
     _Tacan = fgGetNode(tacan_source, true);
 
     _font_node = _Instrument->getNode("font", true);
@@ -596,8 +596,8 @@ wxRadarBg::update_data(const SGPropertyNode *ac, double altitude, double heading
     callsign->setAlignment(osgText::Text::LEFT_BOTTOM_BASE_LINE);
     callsign->setLineSpacing(_font_spacing);
 
-    const char *identity = ac->getStringValue("transponder-id");
-    if (!identity[0])
+    string identity = ac->getStringValue("transponder-id", "");
+    if (identity.empty())
         identity = ac->getStringValue("callsign");
 
     stringstream text;
@@ -730,7 +730,7 @@ wxRadarBg::update_aircraft()
             continue;
 
         double echo_radius, sigma;
-        const string name = model->getName();
+        const string name = model->getNameString();
 
         //cout << "name "<<name << endl;
         if (name == "aircraft" || name == "tanker")

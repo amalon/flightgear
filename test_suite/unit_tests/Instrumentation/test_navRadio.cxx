@@ -61,7 +61,7 @@ void NavRadioTests::testBasic()
     setPositionAndStabilise(r.get(), pos);
     
     CPPUNIT_ASSERT_EQUAL(true, node->getBoolValue("operable"));
-    CPPUNIT_ASSERT(!strcmp("TLA", node->getStringValue("nav-id")));
+    CPPUNIT_ASSERT(node->getStringValue("nav-id") == "TLA");
     CPPUNIT_ASSERT_EQUAL(true, node->getBoolValue("in-range"));
 }
 
@@ -141,7 +141,7 @@ void NavRadioTests::callNavRadioCDI() {
         CPPUNIT_ASSERT_EQUAL_MESSAGE(tMesg, CDITestRoll[i].vToFlag, !node->getBoolValue("from-flag"));
         //
         tMesg = itemDesc + "nav-id";
-        CPPUNIT_ASSERT_MESSAGE(tMesg, !strcmp((CDITestRoll[i].nvIden).c_str(), node->getStringValue("nav-id")));
+        CPPUNIT_ASSERT_MESSAGE(tMesg, node->getStringValue("nav-id") == CDITestRoll[i].nvIden);
         //tbd VOR seems to not set selected-mhz-fmt
         // Converting nvFreq to string results in trailing zeros
         tMesg = itemDesc + "selected-mhz-fmt";
@@ -531,7 +531,7 @@ void NavRadioTests::callNavRadioGS() {
         CPPUNIT_ASSERT_EQUAL_MESSAGE(tMesg, GSTestRoll[i].vInRnge, node->getBoolValue("operable"));
         tMesg = itemDesc + "nav-id";
         string dddbug = node->getStringValue("nav-id");
-        CPPUNIT_ASSERT_MESSAGE(tMesg, !strcmp((GSTestRoll[i].nvIden).c_str(), node->getStringValue("nav-id")));
+        CPPUNIT_ASSERT_MESSAGE(tMesg, node->getStringValue("nav-id") == GSTestRoll[i].nvIden);
         tMesg = itemDesc + "Sig Norm";
         CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE(tMesg, GSTestRoll[i].vSigNorm, node->getDoubleValue("signal-quality-norm"), GSTestRoll[i].vSigTolr);
         tMesg = itemDesc + "gs-direct";
@@ -634,7 +634,7 @@ void NavRadioTests::callNewNavRadioGS()
         CPPUNIT_ASSERT_EQUAL_MESSAGE(tMesg, GSTestRoll[i].vInRnge, node->getBoolValue("operable"));
         tMesg = itemDesc + "nav-id";
         string dddbug = node->getStringValue("nav-id");
-        CPPUNIT_ASSERT_MESSAGE(tMesg, !strcmp((GSTestRoll[i].nvIden).c_str(), node->getStringValue("nav-id")));
+        CPPUNIT_ASSERT_MESSAGE(tMesg, node->getStringValue("nav-id") == GSTestRoll[i].nvIden);
         tMesg = itemDesc + "Sig Norm";
         CPPUNIT_ASSERT_DOUBLES_EQUAL_MESSAGE(tMesg, GSTestRoll[i].vSigNorm, node->getDoubleValue("signal-quality-norm"), GSTestRoll[i].vSigTolr);
         tMesg = itemDesc + "gs-direct";
@@ -667,7 +667,7 @@ void NavRadioTests::testGS()
                                                         FGPositioned::findClosestWithIdent("ITLW", SGGeod::fromDeg(13, 52), &f));
     CPPUNIT_ASSERT(gs->type() == FGPositioned::GS);
     node->setDoubleValue("frequencies/selected-mhz", 110.10);
-    CPPUNIT_ASSERT(!strcmp("110.10", node->getStringValue("frequencies/selected-mhz-fmt")));
+    CPPUNIT_ASSERT(node->getStringValue("frequencies/selected-mhz-fmt") == "110.10");
     
     CPPUNIT_ASSERT_DOUBLES_EQUAL(gs->glideSlopeAngleDeg(), 3.0, 0.001);
     double gsAngleRad = gs->glideSlopeAngleDeg() * SG_DEGREES_TO_RADIANS;
@@ -696,7 +696,7 @@ void NavRadioTests::testGS()
 
     setPositionAndStabilise(r.get(), SGGeod::fromCart(radioPos));
     
-    CPPUNIT_ASSERT(!strcmp("ITLW", node->getStringValue("nav-id")));
+    CPPUNIT_ASSERT(node->getStringValue("nav-id") == "ITLW");
     CPPUNIT_ASSERT_DOUBLES_EQUAL(1.0, node->getDoubleValue("signal-quality-norm"), 0.01);
     CPPUNIT_ASSERT_DOUBLES_EQUAL(3.0, node->getDoubleValue("gs-direct-deg"), 0.1);
     CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0, node->getDoubleValue("gs-needle-deflection"), 0.1);
@@ -711,7 +711,7 @@ void NavRadioTests::testGS()
     
     setPositionAndStabilise(r.get(), SGGeod::fromCart(radioPos));
     
-    CPPUNIT_ASSERT(!strcmp("ITLW", node->getStringValue("nav-id")));
+    CPPUNIT_ASSERT(node->getStringValue("nav-id") == "ITLW");
     CPPUNIT_ASSERT_DOUBLES_EQUAL(1.0, node->getDoubleValue("signal-quality-norm"), 0.01);
     CPPUNIT_ASSERT_DOUBLES_EQUAL(3.5, node->getDoubleValue("gs-direct-deg"), 0.1);
     CPPUNIT_ASSERT_DOUBLES_EQUAL(-2.5, node->getDoubleValue("gs-needle-deflection"), 0.1);
@@ -797,7 +797,7 @@ void NavRadioTests::testGlideslopeLongDistance()
         FGPositioned::findClosestWithIdent("ILL", SGGeod::fromDeg(0, 51), &f));
     CPPUNIT_ASSERT(gs->type() == FGPositioned::GS);
     node->setDoubleValue("frequencies/selected-mhz", 109.50);
-    CPPUNIT_ASSERT(!strcmp("109.50", node->getStringValue("frequencies/selected-mhz-fmt")));
+    CPPUNIT_ASSERT(node->getStringValue("frequencies/selected-mhz-fmt") == "109.50");
 
     CPPUNIT_ASSERT_DOUBLES_EQUAL(gs->glideSlopeAngleDeg(), 3.0, 0.001);
     double gsAngleRad = gs->glideSlopeAngleDeg() * SG_DEGREES_TO_RADIANS;

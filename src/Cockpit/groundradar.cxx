@@ -92,7 +92,7 @@ inline static osg::Vec3 fromPolar(double fi, double r)
     return osg::Vec3(sin(fi * SGD_DEGREES_TO_RADIANS) * r, cos(fi * SGD_DEGREES_TO_RADIANS) * r, 0);
 }
 
-void GroundRadar::createTexture(const char* texture_name)
+void GroundRadar::createTexture(const std::string& texture_name)
 {
     setSize(TextureHalfSize + TextureHalfSize);
     allocRT();

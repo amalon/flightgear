@@ -57,10 +57,10 @@ FGLaRCsim::FGLaRCsim( double dt ) {
     aero = fgGetNode("/sim/aero", true);
     uiuc_type = fgGetNode("/sim/uiuc-type", true);
 
-    ls_toplevel_init( 0.0, (char *)(aero->getStringValue()) );
+    ls_toplevel_init( 0.0, (char *)(aero->getStringValue().c_str()) );
 
     lsic=new LaRCsimIC; //this needs to be brought up after LaRCsim is
-    if ( !strcmp(aero->getStringValue(), "c172") ) {
+    if ( aero->getStringValue() == "c172" ) {
         copy_to_LaRCsim(); // initialize all of LaRCsim's vars
 
         //this should go away someday -- formerly done in fg_init.cxx
@@ -71,7 +71,7 @@ FGLaRCsim::FGLaRCsim( double dt ) {
         I_xz = 0.000000E+00;
     }
 
-    if ( !strcmp(aero->getStringValue(), "basic") ) {
+    if ( aero->getStringValue() == "basic" ) {
         copy_to_LaRCsim(); // initialize all of LaRCsim's vars
 
         //this should go away someday -- formerly done in fg_init.cxx
@@ -119,7 +119,7 @@ void FGLaRCsim::update( double dt ) {
     int multiloop = _calc_multiloop(dt);
 
     // if flying c172-larcsim, do the following
-    if ( !strcmp(aero->getStringValue(), "c172") ) {
+    if ( aero->getStringValue() == "c172" ) {
         // set control inputs
         // cout << "V_calibrated_kts = " << V_calibrated_kts << '\n';
         eng.set_IAS( V_calibrated_kts );
@@ -190,7 +190,7 @@ void FGLaRCsim::update( double dt ) {
     }
     // done with c172-larcsim if-block
 
-    if ( !strcmp(aero->getStringValue(), "basic") ) {
+    if ( aero->getStringValue() == "basic" ) {
         // set control inputs
         // cout << "V_calibrated_kts = " << V_calibrated_kts << '\n';
         eng.set_IAS( V_calibrated_kts );
@@ -277,7 +277,7 @@ void FGLaRCsim::update( double dt ) {
 
     // IO360.cxx for the C172 thrust is broken (not sure why).  
     // So force C172 to use engine model in c172_engine.c instead of the IO360.cxx.
-    //      if ( !strcmp(aero->getStringValue(), "c172") ) {
+    //      if ( aero->getStringValue() == "c172" ) {
     //          Use_External_Engine = 1;
     //      } else {
     //          Use_External_Engine = 0;
@@ -318,7 +318,7 @@ void FGLaRCsim::update( double dt ) {
 
     // if flying uiuc, set some properties and over-ride some previous ones
 #ifdef ENABLE_UIUC_MODEL
-    if ( !strcmp(aero->getStringValue(), "uiuc")) {
+    if ( aero->getStringValue() == "uiuc" ) {
 
       // surface positions and other general properties
       fgSetDouble("/surface-positions/flight/rudder-pos-norm",             fgGetDouble("/controls/flight/rudder"));
@@ -377,10 +377,10 @@ void FGLaRCsim::update( double dt ) {
       // make the engine cranking and running sounds when fgfs starts up
       fgSetDouble("/engines/engine/cranking", 1);
       fgSetDouble("/engines/engine/running", 1);
-      if ( !strcmp(uiuc_type->getStringValue(), "uiuc-prop")) {
+      if ( uiuc_type->getStringValue() == "uiuc-prop" ) {
         // uiuc prop driven airplane, e.g. Wright Flyer
       }
-      else if ( !strcmp(uiuc_type->getStringValue(), "uiuc-jet")) {
+      else if ( uiuc_type->getStringValue() == "uiuc-jet" ) {
         // uiuc jet aircraft, e.g. a4d
         // used for setting the sound
         fgSetDouble("/engines/engine/n1", (75 + (globals->get_controls()->get_throttle( 0 ) * 100.0 )/400));
@@ -388,15 +388,15 @@ void FGLaRCsim::update( double dt ) {
         // used for setting the instruments
         fgSetDouble("/engines/engine[0]/n1", (50 + (globals->get_controls()->get_throttle( 0 ) * 50)));
       }
-      else if ( !strcmp(uiuc_type->getStringValue(), "uiuc-sailplane")) {
+      else if ( uiuc_type->getStringValue() == "uiuc-sailplane" ) {
         // uiuc sailplane, e.g. asw20
         fgSetDouble("/engines/engine/cranking", 0);
       }
-      else if ( !strcmp(uiuc_type->getStringValue(), "uiuc-hangglider")) {
+      else if ( uiuc_type->getStringValue() == "uiuc-hangglider" ) {
         // uiuc hang glider, e.g. airwave
         fgSetDouble("/engines/engine/cranking", 0);
       }
-      else if ( !strcmp(uiuc_type->getStringValue(), "uiuc-ornithopter")) {
+      else if ( uiuc_type->getStringValue() == "uiuc-ornithopter" ) {
         // flapping wings
         fgSetDouble("/canopy/position-norm", 0);
         fgSetDouble("/wing-phase/position-norm", sin(flapper_phi - 3 * LS_PI / 2));
@@ -759,7 +759,7 @@ bool FGLaRCsim::copy_from_LaRCsim() {
     // cout << "climb rate = " << -V_down * 60 << endl;
 
 #ifdef ENABLE_UIUC_MODEL
-    if (!strcmp(aero->getStringValue(), "uiuc") && aircraft_) {
+    if (aero->getStringValue() == "uiuc" && aircraft_) {
         if (pilot_elev_no) {
             globals->get_controls()->set_elevator(Long_control);
             globals->get_controls()->set_elevator_trim(Long_trim);

@@ -20,12 +20,7 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //
-#ifndef __DIGITALFILTER_HXX
-#define __DIGITALFILTER_HXX 1
-
-#ifdef HAVE_CONFIG_H
-#  include <config.h>
-#endif
+#pragma once
 
 #include "analogcomponent.hxx"
 
@@ -47,12 +42,12 @@ private:
     };
 
 protected:
-    virtual bool configure( SGPropertyNode& cfg_node,
+    bool configure( SGPropertyNode& cfg_node,
                             const std::string& cfg_name,
-                            SGPropertyNode& prop_root );
-    virtual void update( bool firstTime, double dt);
+                            SGPropertyNode& prop_root ) override;
+    void update( bool firstTime, double dt) override;
 
-    InitializeTo _initializeTo;
+    InitializeTo _initializeTo = INITIALIZE_INPUT;
 
 public:
     DigitalFilter();
@@ -66,4 +61,4 @@ public:
 };
 
 } // namespace FGXMLAutopilot
-#endif
+

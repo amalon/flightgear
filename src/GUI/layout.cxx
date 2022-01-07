@@ -46,8 +46,8 @@ void LayoutWidget::calcPrefSize(int* w, int* h)
     if (!getBool("enabled", true) || isType("nasal"))
         return;
 
-    int legw = stringLength(getStr("legend"));
-    int labw = stringLength(getStr("label"));
+    int legw = stringLength(getStr("legend").c_str());
+    int labw = stringLength(getStr("label").c_str());
 
     if(isType("dialog") || isType("group") || isType("frame")) {
         if(!hasField("layout")) {
@@ -55,10 +55,10 @@ void LayoutWidget::calcPrefSize(int* w, int* h)
             if(hasField("width")) *w = getNum("width");
             if(hasField("height")) *h = getNum("height");
         } else {
-            const char* layout = getStr("layout");
-            if     (eq(layout, "hbox" )) doHVBox(false, false, w, h);
-            else if(eq(layout, "vbox" )) doHVBox(false, true, w, h);
-            else if(eq(layout, "table")) doTable(false, w, h);
+            string layout = getStr("layout");
+            if     (layout == "hbox")  doHVBox(false, false, w, h);
+            else if(layout == "vbox")  doHVBox(false, true, w, h);
+            else if(layout == "table") doTable(false, w, h);
         }
     } else if (isType("text")) {
         *w = labw;
@@ -130,25 +130,25 @@ void LayoutWidget::layout(int x, int y, int w, int h)
 
     // Correct our box for alignment.  The values above correspond to
     // a "fill" alignment.
-    const char* halign = (isGroup || isType("hrule")) ? "fill" : "center";
+    string halign = (isGroup || isType("hrule")) ? "fill" : "center";
     if(hasField("halign")) halign = getStr("halign");
-    if(eq(halign, "left")) {
+    if(halign == "left") {
         w = prefw;
-    } else if(eq(halign, "right")) {
+    } else if(halign == "right") {
         x += w - prefw;
         w = prefw;
-    } else if(eq(halign, "center")) {
+    } else if(halign == "center") {
         x += (w - prefw)/2;
         w = prefw;
     }
-    const char* valign = (isGroup || isType("vrule")) ? "fill" : "center";
+    string valign = (isGroup || isType("vrule")) ? "fill" : "center";
     if(hasField("valign")) valign = getStr("valign");
-    if(eq(valign, "bottom")) {
+    if(valign == "bottom") {
         h = prefh;
-    } else if(eq(valign, "top")) {
+    } else if(valign == "top") {
         y += h - prefh;
         h = prefh;
-    } else if(eq(valign, "center")) {
+    } else if(valign == "center") {
         y += (h - prefh)/2;
         h = prefh;
     }
@@ -186,10 +186,10 @@ void LayoutWidget::layout(int x, int y, int w, int h)
 
     // Finally, if we are ourselves a layout object, do the actual layout.
     if(isGroup && hasField("layout")) {
-        const char* layout = getStr("layout");
-        if     (eq(layout, "hbox" )) doHVBox(true, false);
-        else if(eq(layout, "vbox" )) doHVBox(true, true);
-        else if(eq(layout, "table")) doTable(true);
+        string layout = getStr("layout");
+        if     (layout == "hbox")  doHVBox(true, false);
+        else if(layout == "vbox")  doHVBox(true, true);
+        else if(layout == "table") doTable(true);
     }
 }
 

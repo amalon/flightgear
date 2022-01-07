@@ -23,21 +23,23 @@ FGMenuBar::getLocalizedLabel(SGPropertyNode* node)
     if (!node)
         return {};
 
-    const char* name = node->getStringValue("name", 0);
-    const auto translated = globals->get_locale()->getLocalizedString(name, "menu");
-    if (!translated.empty())
-        return translated;
+    std::string name = node->getStringValue("name", ""); 
+    if (!name.empty()) {
+        const auto translated = globals->get_locale()->getLocalizedString(name, "menu");
+        if (!translated.empty())
+            return translated;
+    }
 
     // return default with fallback to name
-    const char* l = node->getStringValue("label", name);
+    std::string label = node->getStringValue("label", name.c_str());
 
     // this can occur if the menu item is missing a <name>
-    if (l == nullptr) {
+    if (label.empty()) {
         SG_LOG(SG_GUI, SG_ALERT, "FGMenuBar::getLocalizedLabel: No <name> defined for:" << node->getPath());
         return string{"<unnamed>"};
     }
 
-    return string{l};
+    return label;
 }
 
 // end of menubar.cxx

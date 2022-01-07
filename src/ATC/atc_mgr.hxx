@@ -37,7 +37,6 @@
 #include <simgear/structure/SGReferenced.hxx>
 
 #include <ATC/trafficcontrol.hxx>
-#include <ATC/atcdialog.hxx>
 #include <AIModel/AIAircraft.hxx>
 #include <Traffic/Schedule.hxx>
 #include <Traffic/SchedFlight.hxx>

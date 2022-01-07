@@ -115,7 +115,7 @@ double FGClouds::buildCloud(SGPropertyNode *cloud_def_root, SGPropertyNode *box_
 
 	for(int i = 0; i < box_def->nChildren() ; i++) {
 		SGPropertyNode *abox = box_def->getChild(i);
-		if( strcmp(abox->getName(), "box") == 0) {
+		if( abox->getNameString() == "box" ) {
 
 			string type = abox->getStringValue("type", "cu-small");
 			cld_def = cloud_def_root->getChild(type.c_str());
@@ -212,7 +212,7 @@ void FGClouds::buildLayer(int iLayer, const string& name, double coverage) {
 
 	for(int i = 0; i < layer_def->nChildren() ; i++) {
 		SGPropertyNode *acloud = layer_def->getChild(i);
-		if( strcmp(acloud->getName(), "cloud") == 0) {
+		if( acloud->getNameString() == "cloud" ) {
 			string cloud_name = acloud->getStringValue("name");
 			tCloudVariety[CloudVarietyCount].name = cloud_name;
 			double count = acloud->getDoubleValue("count", 1.0);

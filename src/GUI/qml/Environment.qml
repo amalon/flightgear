@@ -77,19 +77,6 @@ Item {
                         label: qsTr("Custom time is GMT / UTC")
                         visible: timeOfDay.isCustom
                         setting: "custom-time-is-gmt"
-                    },
-
-                    SettingsComboBox {
-                        id: season
-                        label: qsTr("Season")
-                        description: qsTr("Select if normal (summer) or winter textures are used for the scenery. "
-                            + "This does not affect other aspects of the simulation at present, "
-                            + "such as icing or weather simulation");
-                        keywords: ["season", "scenery", "texture", "winter"]
-                        choices: [qsTr("Summer (default)"), qsTr("Winter")]
-                        defaultIndex: 0
-                        setting: "winter-textures"
-                        readonly property var args: ["summer", "winter"]
                     }
                 ]
 
@@ -103,10 +90,6 @@ Item {
                         }
                     } else if (timeOfDay.selectedIndex > 0) {
                         _config.setArg("timeofday", timeOfDay.args[timeOfDay.selectedIndex])
-                    }
-
-                    if (season.selectedIndex > 0) {
-                        _config.setArg("season", season.args[season.selectedIndex])
                     }
                 }
             }

@@ -137,6 +137,7 @@ void FGClimate::reinit()
     _dust_cover = -99999.0;
     _wetness = -99999.0;
     _lichen_cover = -99999.0;
+    _inland_ice_cover = false;
 }
 
 // Set all environment parameters based on the koppen-classicfication
@@ -198,6 +199,7 @@ void FGClimate::update(double dt)
 
             // convert from color shades to koppen-classicfication
             _gl.elevation_m = 5600.0*color[1];
+            _gl.precipitation_annual = 150.0 + 9000.0*color[2];
             _code = static_cast<int>(floorf(255.0f*color[0]/4.0f));
             if (_code >= MAX_CLIMATE_CLASSES)
             {
@@ -478,8 +480,6 @@ void FGClimate::set_tropical()
     _set(_gl.temperature_water, temp_water);
 
     _set(_gl.relative_humidity, relative_humidity);
-
-    _set(_gl.precipitation_annual, 3000.0);
     _set(_gl.precipitation, precipitation);
 
     _gl.has_autumn = false;
@@ -543,12 +543,6 @@ void FGClimate::set_dry()
     _set(_gl.temperature_water, temp_water);
 
     _set(_gl.relative_humidity, relative_humidity);
-
-    if (_code == 5 || _code == 6) {     // steppe
-        _set(_gl.precipitation_annual, 200.0);
-    } else {
-        _set(_gl.precipitation_annual, 100.0);
-    }
     _set(_gl.precipitation, precipitation);
     _gl.has_autumn = false;
 }
@@ -644,8 +638,6 @@ void FGClimate::set_temperate()
     _set(_gl.temperature_water, temp_water);
 
     _set(_gl.relative_humidity, relative_humidity);
-
-    _set(_gl.precipitation_annual, 990.0);
     _set(_gl.precipitation, precipitation);
 
     _gl.has_autumn = true;
@@ -765,8 +757,6 @@ void FGClimate::set_continetal()
     _set(_gl.temperature_water, temp_water);
 
     _set(_gl.relative_humidity, relative_humidity);
-
-    _set(_gl.precipitation_annual, 990.0);
     _set(_gl.precipitation, precipitation);
 
     _gl.has_autumn = true;
@@ -816,8 +806,6 @@ void FGClimate::set_polar()
     _set(_gl.temperature_water, temp_water);
 
     _set(_gl.relative_humidity, relative_humidity);
-
-    _set(_gl.precipitation_annual, 990.0);
     _set(_gl.precipitation, precipitation);
 
     _gl.has_autumn = true;
@@ -852,9 +840,15 @@ void FGClimate::set_environment()
     // Sea water will start to freeze at -2° water temperaure.
     if (_is_autumn < 0.95 || _sl.temperature_mean > -2.0) {
         _set(_ice_cover, 0.0);
-    }
-    else {
+    } else {
         _set(_ice_cover, std::min(-(_sl.temperature_water+2.0)/10.0, 1.0));
+    }
+
+    // Inland water will start to freeze at 0⁰ water temperature.
+    if (_gl.temperature_mean > 0.5) {
+        _inland_ice_cover = false;
+    } else {
+        _inland_ice_cover = true;
     }
 
     // less than 20 mm/month of precipitation is considered dry.
@@ -918,6 +912,7 @@ void FGClimate::set_environment()
             fgSetDouble("/environment/snow-level-m", _snow_level);
         }
         fgSetDouble("/environment/surface/snow-thickness-factor", _snow_thickness);
+        fgSetBool("/environment/surface/ice-cover", _inland_ice_cover);
         fgSetDouble("/environment/sea/surface/ice-cover", _ice_cover);
         fgSetDouble("/environment/surface/dust-cover-factor", _dust_cover);
         fgSetDouble("/environment/surface/wetness-set", _wetness);
@@ -1254,6 +1249,8 @@ void FGClimate::report()
     std::cout << "  Wind direction: " << _wind_direction << " degrees"
               << std::endl;
     std::cout << "  Snow level:     " << _snow_level << " m." << std::endl;
+    std::cout << "  Inland water bodies ice cover: "
+                 << _inland_ice_cover ? "yes" : "no" << std::endl;
     std::cout << "  Snow thickness.(0.0 = thin .. 1.0 = thick): "
               << _snow_thickness << std::endl;
     std::cout << "  Ice cover......(0.0 = none .. 1.0 = thick): " << _ice_cover

@@ -65,13 +65,9 @@ public:
      */
     virtual FGEnvironment getEnvironment () const;
 
-    /**
-     * Get the environment information for another location.
-     */
-    virtual FGEnvironment getEnvironment (double lat, double lon,
-                                          double alt) const;
-
-    virtual FGEnvironment getEnvironment(const SGGeod& aPos) const;
+    const FGEnvironment* getAircraftEnvironment() const;
+    
+    virtual FGEnvironment getEnvironmentAtPosition(const SGGeod& aPos) const;
 
 private:
     friend FGEnvironmentMgrMultiplayerListener;

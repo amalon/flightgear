@@ -128,7 +128,7 @@ FGFX::init()
                "File not found: '" << path_str);
         return;
     }
-    SG_LOG(SG_SOUND, SG_INFO, "Reading sound " << node->getName()
+    SG_LOG(SG_SOUND, SG_INFO, "Reading sound " << node->getNameString()
            << " from " << path);
 
     SGPropertyNode root;

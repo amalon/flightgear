@@ -24,10 +24,10 @@ int LayoutWidget::stringLength(const char* s)
     return (int)(FONT.getFloatStringWidth(s) + 0.999);
 }
 
-const char* LayoutWidget::type()
+std::string LayoutWidget::type()
 {
-    const char* t = _prop->getName();
-    return (*t == 0) ? "dialog" : t;
+    string t = _prop->getNameString();
+    return t.empty() ? "dialog" : t;
 }
 
 bool LayoutWidget::hasParent()
@@ -47,9 +47,8 @@ int LayoutWidget::nChildren()
     int n = 0;
     for(int i=0; i<_prop->nChildren(); i++) {
         SGPropertyNode* p = _prop->getChild(i);
-        const char* name = p->getName();
-        if(p->nChildren() != 0 || !strcmp(name, "hrule")
-                || !strcmp(name, "vrule"))
+        string name = p->getNameString();
+        if (p->nChildren() != 0 || name == "hrule" || name == "vrule")
             n++;
     }
     return n;
@@ -62,9 +61,8 @@ LayoutWidget LayoutWidget::getChild(int idx)
     int n = 0;
     for(int i=0; i<_prop->nChildren(); i++) {
         SGPropertyNode* p = _prop->getChild(i);
-        const char* name = p->getName();
-        if(p->nChildren() != 0 || !strcmp(name, "hrule")
-                || !strcmp(name, "vrule")) {
+        string name = p->getNameString();
+        if (p->nChildren() != 0 || name == "hrule" || name == "vrule") {
             if(idx == n) return LayoutWidget(p);
             n++;
         }
@@ -87,7 +85,7 @@ bool LayoutWidget::getBool(const char* f, bool dflt)
     return _prop->getBoolValue(f, dflt);
 }
 
-const char* LayoutWidget::getStr(const char* f)
+std::string LayoutWidget::getStr(const char* f)
 {
     return _prop->getStringValue(f);
 }

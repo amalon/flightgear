@@ -31,6 +31,8 @@
 #include <simgear/props/props.hxx>
 #include <simgear/props/tiedpropertylist.hxx>
 #include <simgear/math/SGMath.hxx>
+#include <simgear/screen/video-encoder.hxx>
+
 
 // forward decls
 namespace flightgear
@@ -92,6 +94,40 @@ public:
 
     void add_view( flightgear::View * v );
 
+    // Start video encoding of main window.
+    //
+    //  name
+    //      Name of output file or "" to generate a name containing current
+    //      date and time and /sim/video/container. List of supported
+    //      containers can be found with 'ffmpeg -formats'.
+    //  codec_name
+    //      Name of codec or "" to use /sim/video/codec. Passed to
+    //      avcodec_find_encoder_by_name(). List of supported codecs can be
+    //      found with 'ffmpeg -codecs'.
+    //  quality
+    //      Encoding quality in range 0..1 or -1 to use /sim/video/quality.
+    //  speed:
+    //      Encoding speed in range 0..1 or -1 to use /sim/video/speed.
+    //    bitrate
+    //      Target bitratae in bits/sec or -1 to use /sim/video/bitrate.
+    //
+    // We show popup warning if values are out of range - quality and speed
+    // must be -1 or 0-1, bitrate must be >= 0.
+    //
+    // Returns false if we fail to start video encoding.
+    //
+    bool video_start(
+            const std::string& name="",
+            const std::string& codec="",
+            double quality=-1,
+            double speed=-1,
+            int bitrate=0
+            );
+    
+    // Stop video encoding of main window.
+    //
+    void video_stop();
+
 private:
     simgear::TiedPropertyList _tiedProperties;
 
@@ -104,6 +140,8 @@ private:
     viewer_list views;
 
     int _current = 0;
+
+    std::unique_ptr<simgear::VideoEncoder>  _video_encoder;
 };
 
 #endif // _VIEWMGR_HXX

@@ -73,11 +73,20 @@ void Gear::setGlobalGround(double *global_ground, float* global_vel,
     for(i=0; i<3; i++) _global_vel[i] = global_vel[i];
 
     if (material) {
+        bool is_lake = (*material).solid_is_prop();
+        bool solid = (*material).get_solid();
+        if (is_lake && solid) { // on ice
+          frictionFactor = 0.3;
+          rollingFriction = 0.05;
+          bumpiness = 0.1;
+        } else {
+          frictionFactor = (*material).get_friction_factor();
+          rollingFriction = (*material).get_rolling_friction();
+          bumpiness = (*material).get_bumpiness();
+        }
+
         loadCapacity = (*material).get_load_resistance();
-        frictionFactor =(*material).get_friction_factor();
-        rollingFriction = (*material).get_rolling_friction();
         loadResistance = (*material).get_load_resistance();
-        bumpiness = (*material).get_bumpiness();
         isSolid = (*material).get_solid();
     } else {
         // no material, assume solid

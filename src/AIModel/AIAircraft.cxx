@@ -188,12 +188,12 @@ void FGAIAircraft::setPerformance(const std::string& acType, const std::string& 
     // enough
     const bool isUserAircraft = (manager == nullptr);
 
-    bool outOfSight = false,
-         flightplanActive = true;
+    bool flightplanActive = true;
 
     // user aircraft speed, heading and position are synchronzied in
     // FGAIManager::fetchUserState()
     if (!isUserAircraft) {
+        bool outOfSight = false;
         updatePrimaryTargetValues(dt, flightplanActive, outOfSight); // target hdg, alt, speed
         if (outOfSight) {
             return;
@@ -1057,7 +1057,7 @@ void FGAIAircraft::controlSpeed(FGAIWaypoint* curr, FGAIWaypoint* next) {
     if (fabs(speed_diff) > 10) {
         prevSpeed = speed;
         if (next) {
-            if (next && !curr->contains("END") && !curr->contains("PushBackPointlegend")) {
+            if (!curr->contains("END") && !curr->contains("PushBackPointlegend")) {
                 fp->setLeadDistance(speed, tgt_heading, curr, next);
             } else {
             // If we are ending in a parking the heading will be a 
@@ -1183,23 +1183,21 @@ void FGAIAircraft::updateHeading(double dt) {
                             headingChangeRate = -30;
                     }
                 } else {
-                    if (speed != 0) {
-                        if( sign(headingChangeRate) == sign(headingDiff)) {
-                            // left/right change
-                           headingChangeRate = 3 * dt * sign(headingDiff) * -1;
-                        } else {
-                            headingChangeRate -= 3 * dt * sign(headingDiff);
-                        }
-                        /*
-                        if (headingChangeRate > headingDiff || 
-                            headingChangeRate < headingDiff) {
-                            headingChangeRate = headingDiff*sign(roll);
-                        }
-                        else {
-                            headingChangeRate += dt * sign(roll);
-                        }
-                        */
+                    if( sign(headingChangeRate) == sign(headingDiff)) {
+                        // left/right change
+                       headingChangeRate = 3 * dt * sign(headingDiff) * -1;
+                    } else {
+                        headingChangeRate -= 3 * dt * sign(headingDiff);
                     }
+                    /*
+                    if (headingChangeRate > headingDiff || 
+                        headingChangeRate < headingDiff) {
+                        headingChangeRate = headingDiff*sign(roll);
+                    }
+                    else {
+                        headingChangeRate += dt * sign(roll);
+                    }
+                    */
                 }
             }
 

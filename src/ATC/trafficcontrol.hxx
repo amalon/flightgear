@@ -318,18 +318,16 @@ public:
 class ActiveRunway
 {
 private:
-    std::string rwy;
+    const std::string rwy;
     int currentlyCleared;
     double distanceToFinal;
     TimeVector estimatedArrivalTimes;
-    AircraftVec departureQueue;
+    
+    using AircraftRefVec = std::vector<SGSharedPtr<FGAIAircraft>>;
+    AircraftRefVec departureQueue;
 
 public:
-    ActiveRunway(const std::string& r, int cc) {
-        rwy = r;
-        currentlyCleared = cc;
-        distanceToFinal = 6.0 * SG_NM_TO_METER;
-    };
+    ActiveRunway(const std::string& r, int cc);
 
     const std::string& getRunwayName() const
     {
@@ -346,9 +344,8 @@ public:
     //time_t getEstApproachTime() { return estimatedArrival; };
 
     //void setEstApproachTime(time_t time) { estimatedArrival = time; };
-    void addTodepartureQueue(FGAIAircraft *ac) {
-        departureQueue.push_back(ac);
-    };
+    void addToDepartureQueue(FGAIAircraft *ac);
+
     void setCleared(int number) {
         currentlyCleared = number;
     };
@@ -358,14 +355,14 @@ public:
     int getdepartureQueueSize() {
         return departureQueue.size();
     };
-    FGAIAircraft* getFirstAircraftIndepartureQueue() {
-        return departureQueue.size() ? *(departureQueue.begin()) : NULL;
-    };
-    FGAIAircraft* getFirstOfStatus(int stat);
-    void updatedepartureQueue() {
-        departureQueue.erase(departureQueue.begin());
-    }
-    void printdepartureQueue();
+    
+    SGSharedPtr<FGAIAircraft> getFirstAircraftInDepartureQueue() const;
+    
+    SGSharedPtr<FGAIAircraft> getFirstOfStatus(int stat) const;
+    
+    void updateDepartureQueue();
+    
+    void printDepartureQueue();
 };
 
 /**

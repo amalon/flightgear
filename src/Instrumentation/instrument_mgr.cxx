@@ -111,7 +111,7 @@ bool FGInstrumentMgr::build (SGPropertyNode* config_props, const SGPath& path)
 {
     for ( int i = 0; i < config_props->nChildren(); ++i ) {
         SGPropertyNode *node = config_props->getChild(i);
-        std::string name = node->getName();
+        std::string name = node->getNameString();
 
         std::ostringstream subsystemname;
         subsystemname << "instrument-" << i << '-'

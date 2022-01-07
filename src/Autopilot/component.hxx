@@ -20,12 +20,7 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //
-#ifndef __COMPONENT_HXX
-#define __COMPONENT_HXX 1
-
-#ifdef HAVE_CONFIG_H
-#  include <config.h>
-#endif
+#pragma once
 
 #include <simgear/structure/subsystem_mgr.hxx>
 #include <simgear/props/propsfwd.hxx>
@@ -122,6 +117,5 @@ public:
     bool isPropertyEnabled();
 };
 
-}
+} // of namespace FGXMLAutopilot
 
-#endif // COMPONENT_HXX

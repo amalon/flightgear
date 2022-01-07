@@ -519,7 +519,7 @@ void FGExternalPipe::update_property( double dt ) {
     // Send requested property values to fdm
     for ( unsigned int i = 0; i < nodes.size(); i++ ) {
         sprintf( cmd, "set %s %s", property_names[i].c_str(),
-                 nodes[i]->getStringValue() );
+                 nodes[i]->getStringValue().c_str() );
         // cout << "  sending " << cmd << endl;
         result = write_property( pd1, cmd );
     }

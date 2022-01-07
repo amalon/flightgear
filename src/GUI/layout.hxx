@@ -24,7 +24,7 @@ public:
     LayoutWidget() { _prop = 0; }
     LayoutWidget(SGPropertyNode* p) { _prop = p; }
 
-    const char*  type();
+    std::string  type();
     bool         hasParent();
     LayoutWidget parent();
     int          nChildren();
@@ -32,7 +32,7 @@ public:
     bool         hasField(const char* f);
     int          getNum(const char* f);
     bool         getBool(const char* f, bool dflt = false);
-    const char*  getStr(const char* f);
+    std::string  getStr(const char* f);
     void         setNum(const char* f, int num);
 
     void calcPrefSize(int* w, int* h);
@@ -43,7 +43,7 @@ private:
     static puFont FONT;
 
     static bool eq(const char* a, const char* b);
-    bool isType(const char* t) { return eq(t, type()); }
+    bool isType(const char* t) { return (t == type()); }
 
     int padding();
     int stringLength(const char* s); // must handle null argument

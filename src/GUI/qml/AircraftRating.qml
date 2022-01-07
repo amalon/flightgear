@@ -7,7 +7,7 @@ Item {
     property string title: ""
     property int value: 3
 
-    implicitWidth: Style.strutSize * 3
+    implicitWidth: label.implicitWidth + ratingRow.implicitWidth + Style.margin
     implicitHeight: label.height
 
     StyledText {

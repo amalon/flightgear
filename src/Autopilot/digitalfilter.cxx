@@ -56,7 +56,7 @@ class DigitalFilterImplementation:
     void setDigitalFilter( DigitalFilter * digitalFilter ) { _digitalFilter = digitalFilter; }
     virtual void collectDependentProperties(std::set<const SGPropertyNode*>& props) const = 0;
   protected:
-    DigitalFilter * _digitalFilter;
+    DigitalFilter * _digitalFilter = nullptr;
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -903,7 +903,7 @@ bool DigitalFilter::configure( SGPropertyNode& prop_root,
   for( int i = 0; i < cfg.nChildren(); ++i )
   {
     SGPropertyNode_ptr child = cfg.getChild(i);
-    std::string cname(child->getName());
+    std::string cname(child->getNameString());
     bool ok = false;
     if (!ok) ok = _implementation->configure(*child, cname, prop_root);
     if (!ok) ok = configure(*child, cname, prop_root);

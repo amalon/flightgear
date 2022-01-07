@@ -360,8 +360,8 @@ public:
 
                 SGConstPropertyNode_ptr canvasnode = canvas->getProps();
                 if (canvasnode) {
-                    const char *canvasname = canvasnode->getStringValue("name");
-                    if (canvasname) {
+                    string canvasname = canvasnode->getStringValue("name");
+                    if (!canvasname.empty()) {
                         SG_LOG(SG_NETWORK, SG_INFO, "CanvasImageRequest: node=" << canvasnode->getDisplayName().c_str() << ", canvasname =" << canvasname);
                     }
                 }
@@ -436,7 +436,7 @@ private:
     string _compressedData;
 };
 
-ScreenshotUriHandler::ScreenshotUriHandler(const char * uri)
+ScreenshotUriHandler::ScreenshotUriHandler(const std::string& uri)
     : URIHandler(uri)
 {
 }

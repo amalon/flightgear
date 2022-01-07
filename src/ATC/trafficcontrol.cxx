@@ -80,6 +80,18 @@ TrafficVectorIterator searchActiveTraffic(TrafficVector& vec, int id)
  * ActiveRunway
  **************************************************************************/
  
+ActiveRunway::ActiveRunway(const std::string& r, int cc) :
+    rwy(r)
+{
+    currentlyCleared = cc;
+    distanceToFinal = 6.0 * SG_NM_TO_METER;
+};
+
+void ActiveRunway::updateDepartureQueue()
+{
+    departureQueue.erase(departureQueue.begin());
+}
+
 /*
 * Fetch next slot for the active runway
 * @param eta time of slot requested
@@ -206,26 +218,45 @@ void ActiveRunway::slotHousekeeping(time_t newEta)
 }
 
 /* Output the contents of the departure queue vector nicely formatted*/
-void ActiveRunway::printdepartureQueue()
+void ActiveRunway::printDepartureQueue()
 {
     SG_LOG(SG_ATC, SG_DEBUG, "Departure queue for " << rwy << ": ");
-    for (AircraftVecIterator atc = departureQueue.begin(); atc != departureQueue.end(); atc++) {
-        SG_LOG(SG_ATC, SG_DEBUG, "     " << (*atc)->getCallSign() << " " << (*atc)->getTakeOffStatus());
-        SG_LOG(SG_ATC, SG_DEBUG, " " << (*atc)->_getLatitude() << " " << (*atc)->_getLongitude() << (*atc)->getSpeed() << " " << (*atc)->getAltitude());
+    for (auto acft : departureQueue) {
+        SG_LOG(SG_ATC, SG_DEBUG, "     " << acft->getCallSign() << " " << acft->getTakeOffStatus());
+        SG_LOG(SG_ATC, SG_DEBUG, " " << acft->_getLatitude() << " " << acft->_getLongitude() << acft->getSpeed() << " " << acft->getAltitude());
     }
     
 }
 
 /* Fetch the first aircraft in the departure cue with a certain status */
-FGAIAircraft* ActiveRunway::getFirstOfStatus(int stat)
+SGSharedPtr<FGAIAircraft>ActiveRunway::getFirstOfStatus(int stat) const
 {
-    for (AircraftVecIterator atc =departureQueue.begin(); atc != departureQueue.end(); atc++) {
-        if ((*atc)->getTakeOffStatus() == stat)
-            return (*atc);
+    auto it = std::find_if(departureQueue.begin(), departureQueue.end(), [stat](const SGSharedPtr<FGAIAircraft>& acft) {
+        return acft->getTakeOffStatus() == stat;
+    });
+    
+    if (it == departureQueue.end()) {
+        return {};
     }
-    return 0;
+    
+    return *it;
 }
 
+SGSharedPtr<FGAIAircraft> ActiveRunway::getFirstAircraftInDepartureQueue() const
+{
+    if (departureQueue.empty()) {
+        return {};
+    }
+    
+    return departureQueue.front();
+};
+
+void ActiveRunway::addToDepartureQueue(FGAIAircraft *ac)
+{
+    assert(ac);
+    assert(!ac->getDie());
+    departureQueue.push_back(ac);
+};
 
 
 /***************************************************************************
@@ -855,7 +886,7 @@ void FGATCController::transmit(FGTrafficRecord * rec, FGAirportDynamics *parent,
             }
         }
     } else {
-        FGATCDialogNew::instance()->addEntry(1, text);
+        //FGATCDialogNew::instance()->addEntry(1, text);
     }
 }
 
@@ -959,11 +990,11 @@ void FGTowerController::announcePosition(int id,
         }
         if (rwy == activeRunways.end()) {
             ActiveRunway aRwy(intendedRoute->getRunway(), id);
-            aRwy.addTodepartureQueue(ref);
+            aRwy.addToDepartureQueue(ref);
             activeRunways.push_back(aRwy);
             rwy = (activeRunways.end()-1);
         } else {
-            rwy->addTodepartureQueue(ref);
+            rwy->addToDepartureQueue(ref);
         }
 
         SG_LOG(SG_ATC, SG_DEBUG, ref->getTrafficRef()->getCallSign() << " You are number " << rwy->getdepartureQueueSize() << " for takeoff ");
@@ -1026,7 +1057,7 @@ void FGTowerController::updateAircraftInformation(int id, double lat, double lon
         }
     } */
     // only bother with aircraft that have a takeoff status of 2, since those are essentially under tower control
-    FGAIAircraft* ac= rwy->getFirstAircraftIndepartureQueue();
+    auto ac = rwy->getFirstAircraftInDepartureQueue();
     if (ac) {
         if (ac->getTakeOffStatus() == 1) {
             // transmit takeoff clearance
@@ -1045,9 +1076,9 @@ void FGTowerController::updateAircraftInformation(int id, double lat, double lon
             current.setHoldPosition(false);
         }
     } else {
-        if (current.getAircraft() == rwy->getFirstAircraftIndepartureQueue()) {
+        if (current.getAircraft() == rwy->getFirstAircraftInDepartureQueue()) {
             rwy->setCleared(id);
-            FGAIAircraft *ac = rwy->getFirstOfStatus(1);
+            auto ac = rwy->getFirstOfStatus(1);
             if (ac)
                 ac->setTakeOffStatus(2);
                 // transmit takeoff clearacne? But why twice?
@@ -1078,7 +1109,7 @@ void FGTowerController::signOff(int id)
 
     if (runwayIt != activeRunways.end()) {
         runwayIt->setCleared(0);
-        runwayIt->updatedepartureQueue();
+        runwayIt->updateDepartureQueue();
     } else {
         SG_LOG(SG_ATC, SG_ALERT,
                "AI error: Attempting to erase non-existing runway clearance record in FGTowerController::signoff at " << SG_ORIGIN);
@@ -1255,7 +1286,7 @@ bool FGStartupController::checkTransmissionState(int st, time_t now, time_t star
                 trans_num->setIntValue(-1);
                 // PopupCallback(n);
                 SG_LOG(SG_ATC, SG_BULK, "Selected transmission message " << n);
-                FGATCDialogNew::instance()->removeEntry(1);
+                //FGATCDialogNew::instance()->removeEntry(1);
             } else {
                 SG_LOG(SG_ATC, SG_BULK, "Creating message for " << i->getAircraft()->getCallSign());
                 transmit(&(*i), &(*parent), msgId, msgDir, false);

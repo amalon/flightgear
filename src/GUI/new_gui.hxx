@@ -189,15 +189,15 @@ protected:
 private:
     void createMenuBarImplementation();
 
-    struct ltstr
+    /*struct ltstr
     {
-        bool operator()(const char* s1, const char* s2) const {
-            return strcmp(s1, s2) < 0;
+        bool operator()(const std::string& s1, const std::string& s2) const {
+            return s1 < s2;
         }
-    };
+    };*/
 
     puFont *_font;
-    typedef std::map<const char*,FGColor*, ltstr> ColourDict;
+    typedef std::map<std::string, FGColor*> ColourDict;
     ColourDict _colors;
     typedef ColourDict::iterator _itt_t;
     typedef ColourDict::const_iterator _citt_t;

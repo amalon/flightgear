@@ -83,7 +83,7 @@ static void s_RecordPropertyDiffs(
 {
     assert(a);
     assert(b);
-    assert(!strcmp(a->getName(), b->getName()));
+    assert(a->getNameString() == b->getNameString());
     assert(a->getPath() == b->getPath());
     assert(a->getIndex() == b->getIndex());
     
@@ -96,9 +96,9 @@ static void s_RecordPropertyDiffs(
         }
     }
     // If values differ, write a's value to out and change b's value to a's value.
-    const char* a_value = a->getStringValue();
-    const char* b_value = b->getStringValue();
-    if (strcmp(a_value, b_value)) {
+    const std::string a_value = a->getStringValue();
+    const std::string b_value = b->getStringValue();
+    if (a_value != b_value) {
         // Values are different so write out node <a> and update b.
         SG_LOG(SG_SYSTEMS, SG_DEBUG, "recording property change:"
                 << a->getPath()
@@ -114,7 +114,7 @@ static void s_RecordPropertyDiffs(
     int bn = b->nChildren();
     for (int i=0; i<bn; ++i) {
         SGPropertyNode* bc = b->getChild(i);
-        SGPropertyNode* ac = a->getChild(bc->getName(), bc->getIndex(), false /*create*/);
+        SGPropertyNode* ac = a->getChild(bc->getNameString(), bc->getIndex(), false /*create*/);
         if (!ac) {
             // Child node is in b but not in a; we write out special
             // information about the deleted node and remove from b.
@@ -129,7 +129,7 @@ static void s_RecordPropertyDiffs(
     int an = a->nChildren();
     for (int i=0; i<an; ++i) {
         SGPropertyNode* ac = a->getChild(i);
-        SGPropertyNode* bc = b->getChild(ac->getName(), ac->getIndex(), true /*create*/);
+        SGPropertyNode* bc = b->getChild(ac->getNameString(), ac->getIndex(), true /*create*/);
         // Recurse.
         s_RecordPropertyDiffs(out, ac, bc, path_exclude_prefixes);
     }
@@ -282,7 +282,7 @@ FGFlightRecorder::reinit(SGPropertyNode_ptr ConfigNode)
     else
     {
         // set name of active flight recorder type 
-        const char* pRecorderName =
+        const std::string pRecorderName =
                 m_ConfigNode->getStringValue("name",
                                              "aircraft-specific flight recorder");
         SG_LOG(SG_SYSTEMS, SG_INFO, "FlightRecorder: Using custom recorder configuration: " << pRecorderName);
@@ -357,8 +357,8 @@ FGFlightRecorder::getDefault(void)
     // set name of active flight recorder type
     SG_LOG(SG_SYSTEMS, SG_INFO, "FlightRecorder: No custom configuration. Loading generic default recorder.");
 
-    const char* Path = m_RecorderNode->getStringValue("default-config",NULL);
-    if (!Path)
+    const std::string Path = m_RecorderNode->getStringValue("default-config", "");
+    if (Path.empty())
     {
         SG_LOG(SG_SYSTEMS, SG_ALERT, "FlightRecorder: No default flight recorder specified! Check defaults.xml!");
     }
@@ -423,13 +423,13 @@ FGFlightRecorder::processSignalList(const char* pSignalType, TSignalList& Signal
     {
         SignalNode = SignalListNode->getChild("signal",Index,false);
         if (SignalNode.valid()&&
-            (0==strcmp(pSignalType, SignalNode->getStringValue("type","float"))))
+            (std::string(pSignalType) == SignalNode->getStringValue("type", "float")))
         {
-            string PropertyPath = SignalNode->getStringValue("property","");
+            string PropertyPath = SignalNode->getStringValue("property", "");
             if (!PropertyPath.empty())
             {
                 PropertyPath = PropPrefix + PropertyPath;
-                const char* pInterpolation = SignalNode->getStringValue("interpolation","linear");
+                const std::string pInterpolation = SignalNode->getStringValue("interpolation", "linear");
 
                 // Check if current signal has a "%i" place holder. Otherwise count is 1.
                 string::size_type IndexPos = PropertyPath.find("%i");
@@ -462,17 +462,17 @@ FGFlightRecorder::processSignalList(const char* pSignalType, TSignalList& Signal
                         Capture.Signal = fgGetNode(PPath.c_str(),true);
                     }
 
-                    if (0==strcmp(pInterpolation,"discrete"))
+                    if (pInterpolation == "discrete")
                         Capture.Interpolation = discrete;
                     else 
-                    if ((0==strcmp(pInterpolation,"angular"))||
-                        (0==strcmp(pInterpolation,"angular-rad")))
+                    if ((pInterpolation == "angular")||
+                        (pInterpolation == "angular-rad"))
                         Capture.Interpolation = angular_rad;
                     else
-                    if (0==strcmp(pInterpolation,"angular-deg"))
+                    if (pInterpolation == "angular-deg")
                         Capture.Interpolation = angular_deg;
                     else
-                    if (0==strcmp(pInterpolation,"linear"))
+                    if (pInterpolation == "linear")
                         Capture.Interpolation = linear;
                     else
                     {
@@ -737,6 +737,83 @@ static void setInt(const std::string& value, int* out)
     }
 }
 
+/* Converts string to double, writing to out-para <out> and setting <ok> to
+true. If conversion fails or fails to use the entire input string, sets ok to
+false. */
+static void string_to_double(const std::string& s, double& out, bool& ok)
+{
+    errno = 0;
+    char* end;
+    out = strtod(s.c_str(), &end);
+    if (errno || !end || *end != 0)
+    {
+        ok = false;
+        return;
+    }
+    ok = true;
+}
+
+/* Updates property <path> to <value_next_string>. If property is also in
+<frame_prev> and values look like floating point, we interpolate using <ratio>.
+*/
+static void replayProperty(
+        const std::string& path,
+        const std::string& value_next_string,
+        const FGReplayData* frame_prev,
+        double ratio
+        )
+{
+    SGPropertyNode* p = globals->get_props()->getNode(path, true /*create*/);
+    bool done = false;
+    if (frame_prev)
+    {
+        /* Check whether <path> is in frame_prev's list of property changes. */
+        SG_LOG(SG_SYSTEMS, SG_DEBUG, "p && _pLastBuffer");
+        auto p_prev_it = frame_prev->replay_extra_property_changes.find(path);
+        if (p_prev_it != frame_prev->replay_extra_property_changes.end())
+        {
+            /* Property <path> is also in frame_prev. */
+            SG_LOG(SG_SYSTEMS, SG_DEBUG, "property in frame_prev and frame_next:"
+                    << " " << path);
+            const std::string&  value_prev_string = p_prev_it->second;
+            bool value_prev_ok;
+            bool value_next_ok;
+            double value_prev;
+            double value_next;
+            string_to_double(value_prev_string, value_prev, value_prev_ok);
+            string_to_double(value_next_string, value_next, value_next_ok);
+            if (value_prev_ok && value_next_ok)
+            {
+                /* Both values look like floating point so we interpolate. */
+                SG_LOG(SG_SYSTEMS, SG_DEBUG, "property is fp");
+                TInterpolation  interpolation = TInterpolation::linear;
+                if (simgear::strutils::ends_with(path, "-deg"))
+                {
+                    interpolation = TInterpolation::angular_deg;
+                }
+                else if (simgear::strutils::ends_with(path, "-rad"))
+                {
+                    interpolation = TInterpolation::angular_rad;
+                }
+                SG_LOG(SG_SYSTEMS, SG_DEBUG, "calling weighting() ratio=" << ratio);
+                double value_interpolated = weighting(
+                        interpolation,
+                        ratio,
+                        value_prev,
+                        value_next
+                        );
+                SG_LOG(SG_GENERAL, SG_DEBUG, "Interpolating " << path
+                        << ": [" << value_prev << " .. " << value_next
+                        << "] => " << value_interpolated
+                        );
+                globals->get_props()->setDoubleValue(path, value_interpolated);
+                done = true;
+            }
+        }
+    }
+    if (!done) p->setStringValue(path, value_next_string);
+}
+
 /** Replay.
  * Restore all properties with data from given buffer. */
 void
@@ -750,11 +827,10 @@ FGFlightRecorder::replay(double SimTime, const FGReplayData* _pNextBuffer,
 {
     const char* pLastBuffer = (_pLastBuffer && !_pLastBuffer->raw_data.empty()) ? &_pLastBuffer->raw_data.front() : nullptr;
     const char* pBuffer = (_pNextBuffer && !_pNextBuffer->raw_data.empty()) ? &_pNextBuffer->raw_data.front() : nullptr;
-    
+    double ratio = 1.0;
     if (pBuffer) {
         /* Replay signals. */
         int Offset = 0;
-        double ratio = 1.0;
         if (pLastBuffer)
         {
             double NextSimTime = _pNextBuffer->sim_time;
@@ -953,13 +1029,57 @@ FGFlightRecorder::replay(double SimTime, const FGReplayData* _pNextBuffer,
             if (replay_main_view) {
                 SG_LOG(SG_SYSTEMS, SG_DEBUG, "SimTime=" << SimTime
                         << " replaying view change: " << path << "=" << value);
-                globals->get_props()->setStringValue(path, value);
+                /* Interpolate floating point values if possible. */
+                replayProperty(path, value, _pLastBuffer, ratio);
             }
         }
         else if (replay_extra_properties) {
             SG_LOG(SG_SYSTEMS, SG_DEBUG, "SimTime=" << SimTime
                     << " replaying extra_property change: " << path << "=" << value);
-            globals->get_props()->setStringValue(path, value);
+            SGPropertyNode* p = globals->get_props()->getNode(path, true /*create*/);
+            bool done = false;
+            if (p && _pLastBuffer) {
+                SG_LOG(SG_SYSTEMS, SG_DEBUG, "p && _pLastBuffer");
+                auto p_prev_it = _pLastBuffer->replay_extra_property_changes.find(path);
+                if (p_prev_it != _pLastBuffer->replay_extra_property_changes.end()) {
+                    /* Property <path> is in both _pLastBuffer and
+                    _pNextBuffer, so if it is floating point, we will
+                    interpolate. */
+                    SG_LOG(SG_SYSTEMS, SG_DEBUG, "property in _pLastBuffer and _pNextBuffer:"
+                            << " " << path);
+                    const std::string&  valus_prev = p_prev_it->second;
+                    size_t  value_prev_len;
+                    size_t  value_next_len;
+                    double value_prev = std::stod(valus_prev, &value_prev_len);
+                    double value_next = std::stod(value, &value_next_len);
+                    if (value_prev_len == valus_prev.size() && value_next_len == value.size()) {
+                        /* Both values look like floating point so we will
+                        interpolate. */
+                        SG_LOG(SG_SYSTEMS, SG_DEBUG, "property is fp");
+                        TInterpolation  interpolation = TInterpolation::linear;
+                        if (simgear::strutils::ends_with(path, "-deg")) {
+                            interpolation = TInterpolation::angular_deg;
+                        }
+                        else if (simgear::strutils::ends_with(path, "-rad")) {
+                            interpolation = TInterpolation::angular_rad;
+                        }
+                        SG_LOG(SG_SYSTEMS, SG_DEBUG, "calling weighting()");
+                        double value_interpolated = weighting(
+                                interpolation,
+                                ratio,
+                                value_prev,
+                                value_next
+                                );
+                        SG_LOG(SG_GENERAL, SG_DEBUG, "Interpolating " << path
+                                << ": [" << value_prev << " .. " << value_next
+                                << "] => " << value_interpolated
+                                );
+                        globals->get_props()->setDoubleValue(path, value_interpolated);
+                        done = true;
+                    }
+                }
+            }
+            if (!done) p->setStringValue(path, value);
         }
     }
 }

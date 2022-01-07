@@ -442,39 +442,39 @@ void MongooseHttpd::init()
 {
   SGPropertyNode_ptr n = _configNode->getNode("uri-handler");
   if (n.valid()) {
-    const char * uri;
+    string uri;
 
-    if ((uri = n->getStringValue("screenshot"))[0] != 0) {
+    if (!(uri = n->getStringValue("screenshot")).empty()) {
       SG_LOG(SG_NETWORK, SG_INFO, "httpd: adding screenshot uri handler at " << uri);
       _uriHandler.push_back(new flightgear::http::ScreenshotUriHandler(uri));
     }
 
-    if ((uri = n->getStringValue("property"))[0] != 0) {
+    if (!(uri = n->getStringValue("property")).empty()) {
       SG_LOG(SG_NETWORK, SG_INFO, "httpd: adding property uri handler at " << uri);
       _uriHandler.push_back(new flightgear::http::PropertyUriHandler(uri));
     }
 
-    if ((uri = n->getStringValue("json"))[0] != 0) {
+    if (!(uri = n->getStringValue("json")).empty()) {
       SG_LOG(SG_NETWORK, SG_INFO, "httpd: adding json uri handler at " << uri);
       _uriHandler.push_back(new flightgear::http::JsonUriHandler(uri));
     }
 
-    if ((uri = n->getStringValue("pkg"))[0] != 0) {
+    if (!(uri = n->getStringValue("pkg")).empty()) {
       SG_LOG(SG_NETWORK, SG_INFO, "httpd: adding pkg uri handler at " << uri);
       _uriHandler.push_back(new flightgear::http::PkgUriHandler(uri));
     }
 
-    if ((uri = n->getStringValue("flighthistory"))[0] != 0) {
+    if (!(uri = n->getStringValue("flighthistory")).empty()) {
       SG_LOG(SG_NETWORK, SG_INFO, "httpd: adding flighthistory uri handler at " << uri);
       _uriHandler.push_back(new flightgear::http::FlightHistoryUriHandler(uri));
     }
 
-    if ((uri = n->getStringValue("run"))[0] != 0) {
+    if (!(uri = n->getStringValue("run")).empty()) {
       SG_LOG(SG_NETWORK, SG_INFO, "httpd: adding run uri handler at " << uri);
       _uriHandler.push_back(new flightgear::http::RunUriHandler(uri));
     }
 
-    if ((uri = n->getStringValue("navdb"))[0] != 0) {
+    if (!(uri = n->getStringValue("navdb")).empty()) {
       SG_LOG(SG_NETWORK, SG_INFO, "httpd: adding navdb uri handler at " << uri);
       _uriHandler.push_back(new flightgear::http::NavdbUriHandler(uri));
     }
@@ -491,7 +491,7 @@ void MongooseHttpd::init()
 
     mg_set_option(_server, "document_root", docRoot.c_str());
 
-    mg_set_option(_server, "listening_port", n->getStringValue("listening-port", "8080"));
+    mg_set_option(_server, "listening_port", n->getStringValue("listening-port", "8080").c_str());
     {
       // build url rewrites relative to fg-root
       string rewrites = n->getStringValue("url-rewrites", "");
@@ -520,11 +520,11 @@ void MongooseHttpd::init()
       }
       if (!rewrites.empty()) mg_set_option(_server, "url_rewrites", rewrites.c_str());
     }
-    mg_set_option(_server, "enable_directory_listing", n->getStringValue("enable-directory-listing", "yes"));
-    mg_set_option(_server, "idle_timeout_ms", n->getStringValue("idle-timeout-ms", "30000"));
-    mg_set_option(_server, "index_files", n->getStringValue("index-files", "index.html"));
-    mg_set_option(_server, "extra_mime_types", n->getStringValue("extra-mime-types", ""));
-    mg_set_option(_server, "access_log_file", n->getStringValue("access-log-file", ""));
+    mg_set_option(_server, "enable_directory_listing", n->getStringValue("enable-directory-listing", "yes").c_str());
+    mg_set_option(_server, "idle_timeout_ms", n->getStringValue("idle-timeout-ms", "30000").c_str());
+    mg_set_option(_server, "index_files", n->getStringValue("index-files", "index.html").c_str());
+    mg_set_option(_server, "extra_mime_types", n->getStringValue("extra-mime-types", "").c_str());
+    mg_set_option(_server, "access_log_file", n->getStringValue("access-log-file", "").c_str());
 
     SG_LOG(SG_NETWORK,SG_INFO,"starting mongoose with these options: ");
     const char ** optionNames = mg_get_valid_option_names();

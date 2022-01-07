@@ -84,12 +84,12 @@ private:
     // set up a time offset (aka warp) if one is specified
     void initTimeOffset();
 
-    bool _inited;
-    SGTime* _impl;
+    bool _inited = false;
+    SGTime* _impl = nullptr;
     SGTimeStamp _lastStamp;
     SGTimeStamp _systemStamp;
-    bool _firstUpdate;
-    double _dtRemainder;
+    bool _firstUpdate = true;
+    double _dtRemainder = 0;
     SGPropertyNode_ptr _maxDtPerFrame;
     SGPropertyNode_ptr _clockFreeze;
     SGPropertyNode_ptr _timeOverride;
@@ -107,6 +107,8 @@ private:
     SGPropertyNode_ptr _maxFrameRate;
     SGPropertyNode_ptr _localTimeStringNode;
     SGPropertyNode_ptr _localTimeZoneNode;
+    SGPropertyNode_ptr _frameNumber;
+    SGPropertyNode_ptr _simFixedDt;
 
     bool _lastClockFreeze = false;
     bool _adjustWarpOnUnfreeze = false;
@@ -115,25 +117,26 @@ private:
     SGPropertyNode_ptr _frameRate;
     SGPropertyNode_ptr _frameRateWorst;
     SGPropertyNode_ptr _frameLatency;
-    time_t _lastFrameTime;
-    double _frameLatencyMax;
-    double _mpProtocolClock;
-    double _steadyClock;
-    int _frameCount;
+    time_t _lastFrameTime = 0;
+    double _frameLatencyMax = 0;
+    double _mpProtocolClock = 0;
+    double _steadyClock = 0;
+    int _frameCount = 0;
 
     // we update TZ after moving more than a threshold distance
     SGVec3d _lastTimeZoneCheckPosition;
 
     SGPropertyNode_ptr _sceneryLoaded;
     SGPropertyNode_ptr _modelHz;
-    SGPropertyNode_ptr _timeDelta, _simTimeDelta;
+    SGPropertyNode_ptr _timeDelta;
+    SGPropertyNode_ptr _simTimeDelta;
     
     bool    _simpleTimeEnabledPrev = false;
     SGPropertyNode_ptr _simpleTimeEnabled;
     SGPropertyNode_ptr _simpleTimeUtc;
     SGPropertyNode_ptr _simpleTimeFdm;
-    double _simple_time_utc;
-    double _simple_time_fdm;
+    double _simple_time_utc = 0;
+    double _simple_time_fdm = 0;
 };
 
 #endif // of FG_TIME_TIMEMANAGER_HXX

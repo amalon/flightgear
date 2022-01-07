@@ -624,7 +624,7 @@ fgGetDouble (const char * name, double defaultValue)
   return globals->get_props()->getDoubleValue(name, defaultValue);
 }
 
-const char *
+std::string
 fgGetString (const char * name, const char * defaultValue)
 {
   return globals->get_props()->getStringValue(name, defaultValue);

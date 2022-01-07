@@ -385,7 +385,7 @@ WayptRef Waypt::createFromString(RouteBase* aOwner, const std::string& s, const 
     if (pos != string::npos) {
         altFt = std::stof(target.substr(pos + 1));
         target = target.substr(0, pos);
-        if (!strcmp(fgGetString("/sim/startup/units"), "meter")) {
+        if (fgGetString("/sim/startup/units") == "meter") {
             altFt *= SG_METER_TO_FEET;
         }
         altSetting = RESTRICT_AT;
@@ -487,12 +487,12 @@ bool Waypt::initFromProperties(SGPropertyNode_ptr aProp)
   }
 
   if (aProp->hasChild("alt-restrict")) {
-    _altRestrict = restrictionFromString(aProp->getStringValue("alt-restrict"));
+    _altRestrict = restrictionFromString(aProp->getStringValue("alt-restrict").c_str());
     _altitudeFt = aProp->getDoubleValue("altitude-ft");
   }
 
   if (aProp->hasChild("speed-restrict")) {
-    _speedRestrict = restrictionFromString(aProp->getStringValue("speed-restrict"));
+    _speedRestrict = restrictionFromString(aProp->getStringValue("speed-restrict").c_str());
     _speed = aProp->getDoubleValue("speed");
   }
 

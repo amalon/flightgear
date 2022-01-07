@@ -28,7 +28,7 @@ namespace http {
 
 class RunUriHandler : public URIHandler {
 public:
-  RunUriHandler( const char * uri = "/run.cgi" ) : URIHandler( uri  ) {}
+  RunUriHandler( const std::string& uri = "/run.cgi" ) : URIHandler( uri  ) {}
   virtual bool handleRequest( const HTTPRequest & request, HTTPResponse & response, Connection * connection );
 };
 

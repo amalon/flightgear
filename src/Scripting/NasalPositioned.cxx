@@ -412,17 +412,39 @@ bool geodFromHash(naRef ref, SGGeod& result)
     return true;
   }
 
+// handle geo.nas geo.Coord object
   if (hashIsCoord(ref)) {
-    naRef lat = naHash_cget(ref, (char*) "_lat");
-    naRef lon = naHash_cget(ref, (char*) "_lon");
-    naRef alt_feet = naHash_cget(ref, (char*) "_alt");
-    if (naIsNum(lat) && naIsNum(lon) && naIsNil(alt_feet)) {
+    naRef polarDirtyFlag = naHash_cget(ref, (char*) "_pdirty");
+    naRef cartesianDirtyFlag = naHash_cget(ref, (char*) "_cdirty");
+    
+    if (naNumValue(polarDirtyFlag).num == 0) {
+      // polar values are valid
+      naRef lat = naHash_cget(ref, (char*) "_lat");
+      naRef lon = naHash_cget(ref, (char*) "_lon");
+      naRef alt_feet = naHash_cget(ref, (char*) "_alt");
+
+      if (naIsNum(lat) && naIsNum(lon) && naIsNil(alt_feet)) {
         result = SGGeod::fromRad(naNumValue(lon).num, naNumValue(lat).num);
         return true;
-    }
-    if (naIsNum(lat) && naIsNum(lon) && naIsNum(alt_feet)) {
+      }
+
+      if (naIsNum(lat) && naIsNum(lon) && naIsNum(alt_feet)) {
         result = SGGeod::fromRadFt(naNumValue(lon).num, naNumValue(lat).num, naNumValue(alt_feet).num);
         return true;
+      }
+    } else if (naNumValue(cartesianDirtyFlag).num == 0) {
+      // cartesian values are valid
+      naRef x = naHash_cget(ref, (char*) "_x");
+      naRef y = naHash_cget(ref, (char*) "_y");
+      naRef z = naHash_cget(ref, (char*) "_z");
+
+      if (naIsNum(x) && naIsNum(y) && naIsNum(z)) {
+        result = SGGeod::fromCart(SGVec3d{naNumValue(x).num,
+          naNumValue(y).num, naNumValue(z).num});
+        return true;
+      }
+    } else {
+      SG_LOG(SG_NASAL, SG_DEV_ALERT, "geo.Coord() instance has invalid coordinates");
     }
   }
 // check for any synonyms?

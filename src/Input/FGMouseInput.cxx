@@ -420,7 +420,7 @@ void FGMouseInput::init()
       SGPropertyNode * mode_node = mouse_node->getChild("mode", j, true);
 
     // Read the mouse cursor for this mode
-      m.modes[j].cursor = FGMouseCursor::cursorFromString(mode_node->getStringValue("cursor", "inherit"));
+      m.modes[j].cursor = FGMouseCursor::cursorFromString(mode_node->getStringValue("cursor", "inherit").c_str());
 
       // Read other properties for this mode
       m.modes[j].constrained = mode_node->getBoolValue("constrained", false);

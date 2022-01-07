@@ -131,7 +131,7 @@ static string formatPropertyValue(SGPropertyNode* nd, const string& format)
     }
     
     if (format.find('s') != string::npos) {
-        ::snprintf(buf, 512, format.c_str(), nd->getStringValue());
+        ::snprintf(buf, 512, format.c_str(), nd->getStringValue().c_str());
         return buf;
     }
     
@@ -466,8 +466,8 @@ NavDisplay::NavDisplay(SGPropertyNode *node) :
           continue;
         }
         
-        const char* id = symbol->getStringValue("id");
-        if (id && strlen(id)) {
+        string id = symbol->getStringValue("id", "");
+        if (!id.empty()) {
             definitionDict[id] = def;
         }
         
@@ -481,8 +481,8 @@ NavDisplay::NavDisplay(SGPropertyNode *node) :
             continue;
         }
         
-        const char* id = rule->getStringValue("symbol");
-        if (id && strlen(id) && (definitionDict.find(id) != definitionDict.end())) {
+        string id = rule->getStringValue("symbol", "");
+        if (!id.empty() && (definitionDict.find(id) != definitionDict.end())) {
             r->setDefinition(definitionDict[id]);
         } else {
             SG_LOG(SG_INSTR, SG_WARN, "symbol rule has missing/unknown definition id:" << id);
@@ -1305,11 +1305,11 @@ void NavDisplay::computePositionedState(FGPositioned* pos, string_set& states)
 static string mapAINodeToType(SGPropertyNode* model)
 {
   // assume all multiplayer items are aircraft for the moment. Not ideal.
-  if (!strcmp(model->getName(), "multiplayer")) {
+  if (model->getNameString() == "multiplayer") {
     return "ai-aircraft";
   }
   
-  return string("ai-") + model->getName();
+  return string("ai-") + model->getNameString();
 }
 
 void NavDisplay::processAI()
@@ -1464,7 +1464,7 @@ void NavDisplay::processCustomSymbols()
     string_set ss;
     computeCustomSymbolStates(symNode, ss);
     SymbolRuleVector rules;
-    findRules(symNode->getName(), ss, rules);
+    findRules(symNode->getNameString(), ss, rules);
     if (rules.empty()) {
       return; // no rules matched, we can skip this item
     }

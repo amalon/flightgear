@@ -275,6 +275,7 @@ private:
     SGPropertyNode_ptr tailhook_pos_pct;
 
     SGConstPropertyNode_ptr altitude;
+    SGPropertyNode_ptr precipitation;
     SGPropertyNode_ptr temperature;
     SGPropertyNode_ptr pressure;
     SGPropertyNode_ptr pressureSL;

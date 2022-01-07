@@ -49,8 +49,8 @@ IGCProtocol::~IGCProtocol()
 // generate IGC header records
 bool IGCProtocol::gen_Hrecords()
 {
-    const char* AircraftType = fgGetString("/sim/aircraft", "unknown");;
-    const char* Callsign     = fgGetString("/sim/multiplay/callsign", "");
+    const std::string AircraftType = fgGetString("/sim/aircraft", "unknown");
+    const std::string Callsign     = fgGetString("/sim/multiplay/callsign", "");
 
     SGTime *t = globals->get_time_params();
     int Day   = t->getGmt()->tm_mday;
@@ -74,8 +74,8 @@ bool IGCProtocol::gen_Hrecords()
                     "HFRHWHardwareVersion:FlightGear Flight Simulator\r\n" // "hardware" version
                     "HFFTYFRType:Flight Simulator\r\n", // logger type
                     Day, Month, Year,
-                    AircraftType,
-                    Callsign,
+                    AircraftType.c_str(),
+                    Callsign.c_str(),
                     Version);
     SGIOChannel *io = get_io_channel();
     io->write(buf, length);

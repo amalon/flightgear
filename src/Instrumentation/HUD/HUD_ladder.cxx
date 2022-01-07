@@ -78,8 +78,8 @@ HUD::Ladder::Ladder(HUD *hud, const SGPropertyNode *n, float x, float y) :
     _hat(n->getBoolValue("enable-hat")),
     _clip_box(new ClipBox(n->getNode("clipping")))
 {
-    const char *t = n->getStringValue("type");
-    _type = strcmp(t, "climb-dive") ? PITCH : CLIMB_DIVE;
+    string t = n->getStringValue("type");
+    _type = t != "climb-dive" ? PITCH : CLIMB_DIVE;
 
     if (!_width_units)
         _width_units = 45;
@@ -300,7 +300,7 @@ void HUD::Ladder::draw(void)
         for (int i = 0; i < models->nChildren(); i++) {
             SGPropertyNode *chld = models->getChild(i);
             string name;
-            name = chld->getName();
+            name = chld->getNameString();
             if (name == "tanker" || name == "aircraft" || name == "multiplayer") {
                 bool valid = chld->getBoolValue("valid");
                 bool in_range = chld->getBoolValue("radar/in-range", true);

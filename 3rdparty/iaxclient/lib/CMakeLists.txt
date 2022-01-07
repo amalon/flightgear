@@ -18,7 +18,13 @@ set(LIBIAX2_SOURCES
     libiax2/src/md5.c
 )
 
-find_package(OpenAL REQUIRED)
+if (SG_SOUND_USES_OPENALSOFT)
+    message(STATUS "Using OpenAL-soft for IAX OpenAL backend")
+    find_package(OpenAL CONFIG REQUIRED)
+else()
+    find_package(OpenAL REQUIRED)
+endif()
+
 
 add_library(iaxclient_lib STATIC 
     ${IAXCLIENT_BASE_SOURCES} ${LIBIAX2_SOURCES}
@@ -29,6 +35,11 @@ target_include_directories(iaxclient_lib PUBLIC ${PROJECT_SOURCE_DIR}/3rdparty/i
 target_include_directories(iaxclient_lib PRIVATE ${PROJECT_SOURCE_DIR}/3rdparty/iaxclient/lib/libiax2/src ${OPENAL_INCLUDE_DIR})
 
 target_compile_definitions(iaxclient_lib PRIVATE AUDIO_OPENAL=1 LIBIAX LIBVER="SVN 261")
+
+# pass this through since it affects how we include al.h
+if (SG_SOUND_USES_OPENALSOFT)
+    target_compile_definitions(iaxclient_lib PRIVATE SG_SOUND_USES_OPENALSOFT)
+endif()
 
 if (APPLE)
     target_compile_definitions(iaxclient_lib PRIVATE MACOSX)

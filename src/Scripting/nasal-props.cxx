@@ -255,7 +255,7 @@ static naRef f_setAttribute(naContext c, naRef me, int argc, naRef* args)
 static naRef f_getName(naContext c, naRef me, int argc, naRef* args)
 {
     NODENOARG();
-    return NASTR(node->getName());
+    return NASTR(node->getNameString().c_str());
 }
 
 
@@ -321,7 +321,7 @@ static naRef f_getValue(naContext c, naRef me, int argc, naRef* args)
 
     case props::STRING:
     case props::UNSPECIFIED:
-        return NASTR(node->getStringValue());
+        return NASTR(node->getStringValue().c_str());
     case props::VEC3D:
         return makeVectorFromVec(c, node->getValue<SGVec3d>());
     case props::VEC4D:

@@ -29,7 +29,7 @@ namespace http {
 
 class PkgUriHandler : public URIHandler {
 public:
-  PkgUriHandler( const char * uri = "/pkg/" ) : URIHandler( uri  ) {}
+  PkgUriHandler( const std::string& uri = "/pkg/" ) : URIHandler( uri  ) {}
   virtual bool handleRequest( const HTTPRequest & request, HTTPResponse & response, Connection * connection );
 private:
 };

@@ -416,7 +416,7 @@ void APTLoader::throwExceptionIfStreamError(const sg_gzifstream& input_stream,
 
     SG_LOG( SG_NAVAID, SG_ALERT,
             "Error while reading '" << path.utf8Str() << "': " << errMsg );
-    throw sg_io_exception("Error reading file (" + errMsg + ")",
+    throw sg_io_exception("APTLoader: error reading file (" + errMsg + ")",
                           sg_location(path));
   }
 }

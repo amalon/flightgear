@@ -263,8 +263,7 @@ void FGModelMgr::update(double dt)
             if (instance->heading_deg_node != 0)
                 heading = testNan(instance->heading_deg_node->getDoubleValue());
         } catch (const sg_range_exception&) {
-            const char *path = instance->node->getStringValue("path",
-                                                              "unknown");
+            string path = instance->node->getStringValue("path", "unknown");
             SG_LOG(SG_AIRCRAFT, SG_INFO, "Instance of model " << path
                    << " has invalid values");
             return;
@@ -359,7 +358,7 @@ bool FGModelMgr::Instance::checkLoaded() const
 void
 FGModelMgr::Listener::childAdded(SGPropertyNode * parent, SGPropertyNode * child)
 {
-  if (strcmp(parent->getName(), "model") || strcmp(child->getName(), "load"))
+  if (parent->getNameString() != "model" || child->getNameString() != "load")
     return;
 
   _mgr->add_model(parent);
@@ -368,7 +367,7 @@ FGModelMgr::Listener::childAdded(SGPropertyNode * parent, SGPropertyNode * child
 void
 FGModelMgr::Listener::childRemoved(SGPropertyNode * parent, SGPropertyNode * child)
 {
-  if (strcmp(parent->getName(), "models") || strcmp(child->getName(), "model"))
+  if (parent->getNameString() != "models" || child->getNameString() != "model")
     return;
 
   // search instance by node and remove it from scenegraph
