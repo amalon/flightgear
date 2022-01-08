@@ -80,9 +80,9 @@ class VRManager : public osgXR::Manager
         void setDepthInfo(bool depthInfo);
         void setVisibilityMask(bool visibilityMask);
 
-        void setVRMode(const std::string &mode);
-        void setSwapchainMode(const std::string &mode);
-        void setMirrorMode(const std::string &mode);
+        void setVRMode(const std::string& mode);
+        void setSwapchainMode(const std::string& mode);
+        void setMirrorMode(const std::string& mode);
 
         // osgXR::Manager overrides
 
@@ -153,7 +153,7 @@ class VRManager : public osgXR::Manager
                 SetterFn _setter;
         };
         typedef Listener<bool> ListenerBool;
-        typedef Listener<std::string, const std::string &> ListenerString;
+        typedef Listener<std::string, const std::string&> ListenerString;
 
         ListenerBool _listenerEnabled;
         ListenerBool _listenerDepthInfo;

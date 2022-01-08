@@ -144,7 +144,7 @@ void VRManager::setVisibilityMask(bool visibilityMask)
     syncSettings();
 }
 
-void VRManager::setVRMode(const std::string &mode)
+void VRManager::setVRMode(const std::string& mode)
 {
     osgXR::Settings::VRMode vrMode = osgXR::Settings::VRMODE_AUTOMATIC;
 
@@ -160,7 +160,7 @@ void VRManager::setVRMode(const std::string &mode)
     syncSettings();
 }
 
-void VRManager::setSwapchainMode(const std::string &mode)
+void VRManager::setSwapchainMode(const std::string& mode)
 {
     osgXR::Settings::SwapchainMode swapchainMode = osgXR::Settings::SWAPCHAIN_AUTOMATIC;
 
@@ -176,7 +176,7 @@ void VRManager::setSwapchainMode(const std::string &mode)
     syncSettings();
 }
 
-void VRManager::setMirrorMode(const std::string &mode)
+void VRManager::setMirrorMode(const std::string& mode)
 {
     osgXR::MirrorSettings::MirrorMode mirrorMode = osgXR::MirrorSettings::MIRROR_AUTOMATIC;
     int viewIndex = -1;
