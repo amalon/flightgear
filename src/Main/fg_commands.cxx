@@ -1048,7 +1048,7 @@ static void
 no_vr_support()
 {
     SG_LOG(SG_GENERAL, SG_ALERT,
-           "No VR support! Install osgXR and reconfigure/rebuild fgfs.");
+           "No VR support! Rebuild fgfs with VR enabled.");
 }
 #endif
 
