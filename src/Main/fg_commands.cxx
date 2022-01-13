@@ -38,7 +38,7 @@
 #include <Main/sentryIntegration.hxx>
 
 #ifdef ENABLE_OSGXR
-# include <Input/FGVRInput.hxx>
+#include <Input/FGVRInput.hxx>
 #endif
 
 #include "fg_init.hxx"
@@ -1047,22 +1047,19 @@ do_profiler_stop(const SGPropertyNode *arg, SGPropertyNode *root)
 static void
 no_vr_support()
 {
-  SG_LOG
-  (
-    SG_GENERAL,
-    SG_ALERT,
-    "No VR support! Install osgXR and reconfigure/rebuild fgfs."
-  );
+    SG_LOG(SG_GENERAL, SG_ALERT,
+           "No VR support! Install osgXR and reconfigure/rebuild fgfs.");
 }
 #endif
 
 static bool
-do_vr_mode_push(const SGPropertyNode *arg, SGPropertyNode *root)
+do_vr_mode_push(const SGPropertyNode* arg, SGPropertyNode* root)
 {
 #ifdef ENABLE_OSGXR
     auto input = globals->get_subsystem<FGVRInput>();
     if (!input) {
-        SG_LOG(SG_GENERAL, SG_ALERT, "do_vr_mode_push command: VR input subsystem not found");
+        SG_LOG(SG_GENERAL, SG_ALERT,
+               "do_vr_mode_push command: VR input subsystem not found");
         return false;
     }
 
@@ -1074,12 +1071,13 @@ do_vr_mode_push(const SGPropertyNode *arg, SGPropertyNode *root)
 }
 
 static bool
-do_vr_mode_toggle(const SGPropertyNode *arg, SGPropertyNode *root)
+do_vr_mode_toggle(const SGPropertyNode* arg, SGPropertyNode* root)
 {
 #ifdef ENABLE_OSGXR
     auto input = globals->get_subsystem<FGVRInput>();
     if (!input) {
-        SG_LOG(SG_GENERAL, SG_ALERT, "do_vr_mode_toggle command: VR input subsystem not found");
+        SG_LOG(SG_GENERAL, SG_ALERT,
+               "do_vr_mode_toggle command: VR input subsystem not found");
         return false;
     }
 

@@ -29,33 +29,30 @@
  */
 class FGVRButton : public FGVRInput::ModeProcess
 {
-    public:
+public:
+    /**
+     * Construct from a property node.
+     * @param mode       Interaction mode object.
+     * @param subaction  Subaction the mode is tied to.
+     * @param node       Property node describing the process object.
+     * @param statusNode Property node for describing the process object status.
+     */
+    FGVRButton(FGVRInput::Mode* mode, FGVRInput::Subaction* subaction,
+               SGPropertyNode* node, SGPropertyNode* statusNode);
 
-        /**
-         * Construct from a property node.
-         * @param mode       Interaction mode object.
-         * @param subaction  Subaction the mode is tied to.
-         * @param node       Property node describing the process object.
-         * @param statusNode Property node for describing the process object
-         *                   status.
-         */
-        FGVRButton(FGVRInput::Mode *mode, FGVRInput::Subaction *subaction,
-                   SGPropertyNode *node, SGPropertyNode *statusNode);
+    // Implement ModeProcess virtual functions
+    void postinit(SGPropertyNode* node,
+                  const std::string& module) override;
+    void update(double dt) override;
+    void deactivate() override;
 
-        // Implement ModeProcess virtual functions
-        void postinit(SGPropertyNode *node,
-                      const std::string &module) override;
-        void update(double dt) override;
-        void deactivate() override;
-
-    protected:
-
-        /// The boolean input.
-        FGVRInput::ModeProcessInput _input;
-        /// The property object for describing the process object status.
-        SGPropObjBool _statusProp;
-        /// Generic button object hands most of the specifics.
-        FGButton _button;
+protected:
+    /// The boolean input.
+    FGVRInput::ModeProcessInput _input;
+    /// The property object for describing the process object status.
+    SGPropObjBool _statusProp;
+    /// Generic button object hands most of the specifics.
+    FGButton _button;
 };
 
 #endif

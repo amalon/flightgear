@@ -52,7 +52,7 @@
 #endif // of WITH_EVENTINPUT
 
 #if defined(ENABLE_OSGXR)
-  #include "FGVRInput.hxx"
+#include "FGVRInput.hxx"
 #endif
 
 ////////////////////////////////////////////////////////////////////////
@@ -99,11 +99,11 @@ FGInput::FGInput ()
 #endif
 
 #if defined(ENABLE_OSGXR)
-  if (fgGetBool("/sim/input/no-vr-input", false)) {
-    SG_LOG(SG_INPUT, SG_MANDATORY_INFO, "VR input disabled");
-  } else {
-    set_subsystem( "input-vr", new FGVRInput() );
-  }
+    if (fgGetBool("/sim/input/no-vr-input", false)) {
+        SG_LOG(SG_INPUT, SG_MANDATORY_INFO, "VR input disabled");
+    } else {
+        set_subsystem("input-vr", new FGVRInput());
+    }
 #endif
 }
 

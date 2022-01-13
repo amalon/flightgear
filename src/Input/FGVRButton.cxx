@@ -17,24 +17,25 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "config.h"
+
 #include "FGVRButton.hxx"
 
 #include <Main/fg_props.hxx>
 
 // FGVRButton
 
-FGVRButton::FGVRButton(FGVRInput::Mode *mode,
-                       FGVRInput::Subaction *subaction,
-                       SGPropertyNode *node,
-                       SGPropertyNode *statusNode) :
-    ModeProcess(mode, subaction, node, statusNode),
-    _input(mode, subaction, getInputNode("input")),
-    _statusProp(statusNode)
+FGVRButton::FGVRButton(FGVRInput::Mode* mode,
+                       FGVRInput::Subaction* subaction,
+                       SGPropertyNode* node,
+                       SGPropertyNode* statusNode)
+    : ModeProcess(mode, subaction, node, statusNode),
+      _input(mode, subaction, getInputNode("input")),
+      _statusProp(statusNode)
 {
 }
 
-void FGVRButton::postinit(SGPropertyNode *node,
-                          const std::string &module)
+void FGVRButton::postinit(SGPropertyNode* node,
+                          const std::string& module)
 {
     _button.init(node, _name, module);
 }

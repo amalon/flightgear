@@ -17,6 +17,7 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "config.h"
+
 #include "FGVRPoseEuler.hxx"
 
 #include <simgear/math/SGMisc.hxx>
@@ -25,32 +26,30 @@
 
 // FGVRPoseEuler
 
-FGVRPoseEuler::FGVRPoseEuler(FGVRInput::Mode *mode,
-                             FGVRInput::Subaction *subaction,
-                             SGPropertyNode *node,
-                             SGPropertyNode *statusNode) :
-    ModeProcess(mode, subaction, node, statusNode),
-    _pose(mode, subaction, getInputNode("pose")),
-    _transform(SGQuatd::unit()),
-    _statusPropEuler {
-        SGPropObjDouble(statusNode->getChild("euler", 0, true)),
-        SGPropObjDouble(statusNode->getChild("euler", 1, true)),
-        SGPropObjDouble(statusNode->getChild("euler", 2, true))
-    },
-    _lastValue { 0.0, 0.0, 0.0 }
+FGVRPoseEuler::FGVRPoseEuler(FGVRInput::Mode* mode,
+                             FGVRInput::Subaction* subaction,
+                             SGPropertyNode* node,
+                             SGPropertyNode* statusNode)
+    : ModeProcess(mode, subaction, node, statusNode),
+      _pose(mode, subaction, getInputNode("pose")),
+      _transform(SGQuatd::unit()),
+      _statusPropEuler{SGPropObjDouble(statusNode->getChild("euler", 0, true)),
+                       SGPropObjDouble(statusNode->getChild("euler", 1, true)),
+                       SGPropObjDouble(statusNode->getChild("euler", 2, true))},
+      _lastValue{0.0, 0.0, 0.0}
 {
     // Get the transform
-    SGPropertyNode *transform = node->getChild("transform", 0, false);
+    SGPropertyNode* transform = node->getChild("transform", 0, false);
     if (transform) {
-        double yaw   = transform->getDoubleValue("yaw-deg", 0.0);
+        double yaw = transform->getDoubleValue("yaw-deg", 0.0);
         double pitch = transform->getDoubleValue("pitch-deg", 0.0);
-        double roll  = transform->getDoubleValue("roll-deg", 0.0);
+        double roll = transform->getDoubleValue("roll-deg", 0.0);
         _transform = SGQuatd::fromEulerDeg(yaw, pitch, roll);
     }
 }
 
-void FGVRPoseEuler::postinit(SGPropertyNode *node,
-                             const std::string &module)
+void FGVRPoseEuler::postinit(SGPropertyNode* node,
+                             const std::string& module)
 {
     read_bindings(node, _bindings, KEYMOD_NONE, module);
 }
@@ -61,7 +60,7 @@ void FGVRPoseEuler::update(double dt)
     if (_pose.getPoseValue(location)) {
         if (location.isOrientationValid()) {
             // Convert orientation to SGQuatd
-            const auto &xrQuat = location.getOrientation();
+            const auto& xrQuat = location.getOrientation();
             SGQuatd quat(xrQuat._v);
 
             /*
@@ -70,8 +69,7 @@ void FGVRPoseEuler::update(double dt)
              * Desired space: x=right, y=forward, z=up
              * So thats yaw left 90, pitch up 90
              */
-            static const SGQuatd fixedTransform
-                = SGQuatd::fromEulerDeg(-90.0, 90.0, 0.0);
+            static const SGQuatd fixedTransform = SGQuatd::fromEulerDeg(-90.0, 90.0, 0.0);
             quat = conj(fixedTransform) * (quat * fixedTransform);
 
             // Transform by the custom input transformation
@@ -93,7 +91,7 @@ void FGVRPoseEuler::update(double dt)
                 if (!_bindings[KEYMOD_NONE].empty()) {
                     for (unsigned int i = 0; i < 3; ++i)
                         _lastValue[i] = value[i];
-                    for (auto &binding: _bindings[KEYMOD_NONE])
+                    for (auto& binding : _bindings[KEYMOD_NONE])
                         binding->fire(_statusNode);
                 }
             }

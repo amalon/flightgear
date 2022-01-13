@@ -17,6 +17,7 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "config.h"
+
 #include "FGVRInput.hxx"
 
 #include <simgear/debug/ErrorReportingCallback.hxx>
@@ -41,31 +42,31 @@ using flightgear::VRManager;
 
 // FGVRInput::Subaction
 
-FGVRInput::Subaction::Subaction(osgXR::Manager *manager,
-                                const std::string &path) :
-    osgXR::Subaction(manager, path)
+FGVRInput::Subaction::Subaction(osgXR::Manager* manager,
+                                const std::string& path)
+    : osgXR::Subaction(manager, path)
 {
 }
 
-void FGVRInput::Subaction::setup(SGPropertyNode *node)
+void FGVRInput::Subaction::setup(SGPropertyNode* node)
 {
     _modesNode = node->getNode("modes", false);
 }
 
-std::string FGVRInput::Subaction::getPresetMode(const std::string &id)
+std::string FGVRInput::Subaction::getPresetMode(const std::string& id)
 {
     if (!_modesNode)
         return "";
     return _modesNode->getStringValue(id);
 }
 
-void FGVRInput::Subaction::pushMode(FGVRInput::Mode *mode)
+void FGVRInput::Subaction::pushMode(FGVRInput::Mode* mode)
 {
     _modeStack.push_back(mode);
     mode->activate(this);
 }
 
-unsigned int FGVRInput::Subaction::popModesFront(FGVRInput::Mode *keepMode)
+unsigned int FGVRInput::Subaction::popModesFront(FGVRInput::Mode* keepMode)
 {
     int index = -1;
     for (unsigned int i = 0; i < _modeStack.size(); ++i)
@@ -102,14 +103,14 @@ void FGVRInput::Subaction::update(double dt)
 
 // FGVRInput::ActionSet
 
-FGVRInput::ActionSet::ActionSet(FGVRInput *input, osgXR::Manager *manager,
-                                SGPropertyNode *node) :
-    osgXR::ActionSet(manager),
-    _node(node)
+FGVRInput::ActionSet::ActionSet(FGVRInput* input, osgXR::Manager* manager,
+                                SGPropertyNode* node)
+    : osgXR::ActionSet(manager),
+      _node(node)
 {
     // Set up action set information
 
-    const std::string &name = node->getNameString();
+    const std::string& name = node->getNameString();
     std::string desc = node->getStringValue("desc", name.c_str());
     int priority = node->getIntValue("priority", 0);
 
@@ -119,12 +120,12 @@ FGVRInput::ActionSet::ActionSet(FGVRInput *input, osgXR::Manager *manager,
 
     // Set up actions in the action set
 
-    for (SGPropertyNode *actionNode: node->getChildren("action")) {
+    for (SGPropertyNode* actionNode : node->getChildren("action")) {
         std::string actionName = actionNode->getStringValue("name");
         std::string actionType = actionNode->getStringValue("type");
 
         // Create an action of the specified type
-        osgXR::Action *action = nullptr;
+        osgXR::Action* action = nullptr;
         if (actionType == "boolean") {
             action = new ActionBoolean(this, actionNode);
         } else if (actionType == "float") {
@@ -136,14 +137,14 @@ FGVRInput::ActionSet::ActionSet(FGVRInput *input, osgXR::Manager *manager,
         } else {
             SG_LOG(SG_INPUT, SG_WARN,
                    "Unknown VR action type \"" << actionType << "\" for "
-                                            << name << "." << actionName);
+                                               << name << "." << actionName);
         }
 
         if (action) {
             std::ostringstream statusPath;
             statusPath << "action-sets/" << name << "/" << actionName;
-            SGPropertyNode *statusNode = input->getStatusNode()->getNode(statusPath.str(), true);
-            auto *actionCommon = dynamic_cast<ActionCommon *>(action);
+            SGPropertyNode* statusNode = input->getStatusNode()->getNode(statusPath.str(), true);
+            auto* actionCommon = dynamic_cast<ActionCommon*>(action);
             actionCommon->init(input, manager, action, statusNode);
 
             // keep a reference to it for later
@@ -155,7 +156,7 @@ FGVRInput::ActionSet::ActionSet(FGVRInput *input, osgXR::Manager *manager,
     }
 }
 
-const std::string &FGVRInput::ActionSet::getModule(Subaction *subaction)
+const std::string& FGVRInput::ActionSet::getModule(Subaction* subaction)
 {
     auto it = _modules.find(subaction);
     if (it != _modules.end())
@@ -166,14 +167,14 @@ const std::string &FGVRInput::ActionSet::getModule(Subaction *subaction)
     if (subaction)
         str << subaction->getPath();
 
-    const std::string &module = _modules[subaction] = str.str();
+    const std::string& module = _modules[subaction] = str.str();
 
     // This function is called from postinit, so create module too
-    FGNasalSys *nasalsys = (FGNasalSys *)globals->get_subsystem("nasal");
+    FGNasalSys* nasalsys = (FGNasalSys*)globals->get_subsystem("nasal");
     nasalsys->createModule(module.c_str(), module.c_str(), "", 0);
 
     simgear::ErrorReportContext errCtx("input-device", module);
-    for (SGPropertyNode *nasal: _node->getChildren("nasal")) {
+    for (SGPropertyNode* nasal : _node->getChildren("nasal")) {
         nasal->setStringValue("module", module.c_str());
         bool ok = nasalsys->handleCommand(nasal, nullptr);
         if (!ok) {
@@ -187,7 +188,7 @@ const std::string &FGVRInput::ActionSet::getModule(Subaction *subaction)
     return module;
 }
 
-osgXR::Action *FGVRInput::ActionSet::findAction(const std::string &name)
+osgXR::Action* FGVRInput::ActionSet::findAction(const std::string& name)
 {
     auto it = _actionMap.find(name);
     if (it == _actionMap.end())
@@ -202,27 +203,27 @@ void FGVRInput::ActionSet::cleanupActions()
 
 void FGVRInput::ActionSet::postinit()
 {
-    for (auto &actionPair: _actionMap)
-        dynamic_cast<ActionCommon *>(actionPair.second.get())->postinit(this);
+    for (auto& actionPair : _actionMap)
+        dynamic_cast<ActionCommon*>(actionPair.second.get())->postinit(this);
 }
 
 void FGVRInput::ActionSet::update(double dt)
 {
-    for (auto &actionPair: _actionMap)
-        dynamic_cast<ActionCommon *>(actionPair.second.get())->update(dt);
+    for (auto& actionPair : _actionMap)
+        dynamic_cast<ActionCommon*>(actionPair.second.get())->update(dt);
 }
 
 void FGVRInput::ActionSet::fireBindings()
 {
-    for (auto &actionPair: _actionMap)
-        dynamic_cast<ActionCommon *>(actionPair.second.get())->fireBindings();
+    for (auto& actionPair : _actionMap)
+        dynamic_cast<ActionCommon*>(actionPair.second.get())->fireBindings();
 }
 
 // FGVRInput::ActionCommon
 
-FGVRInput::ActionCommon::ActionCommon(osgXR::Action *action,
-                                      SGPropertyNode *node) :
-    _node(node)
+FGVRInput::ActionCommon::ActionCommon(osgXR::Action* action,
+                                      SGPropertyNode* node)
+    : _node(node)
 {
     // Set up action information
 
@@ -234,11 +235,11 @@ FGVRInput::ActionCommon::ActionCommon(osgXR::Action *action,
 
 FGVRInput::ActionCommon::~ActionCommon()
 {
-    for (auto &subactionPair: _subactions)
+    for (auto& subactionPair : _subactions)
         delete subactionPair.second;
 }
 
-FGVRInput::SubactionInfo *FGVRInput::ActionCommon::getSubactionInfo(FGVRInput::Subaction *subaction)
+FGVRInput::SubactionInfo* FGVRInput::ActionCommon::getSubactionInfo(FGVRInput::Subaction* subaction)
 {
     auto it = _subactions.find(subaction);
     if (it == _subactions.end())
@@ -246,22 +247,22 @@ FGVRInput::SubactionInfo *FGVRInput::ActionCommon::getSubactionInfo(FGVRInput::S
     return (*it).second;
 }
 
-void FGVRInput::ActionCommon::init(FGVRInput *input, osgXR::Manager *manager,
-                                   osgXR::Action *action,
-                                   SGPropertyNode *statusNode)
+void FGVRInput::ActionCommon::init(FGVRInput* input, osgXR::Manager* manager,
+                                   osgXR::Action* action,
+                                   SGPropertyNode* statusNode)
 {
     // Set up subactions
     auto subactions = _node->getChildren("subaction");
     for (unsigned int i = 0; i < subactions.size(); ++i) {
-        SGPropertyNode *subactionNode = subactions[i];
-        SGPropertyNode *pathNode = subactionNode->getNode("path", false);
+        SGPropertyNode* subactionNode = subactions[i];
+        SGPropertyNode* pathNode = subactionNode->getNode("path", false);
         if (!pathNode)
             pathNode = subactionNode;
         std::string subactionPath = pathNode->getStringValue();
         if (!subactionPath.empty()) {
-            Subaction *subaction = input->getSubaction(manager, subactionPath);
+            Subaction* subaction = input->getSubaction(manager, subactionPath);
             if (_subactions.find(subaction) == _subactions.end()) {
-                auto *info = createSubactionInfo(subaction, subactionNode,
+                auto* info = createSubactionInfo(subaction, subactionNode,
                                                  statusNode->getChild("value", i, true));
                 _subactions[subaction] = info;
                 action->addSubaction(subaction);
@@ -274,37 +275,37 @@ void FGVRInput::ActionCommon::init(FGVRInput *input, osgXR::Manager *manager,
 
     // Still have an entry for no subaction filter
     if (_subactions.empty()) {
-        auto *info = createSubactionInfo(nullptr, nullptr,
+        auto* info = createSubactionInfo(nullptr, nullptr,
                                          statusNode->getChild("value", 0, true));
         _subactions[nullptr] = info;
     }
 }
 
-void FGVRInput::ActionCommon::postinit(FGVRInput::ActionSet *actionSet)
+void FGVRInput::ActionCommon::postinit(FGVRInput::ActionSet* actionSet)
 {
-    for (auto subactionPair: _subactions)
+    for (auto subactionPair : _subactions)
         subactionPair.second->postinit(actionSet, this);
 }
 
 void FGVRInput::ActionCommon::update(double dt)
 {
-    for (auto subactionPair: _subactions)
+    for (auto subactionPair : _subactions)
         subactionPair.second->update(this, dt);
 }
 
 void FGVRInput::ActionCommon::fireBindings()
 {
-    for (auto subactionPair: _subactions)
+    for (auto subactionPair : _subactions)
         subactionPair.second->fireBindings();
 }
 
 // FGVRInput::SubactionInfo
 
-FGVRInput::SubactionInfo::SubactionInfo(osgXR::Action *action,
-                                        FGVRInput::Subaction *subaction,
-                                        SGPropertyNode *node) :
-    _subaction(subaction),
-    _node(node)
+FGVRInput::SubactionInfo::SubactionInfo(osgXR::Action* action,
+                                        FGVRInput::Subaction* subaction,
+                                        SGPropertyNode* node)
+    : _subaction(subaction),
+      _node(node)
 {
     std::ostringstream actionBuf;
     actionBuf << action->getName();
@@ -313,10 +314,10 @@ FGVRInput::SubactionInfo::SubactionInfo(osgXR::Action *action,
     _name = actionBuf.str();
 }
 
-void FGVRInput::SubactionInfo::postinit(FGVRInput::ActionSet *actionSet,
-                                        FGVRInput::ActionCommon *action)
+void FGVRInput::SubactionInfo::postinit(FGVRInput::ActionSet* actionSet,
+                                        FGVRInput::ActionCommon* action)
 {
-    auto &module = actionSet->getModule(_subaction);
+    auto& module = actionSet->getModule(_subaction);
 
     // Set up action wide bindings
     postinit(action->getNode(), module);
@@ -327,26 +328,26 @@ void FGVRInput::SubactionInfo::postinit(FGVRInput::ActionSet *actionSet,
 
 // FGVRInput::SubactionInfoBoolean
 
-FGVRInput::SubactionInfoBoolean::SubactionInfoBoolean(osgXR::Action *action,
-                                                      FGVRInput::Subaction *subaction,
-                                                      SGPropertyNode *node,
-                                                      SGPropertyNode *statusNode) :
-    SubactionInfo(action, subaction, node),
-    _curValue(false),
-    _statusProp(statusNode)
+FGVRInput::SubactionInfoBoolean::SubactionInfoBoolean(osgXR::Action* action,
+                                                      FGVRInput::Subaction* subaction,
+                                                      SGPropertyNode* node,
+                                                      SGPropertyNode* statusNode)
+    : SubactionInfo(action, subaction, node),
+      _curValue(false),
+      _statusProp(statusNode)
 {
 }
 
-void FGVRInput::SubactionInfoBoolean::postinit(SGPropertyNode *node,
-                                               const std::string &module)
+void FGVRInput::SubactionInfoBoolean::postinit(SGPropertyNode* node,
+                                               const std::string& module)
 {
     _button.init(node, _name, module);
 }
 
-void FGVRInput::SubactionInfoBoolean::update(FGVRInput::ActionCommon *action,
+void FGVRInput::SubactionInfoBoolean::update(FGVRInput::ActionCommon* action,
                                              double dt)
 {
-    auto *actionBool = static_cast<FGVRInput::ActionBoolean*>(action);
+    auto* actionBool = static_cast<FGVRInput::ActionBoolean*>(action);
     _curValue = actionBool->getValue(_subaction);
     _statusProp = _curValue;
 }
@@ -359,27 +360,27 @@ void FGVRInput::SubactionInfoBoolean::fireBindings()
 
 // FGVRInput::SubactionInfoFloat
 
-FGVRInput::SubactionInfoFloat::SubactionInfoFloat(osgXR::Action *action,
-                                                  FGVRInput::Subaction *subaction,
-                                                  SGPropertyNode *node,
-                                                  SGPropertyNode *statusNode) :
-    SubactionInfo(action, subaction, node),
-    _curValue(0),
-    _lastValue(0),
-    _statusProp(statusNode)
+FGVRInput::SubactionInfoFloat::SubactionInfoFloat(osgXR::Action* action,
+                                                  FGVRInput::Subaction* subaction,
+                                                  SGPropertyNode* node,
+                                                  SGPropertyNode* statusNode)
+    : SubactionInfo(action, subaction, node),
+      _curValue(0),
+      _lastValue(0),
+      _statusProp(statusNode)
 {
 }
 
-void FGVRInput::SubactionInfoFloat::postinit(SGPropertyNode *node,
-                                             const std::string &module)
+void FGVRInput::SubactionInfoFloat::postinit(SGPropertyNode* node,
+                                             const std::string& module)
 {
     read_bindings(node, _bindings, KEYMOD_NONE, module);
 }
 
-void FGVRInput::SubactionInfoFloat::update(FGVRInput::ActionCommon *action,
+void FGVRInput::SubactionInfoFloat::update(FGVRInput::ActionCommon* action,
                                            double dt)
 {
-    auto *actionFloat = static_cast<FGVRInput::ActionFloat*>(action);
+    auto* actionFloat = static_cast<FGVRInput::ActionFloat*>(action);
     _curValue = actionFloat->getValue(_subaction);
     _statusProp = _curValue;
 }
@@ -389,7 +390,7 @@ void FGVRInput::SubactionInfoFloat::fireBindings()
     if (_curValue != _lastValue) {
         if (!_bindings[KEYMOD_NONE].empty()) {
             _lastValue = _curValue;
-            for (auto &binding: _bindings[KEYMOD_NONE])
+            for (auto& binding : _bindings[KEYMOD_NONE])
                 binding->fire(_curValue);
         }
     }
@@ -397,31 +398,29 @@ void FGVRInput::SubactionInfoFloat::fireBindings()
 
 // FGVRInput::SubactionInfoVector2f
 
-FGVRInput::SubactionInfoVector2f::SubactionInfoVector2f(osgXR::Action *action,
-                                                        FGVRInput::Subaction *subaction,
-                                                        SGPropertyNode *node,
-                                                        SGPropertyNode *statusNode) :
-    SubactionInfo(action, subaction, node),
-    _curValue(0, 0),
-    _lastValue(0, 0),
-    _statusNode(statusNode),
-    _statusProp {
-        SGPropObjDouble(statusNode->getChild("x", 0, true)),
-        SGPropObjDouble(statusNode->getChild("y", 0, true))
-    }
+FGVRInput::SubactionInfoVector2f::SubactionInfoVector2f(osgXR::Action* action,
+                                                        FGVRInput::Subaction* subaction,
+                                                        SGPropertyNode* node,
+                                                        SGPropertyNode* statusNode)
+    : SubactionInfo(action, subaction, node),
+      _curValue(0, 0),
+      _lastValue(0, 0),
+      _statusNode(statusNode),
+      _statusProp{SGPropObjDouble(statusNode->getChild("x", 0, true)),
+                  SGPropObjDouble(statusNode->getChild("y", 0, true))}
 {
 }
 
-void FGVRInput::SubactionInfoVector2f::postinit(SGPropertyNode *node,
-                                                const std::string &module)
+void FGVRInput::SubactionInfoVector2f::postinit(SGPropertyNode* node,
+                                                const std::string& module)
 {
     read_bindings(node, _bindings, KEYMOD_NONE, module);
 }
 
-void FGVRInput::SubactionInfoVector2f::update(FGVRInput::ActionCommon *action,
-                                           double dt)
+void FGVRInput::SubactionInfoVector2f::update(FGVRInput::ActionCommon* action,
+                                              double dt)
 {
-    auto *actionVector2f = static_cast<FGVRInput::ActionVector2f*>(action);
+    auto* actionVector2f = static_cast<FGVRInput::ActionVector2f*>(action);
     _curValue = actionVector2f->getValue(_subaction);
     _statusProp[0] = _curValue.x();
     _statusProp[1] = _curValue.y();
@@ -432,7 +431,7 @@ void FGVRInput::SubactionInfoVector2f::fireBindings()
     if (_curValue != _lastValue) {
         if (!_bindings[KEYMOD_NONE].empty()) {
             _lastValue = _curValue;
-            for (auto &binding: _bindings[KEYMOD_NONE])
+            for (auto& binding : _bindings[KEYMOD_NONE])
                 binding->fire(_statusNode);
         }
     }
@@ -440,33 +439,31 @@ void FGVRInput::SubactionInfoVector2f::fireBindings()
 
 // FGVRInput::SubactionInfoPose
 
-FGVRInput::SubactionInfoPose::SubactionInfoPose(osgXR::Action *action,
-                                                FGVRInput::Subaction *subaction,
-                                                SGPropertyNode *node,
-                                                SGPropertyNode *statusNode) :
-    SubactionInfo(action, subaction, node),
-    _statusNode(statusNode),
-    _statusPositionNode(statusNode->getChild("position", 0, true)),
-    _statusPositionValidProp(SGPropObjBool(_statusPositionNode->getChild("valid", 0, true))),
-    _statusPositionTrackedProp(SGPropObjBool(_statusPositionNode->getChild("tracked", 0, true))),
-    _statusPositionProp {
-        SGPropObjDouble(_statusPositionNode->getChild("x", 0, true)),
-        SGPropObjDouble(_statusPositionNode->getChild("y", 0, true)),
-        SGPropObjDouble(_statusPositionNode->getChild("z", 0, true))
-    }
+FGVRInput::SubactionInfoPose::SubactionInfoPose(osgXR::Action* action,
+                                                FGVRInput::Subaction* subaction,
+                                                SGPropertyNode* node,
+                                                SGPropertyNode* statusNode)
+    : SubactionInfo(action, subaction, node),
+      _statusNode(statusNode),
+      _statusPositionNode(statusNode->getChild("position", 0, true)),
+      _statusPositionValidProp(SGPropObjBool(_statusPositionNode->getChild("valid", 0, true))),
+      _statusPositionTrackedProp(SGPropObjBool(_statusPositionNode->getChild("tracked", 0, true))),
+      _statusPositionProp{SGPropObjDouble(_statusPositionNode->getChild("x", 0, true)),
+                          SGPropObjDouble(_statusPositionNode->getChild("y", 0, true)),
+                          SGPropObjDouble(_statusPositionNode->getChild("z", 0, true))}
 {
 }
 
-void FGVRInput::SubactionInfoPose::postinit(SGPropertyNode *node,
-                                            const std::string &module)
+void FGVRInput::SubactionInfoPose::postinit(SGPropertyNode* node,
+                                            const std::string& module)
 {
     read_bindings(node, _bindings, KEYMOD_NONE, module);
 }
 
-void FGVRInput::SubactionInfoPose::update(FGVRInput::ActionCommon *action,
+void FGVRInput::SubactionInfoPose::update(FGVRInput::ActionCommon* action,
                                           double dt)
 {
-    auto *actionPose = static_cast<FGVRInput::ActionPose*>(action);
+    auto* actionPose = static_cast<FGVRInput::ActionPose*>(action);
     _curValue = actionPose->getValue(_subaction);
     _statusPositionValidProp = _curValue.isPositionValid();
     _statusPositionTrackedProp = _curValue.isPositionTracked();
@@ -480,7 +477,7 @@ void FGVRInput::SubactionInfoPose::fireBindings()
     if (_curValue != _lastValue) {
         if (!_bindings[KEYMOD_NONE].empty()) {
             _lastValue = _curValue;
-            for (auto &binding: _bindings[KEYMOD_NONE])
+            for (auto& binding : _bindings[KEYMOD_NONE])
                 binding->fire(_statusNode);
         }
     }
@@ -488,29 +485,29 @@ void FGVRInput::SubactionInfoPose::fireBindings()
 
 // FGVRInput::InteractionProfile
 
-FGVRInput::InteractionProfile::InteractionProfile(FGVRInput *input,
-                                                  osgXR::Manager *manager,
-                                                  const std::string &vendor,
-                                                  const std::string &type,
-                                                  SGPropertyNode *node) :
-    osgXR::InteractionProfile(manager, vendor, type)
+FGVRInput::InteractionProfile::InteractionProfile(FGVRInput* input,
+                                                  osgXR::Manager* manager,
+                                                  const std::string& vendor,
+                                                  const std::string& type,
+                                                  SGPropertyNode* node)
+    : osgXR::InteractionProfile(manager, vendor, type)
 {
     // Look for action bindings
     // The first level of child nodes are action set names
     for (int i = 0; i < node->nChildren(); ++i) {
-        SGPropertyNode *actionSetNode = node->getChild(i);
-        const std::string &actionSetName = actionSetNode->getNameString();
+        SGPropertyNode* actionSetNode = node->getChild(i);
+        const std::string& actionSetName = actionSetNode->getNameString();
         auto it = input->_actionSets.find(actionSetName);
         if (it != input->_actionSets.end()) {
-            ActionSet *actionSet = (*it).second;
+            ActionSet* actionSet = (*it).second;
             // The next level of child nodes are action names
             for (int j = 0; j < actionSetNode->nChildren(); ++j) {
-                SGPropertyNode *actionNode = actionSetNode->getChild(j);
-                const std::string &actionName = actionNode->getNameString();
-                osgXR::Action *action = actionSet->findAction(actionName);
+                SGPropertyNode* actionNode = actionSetNode->getChild(j);
+                const std::string& actionName = actionNode->getNameString();
+                osgXR::Action* action = actionSet->findAction(actionName);
                 if (action) {
                     // Finally binding child nodes contain suggested bindings
-                    for (auto bindingNode: actionNode->getChildren("binding")) {
+                    for (auto bindingNode : actionNode->getChildren("binding")) {
                         std::string binding = bindingNode->getStringValue();
                         suggestBinding(action, binding);
                     }
@@ -522,48 +519,47 @@ FGVRInput::InteractionProfile::InteractionProfile(FGVRInput *input,
 
 // FGVRInput::ModeProcessInputSourceAction
 
-FGVRInput::ModeProcessInputSourceAction::ModeProcessInputSourceAction(
-                                                    Subaction *subaction,
-                                                    osgXR::Action *action) :
-    _subaction(subaction),
-    _action(action)
+FGVRInput::ModeProcessInputSourceAction::ModeProcessInputSourceAction(Subaction* subaction,
+                                                                      osgXR::Action* action)
+    : _subaction(subaction),
+      _action(action)
 {
 }
 
-bool FGVRInput::ModeProcessInputSourceAction::getBoolValue(bool &outValue)
+bool FGVRInput::ModeProcessInputSourceAction::getBoolValue(bool& outValue)
 {
     if (_action.valid()) {
-        SubactionInfo *info = getActionCommon()->getSubactionInfo(_subaction);
+        SubactionInfo* info = getActionCommon()->getSubactionInfo(_subaction);
         if (info)
             return info->getBoolCurValue(outValue);
     }
     return false;
 }
 
-bool FGVRInput::ModeProcessInputSourceAction::getFloatValue(float &outValue)
+bool FGVRInput::ModeProcessInputSourceAction::getFloatValue(float& outValue)
 {
     if (_action.valid()) {
-        SubactionInfo *info = getActionCommon()->getSubactionInfo(_subaction);
+        SubactionInfo* info = getActionCommon()->getSubactionInfo(_subaction);
         if (info)
             return info->getFloatCurValue(outValue);
     }
     return false;
 }
 
-bool FGVRInput::ModeProcessInputSourceAction::getVector2fValue(osg::Vec2f &outValue)
+bool FGVRInput::ModeProcessInputSourceAction::getVector2fValue(osg::Vec2f& outValue)
 {
     if (_action.valid()) {
-        SubactionInfo *info = getActionCommon()->getSubactionInfo(_subaction);
+        SubactionInfo* info = getActionCommon()->getSubactionInfo(_subaction);
         if (info)
             return info->getVector2fCurValue(outValue);
     }
     return false;
 }
 
-bool FGVRInput::ModeProcessInputSourceAction::getPoseValue(osgXR::ActionPose::Location &outValue)
+bool FGVRInput::ModeProcessInputSourceAction::getPoseValue(osgXR::ActionPose::Location& outValue)
 {
     if (_action.valid()) {
-        SubactionInfo *info = getActionCommon()->getSubactionInfo(_subaction);
+        SubactionInfo* info = getActionCommon()->getSubactionInfo(_subaction);
         if (info)
             return info->getPoseCurValue(outValue);
     }
@@ -572,20 +568,19 @@ bool FGVRInput::ModeProcessInputSourceAction::getPoseValue(osgXR::ActionPose::Lo
 
 // FGVRInput::ModeProcessInput
 
-FGVRInput::ModeProcessInput::ModeProcessInput(FGVRInput::Mode *mode,
-                                              Subaction *subaction,
-                                              SGPropertyNode *node) :
-    _lastBool(false),
-    _lastFloat(0.0f),
-    _lastVec2f(0.0f, 0.0f)
+FGVRInput::ModeProcessInput::ModeProcessInput(FGVRInput::Mode* mode,
+                                              Subaction* subaction,
+                                              SGPropertyNode* node)
+    : _lastBool(false),
+      _lastFloat(0.0f),
+      _lastVec2f(0.0f, 0.0f)
 {
-    for (SGPropertyNode *actionNode: node->getChildren("action")) {
+    for (SGPropertyNode* actionNode : node->getChildren("action")) {
         std::string actionName = actionNode->getStringValue();
-        osgXR::Action *action = mode->getActionSet()->findAction(actionName);
+        osgXR::Action* action = mode->getActionSet()->findAction(actionName);
         if (action) {
-            _sources.push_back(std::make_unique<ModeProcessInputSourceAction>(
-                                                                subaction,
-                                                                action));
+            _sources.push_back(std::make_unique<ModeProcessInputSourceAction>(subaction,
+                                                                              action));
         } else {
             SG_LOG(SG_INPUT, SG_WARN,
                    "No VR action \"" << actionName << "\" found in action-set \"" << mode->getActionSet()->getName() << "\" for VR mode " << mode->getPath() << " input " << node->getNameString());
@@ -601,11 +596,11 @@ void FGVRInput::ModeProcessInput::deactivate()
     _lastPose = osgXR::ActionPose::Location();
 }
 
-bool FGVRInput::ModeProcessInput::getBoolValue(bool &outValue, bool *outChanged)
+bool FGVRInput::ModeProcessInput::getBoolValue(bool& outValue, bool* outChanged)
 {
     // Use logical OR of valid values from sources (like OpenXR)
     bool ret = false;
-    for (auto &source: _sources) {
+    for (auto& source : _sources) {
         if (source->getBoolValue(outValue)) {
             if (outChanged)
                 *outChanged = (outValue != _lastBool);
@@ -618,13 +613,13 @@ bool FGVRInput::ModeProcessInput::getBoolValue(bool &outValue, bool *outChanged)
     return ret;
 }
 
-bool FGVRInput::ModeProcessInput::getFloatValue(float &outValue,
-                                                bool *outChanged)
+bool FGVRInput::ModeProcessInput::getFloatValue(float& outValue,
+                                                bool* outChanged)
 {
     // Use largest absolute valid value from sources (like OpenXR)
     bool ret = false;
     float maxVal;
-    for (auto &source: _sources) {
+    for (auto& source : _sources) {
         float val;
         if (source->getFloatValue(val)) {
             if (!ret || fabs(val) > fabs(maxVal))
@@ -641,14 +636,14 @@ bool FGVRInput::ModeProcessInput::getFloatValue(float &outValue,
     return false;
 }
 
-bool FGVRInput::ModeProcessInput::getVector2fValue(osg::Vec2f &outValue,
-                                                   bool *outChanged)
+bool FGVRInput::ModeProcessInput::getVector2fValue(osg::Vec2f& outValue,
+                                                   bool* outChanged)
 {
     // Use longest valid value from sources (like OpenXR)
     bool ret = false;
     float maxLength2;
     osg::Vec2f maxVal;
-    for (auto &source: _sources) {
+    for (auto& source : _sources) {
         osg::Vec2f val;
         if (source->getVector2fValue(val)) {
             float length2 = val.length2();
@@ -668,11 +663,11 @@ bool FGVRInput::ModeProcessInput::getVector2fValue(osg::Vec2f &outValue,
     return false;
 }
 
-bool FGVRInput::ModeProcessInput::getPoseValue(osgXR::ActionPose::Location &outValue,
-                                               bool *outChanged)
+bool FGVRInput::ModeProcessInput::getPoseValue(osgXR::ActionPose::Location& outValue,
+                                               bool* outChanged)
 {
     // Use first valid value from sources
-    for (auto &source: _sources) {
+    for (auto& source : _sources) {
         if (source->getPoseValue(outValue)) {
             if (outChanged)
                 *outChanged = (outValue != _lastPose);
@@ -685,59 +680,59 @@ bool FGVRInput::ModeProcessInput::getPoseValue(osgXR::ActionPose::Location &outV
 
 // FGVRInput::ModeProcess
 
-FGVRInput::ModeProcess::ModeProcess(FGVRInput::Mode *mode,
-				    Subaction *subaction,
-				    SGPropertyNode *node,
-				    SGPropertyNode *statusNode) :
-    _node(node),
-    _statusNode(statusNode),
-    _name(node->getStringValue("name")),
-    _subaction(subaction)
+FGVRInput::ModeProcess::ModeProcess(FGVRInput::Mode* mode,
+                                    Subaction* subaction,
+                                    SGPropertyNode* node,
+                                    SGPropertyNode* statusNode)
+    : _node(node),
+      _statusNode(statusNode),
+      _name(node->getStringValue("name")),
+      _subaction(subaction)
 {
 }
 
-void FGVRInput::ModeProcess::postinit(const std::string &module)
+void FGVRInput::ModeProcess::postinit(const std::string& module)
 {
     postinit(_node, module);
 }
 
-SGPropertyNode *FGVRInput::ModeProcess::getInputNode(const std::string &name)
+SGPropertyNode* FGVRInput::ModeProcess::getInputNode(const std::string& name)
 {
     return _node->getNode("inputs", true)->getNode(name, true);
 }
 
 // FGVRInput::Mode::SubactionInfo
 
-FGVRInput::Mode::SubactionInfo::SubactionInfo(Subaction *subaction,
-                                              SGPropertyNode *modeNodeCopy,
-                                              SGPropertyNode *node) :
-    _subaction(subaction),
-    _modeNodeCopy(modeNodeCopy),
-    _node(node)
+FGVRInput::Mode::SubactionInfo::SubactionInfo(Subaction* subaction,
+                                              SGPropertyNode* modeNodeCopy,
+                                              SGPropertyNode* node)
+    : _subaction(subaction),
+      _modeNodeCopy(modeNodeCopy),
+      _node(node)
 {
 }
 
 FGVRInput::Mode::SubactionInfo::~SubactionInfo()
 {
-    for (auto *process: _processes)
+    for (auto* process : _processes)
         delete process;
 }
 
-void FGVRInput::Mode::SubactionInfo::readProcesses(FGVRInput *input,
-                                                   Mode *mode,
-                                                   SGPropertyNode *node,
-                                                   SGPropertyNode *statusNode)
+void FGVRInput::Mode::SubactionInfo::readProcesses(FGVRInput* input,
+                                                   Mode* mode,
+                                                   SGPropertyNode* node,
+                                                   SGPropertyNode* statusNode)
 {
     // Read input processing nodes
-    for (SGPropertyNode *processNode: node->getChildren("process")) {
+    for (SGPropertyNode* processNode : node->getChildren("process")) {
         std::string processName = processNode->getStringValue("name");
         std::string processType = processNode->getStringValue("type");
 
-        SGPropertyNode *processStatusNode = statusNode->getNode(processName,
+        SGPropertyNode* processStatusNode = statusNode->getNode(processName,
                                                                 true);
 
         // Create a process of the specified type
-        ModeProcess *process = nullptr;
+        ModeProcess* process = nullptr;
         if (processType == "button") {
             process = new FGVRButton(mode, _subaction, processNode,
                                      processStatusNode);
@@ -762,12 +757,12 @@ void FGVRInput::Mode::SubactionInfo::initNasal()
     initNasal(_node);
 }
 
-void FGVRInput::Mode::SubactionInfo::initNasal(SGPropertyNode *node)
+void FGVRInput::Mode::SubactionInfo::initNasal(SGPropertyNode* node)
 {
     simgear::ErrorReportContext errCtx("input-device", _module);
-    for (SGPropertyNode *nasal: node->getChildren("nasal")) {
+    for (SGPropertyNode* nasal : node->getChildren("nasal")) {
         nasal->setStringValue("module", _module.c_str());
-        FGNasalSys *nasalsys = (FGNasalSys *)globals->get_subsystem("nasal");
+        FGNasalSys* nasalsys = (FGNasalSys*)globals->get_subsystem("nasal");
         bool ok = nasalsys->handleCommand(nasal, nullptr);
         if (!ok) {
             // TODO: get the Nasal errors logged properly
@@ -778,45 +773,45 @@ void FGVRInput::Mode::SubactionInfo::initNasal(SGPropertyNode *node)
     }
 }
 
-void FGVRInput::Mode::SubactionInfo::postinit(const std::string &modulePfx)
+void FGVRInput::Mode::SubactionInfo::postinit(const std::string& modulePfx)
 {
     std::ostringstream str;
     str << modulePfx << _subaction->getPath();
     _module = str.str();
 
-    FGNasalSys *nasalsys = (FGNasalSys *)globals->get_subsystem("nasal");
+    FGNasalSys* nasalsys = (FGNasalSys*)globals->get_subsystem("nasal");
     nasalsys->createModule(_module.c_str(), _module.c_str(), "", 0);
 
-    for (auto *process: _processes)
+    for (auto* process : _processes)
         process->postinit(_module);
 }
 
 void FGVRInput::Mode::SubactionInfo::update(double dt)
 {
-    for (auto *process: _processes)
+    for (auto* process : _processes)
         process->update(dt);
 }
 
 void FGVRInput::Mode::SubactionInfo::activate()
 {
-    for (auto *process: _processes)
+    for (auto* process : _processes)
         process->activate();
 }
 
 void FGVRInput::Mode::SubactionInfo::deactivate()
 {
-    for (auto *process: _processes)
+    for (auto* process : _processes)
         process->deactivate();
 }
 
 // FGVRInput::Mode
 
-FGVRInput::Mode::Mode(FGVRInput *input,
-                      osgXR::Manager *manager,
-                      const std::string &type,
-                      const std::string &mode,
-                      SGPropertyNode *node,
-                      SGPropertyNode *dataNode)
+FGVRInput::Mode::Mode(FGVRInput* input,
+                      osgXR::Manager* manager,
+                      const std::string& type,
+                      const std::string& mode,
+                      SGPropertyNode* node,
+                      SGPropertyNode* dataNode)
 {
     std::ostringstream modePath;
     modePath << type << "/" << mode;
@@ -837,29 +832,29 @@ FGVRInput::Mode::Mode(FGVRInput *input,
     // Get subactions this mode can be attached to
     auto subactions = node->getChildren("subaction");
     for (unsigned int i = 0; i < subactions.size(); ++i) {
-        SGPropertyNode *subactionNode = subactions[i];
-        SGPropertyNode *pathNode = subactionNode->getNode("path", false);
+        SGPropertyNode* subactionNode = subactions[i];
+        SGPropertyNode* pathNode = subactionNode->getNode("path", false);
         if (!pathNode)
             pathNode = subactionNode;
         std::string subactionPath = pathNode->getStringValue();
         if (!subactionPath.empty()) {
-            Subaction *subaction = input->getSubaction(manager, subactionPath);
+            Subaction* subaction = input->getSubaction(manager, subactionPath);
             assert(_subactions.find(subaction) == _subactions.end());
             // Copy the whole mode node so bindings etc can be per-subaction
-            SGPropertyNode *nodeCopy = dataNode->getChild("subaction", i, true);
+            SGPropertyNode* nodeCopy = dataNode->getChild("subaction", i, true);
             copyProperties(node, nodeCopy);
             // for fgcommands to be able to distinguish subactions, put the
             // subaction path in a property.
             nodeCopy->setStringValue("subaction-path", subactionPath);
 
-            SGPropertyNode *subactionCopy = nodeCopy->getChild("subaction", i);
+            SGPropertyNode* subactionCopy = nodeCopy->getChild("subaction", i);
 
-            SubactionInfo *info = new SubactionInfo(subaction, nodeCopy, subactionCopy);
+            SubactionInfo* info = new SubactionInfo(subaction, nodeCopy, subactionCopy);
             _subactions[subaction] = info;
 
             std::ostringstream statusPath;
             statusPath << "modes/" << type << "/" << mode << "[" << i << "]";
-            SGPropertyNode *statusNode = input->getStatusNode()->getNode(statusPath.str(), true);
+            SGPropertyNode* statusNode = input->getStatusNode()->getNode(statusPath.str(), true);
             // Read mode wide process objects
             info->readProcesses(input, this, nodeCopy, statusNode);
 
@@ -871,7 +866,7 @@ FGVRInput::Mode::Mode(FGVRInput *input,
 
 FGVRInput::Mode::~Mode()
 {
-    for (auto &subactionPair: _subactions)
+    for (auto& subactionPair : _subactions)
         delete subactionPair.second;
 }
 
@@ -881,28 +876,27 @@ void FGVRInput::Mode::postinit()
     str << "vr/mode/" << _path;
     std::string module = str.str();
 
-    for (auto &subactionPair: _subactions)
-    {
-        auto *info = subactionPair.second;
+    for (auto& subactionPair : _subactions) {
+        auto* info = subactionPair.second;
         info->postinit(module);
     }
 }
 
-void FGVRInput::Mode::activate(Subaction *subaction)
+void FGVRInput::Mode::activate(Subaction* subaction)
 {
     if (_actionSet.valid())
         _actionSet->activate(subaction);
 
     auto it = _subactions.find(subaction);
     if (it != _subactions.end()) {
-        auto *info = (*it).second;
+        auto* info = (*it).second;
         // Call mode init code with each activation
         info->initNasal();
         info->activate();
     }
 }
 
-void FGVRInput::Mode::deactivate(Subaction *subaction)
+void FGVRInput::Mode::deactivate(Subaction* subaction)
 {
     // FIXME hmm, need per subaction ref counting in actionset activation
     if (_actionSet.valid())
@@ -913,7 +907,7 @@ void FGVRInput::Mode::deactivate(Subaction *subaction)
         (*it).second->deactivate();
 }
 
-void FGVRInput::Mode::update(Subaction *subaction, double dt)
+void FGVRInput::Mode::update(Subaction* subaction, double dt)
 {
     auto it = _subactions.find(subaction);
     if (it != _subactions.end())
@@ -925,38 +919,36 @@ namespace {
 /// Update callback for MatrixTransform to sync it to master camera.
 class LocalSpaceUpdateCallback : public osg::NodeCallback
 {
-    public:
+public:
+    LocalSpaceUpdateCallback(osg::MatrixTransform* transform)
+        : _transform(transform)
+    {
+    }
 
-        LocalSpaceUpdateCallback(osg::MatrixTransform *transform) :
-            _transform(transform)
-        {
-        }
+    void operator()(osg::Node* node, osg::NodeVisitor* nv) override
+    {
+        CameraGroup* cgroup = CameraGroup::getDefault();
+        osg::Camera* masterCam = cgroup->getView()->getCamera();
 
-        void operator()(osg::Node* node, osg::NodeVisitor* nv) override
-        {
-            CameraGroup *cgroup = CameraGroup::getDefault();
-            osg::Camera *masterCam = cgroup->getView()->getCamera();
+        // Update the transform object to match the master camera view
+        _transform->setMatrix(masterCam->getInverseViewMatrix());
 
-            // Update the transform object to match the master camera view
-            _transform->setMatrix(masterCam->getInverseViewMatrix());
+        traverse(node, nv);
+    }
 
-            traverse(node, nv);
-        }
-
-    protected:
-
-        /// Transform node to adjust.
-        osg::ref_ptr<osg::MatrixTransform> _transform;
+protected:
+    /// Transform node to adjust.
+    osg::ref_ptr<osg::MatrixTransform> _transform;
 };
 
-}
+} // namespace
 
 // FGVRInput
 
-FGVRInput::FGVRInput() :
-    _running(false),
-    _localSpaceUpdater(new osg::Group),
-    _localSpace(new osg::MatrixTransform)
+FGVRInput::FGVRInput()
+    : _running(false),
+      _localSpaceUpdater(new osg::Group),
+      _localSpace(new osg::MatrixTransform)
 {
     // Only transform nodes in range are updated, so the update callback must be
     // higher up the scene graph than _localSpace.
@@ -974,15 +966,15 @@ FGVRInput::~FGVRInput()
 void FGVRInput::_remove(bool all)
 {
     // Clean up references to actions so action sets can be destroyed
-    for (auto &actionSetPair: _actionSets)
+    for (auto& actionSetPair : _actionSets)
         actionSetPair.second->cleanupActions();
     _actionSets.clear();
     _profiles.clear();
 
     // Clean up interaction modes
-    for (auto &subactionPair: _subactions)
+    for (auto& subactionPair : _subactions)
         subactionPair.second->clearModes();
-    for (auto &modePair: _modes)
+    for (auto& modePair : _modes)
         delete modePair.second;
 }
 
@@ -992,7 +984,7 @@ void FGVRInput::init()
     SGPropertyNode_ptr vrNode = fgGetNode("/input/vr", true);
     _statusNode = fgGetNode("/devices/status/vr", true);
 
-    VRManager *manager = VRManager::instance();
+    VRManager* manager = VRManager::instance();
 
     // Set up local space updating
     osg::Group* sceneGroup = globals->get_scenery()->get_scene_graph();
@@ -1001,19 +993,19 @@ void FGVRInput::init()
     // Set up action sets from property tree
     SGPropertyNode_ptr actionSetsNode = vrNode->getNode("action-sets", true);
     for (int i = 0; i < actionSetsNode->nChildren(); ++i) {
-        SGPropertyNode *actionSetNode = actionSetsNode->getChild(i);
-        const std::string &name = actionSetNode->getNameString();
+        SGPropertyNode* actionSetNode = actionSetsNode->getChild(i);
+        const std::string& name = actionSetNode->getNameString();
         _actionSets[name] = new ActionSet(this, manager, actionSetNode);
     }
 
     // Set up interaction profiles from property tree
     SGPropertyNode_ptr interactionProfilesNode = vrNode->getNode("interaction-profiles", true);
     for (int i = 0; i < interactionProfilesNode->nChildren(); ++i) {
-        SGPropertyNode *vendorNode = interactionProfilesNode->getChild(i);
-        const std::string &vendor = vendorNode->getNameString();
+        SGPropertyNode* vendorNode = interactionProfilesNode->getChild(i);
+        const std::string& vendor = vendorNode->getNameString();
         for (int j = 0; j < vendorNode->nChildren(); ++j) {
-            SGPropertyNode *profileNode = vendorNode->getChild(j);
-            const std::string &type = profileNode->getNameString();
+            SGPropertyNode* profileNode = vendorNode->getChild(j);
+            const std::string& type = profileNode->getNameString();
             _profiles.push_back(new InteractionProfile(this, manager, vendor,
                                                        type, profileNode));
         }
@@ -1023,28 +1015,28 @@ void FGVRInput::init()
     manager->syncActionSetup();
 
     // Set up interaction modes from property tree
-    SGPropertyNode *modesNode = vrNode->getNode("modes", true);
-    SGPropertyNode *modeCopy = vrNode->getNode("mode-data", true);
+    SGPropertyNode* modesNode = vrNode->getNode("modes", true);
+    SGPropertyNode* modeCopy = vrNode->getNode("mode-data", true);
     for (int i = 0; i < modesNode->nChildren(); ++i) {
-        SGPropertyNode *typeNode = modesNode->getChild(i);
-        const std::string &type = typeNode->getNameString();
-        SGPropertyNode *typeCopy = modeCopy->getNode(type, true);
+        SGPropertyNode* typeNode = modesNode->getChild(i);
+        const std::string& type = typeNode->getNameString();
+        SGPropertyNode* typeCopy = modeCopy->getNode(type, true);
         for (int j = 0; j < typeNode->nChildren(); ++j) {
-            SGPropertyNode *modeNode = typeNode->getChild(j);
-            const std::string &modeName = modeNode->getNameString();
-            SGPropertyNode *modeCopy = typeCopy->getNode(modeName, true);
-            auto *mode = new Mode(this, manager, type, modeName, modeNode,
+            SGPropertyNode* modeNode = typeNode->getChild(j);
+            const std::string& modeName = modeNode->getNameString();
+            SGPropertyNode* modeCopy = typeCopy->getNode(modeName, true);
+            auto* mode = new Mode(this, manager, type, modeName, modeNode,
                                   modeCopy);
-            const std::string &modePath = mode->getPath();
+            const std::string& modePath = mode->getPath();
             assert(_modes.find(modePath) == _modes.end());
             _modes[modePath] = mode;
         }
     }
 
     // Set up subactions
-    for (SGPropertyNode *subactionNode: vrNode->getChildren("subaction")) {
+    for (SGPropertyNode* subactionNode : vrNode->getChildren("subaction")) {
         std::string subactionPath = subactionNode->getStringValue("path");
-        Subaction *subaction = getSubaction(manager, subactionPath);
+        Subaction* subaction = getSubaction(manager, subactionPath);
         subaction->setup(subactionNode);
 
         // Set default mode
@@ -1060,10 +1052,10 @@ void FGVRInput::postinit()
     SGPropertyNode_ptr js_nodes = fgGetNode("/input/vr");
 
     // Init ActionSet nasal modules and Action bindings
-    for (auto &actionSetPair: _actionSets)
+    for (auto& actionSetPair : _actionSets)
         actionSetPair.second->postinit();
     // Init interaction mode nasal modules and input bindings
-    for (auto &modePair: _modes)
+    for (auto& modePair : _modes)
         modePair.second->postinit();
 }
 
@@ -1080,25 +1072,25 @@ void FGVRInput::update(double dt)
 {
     // Only bother updating while a session is running (and once after to reset
     // the input values)
-    VRManager *manager = VRManager::instance();
+    VRManager* manager = VRManager::instance();
     bool running = manager->isRunning();
     if (!running && !_running)
         return;
     _running = running;
 
     // Find action values
-    for (auto &actionSetPair: _actionSets)
+    for (auto& actionSetPair : _actionSets)
         actionSetPair.second->update(dt);
     // Fire bindings for changes
-    for (auto &actionSetPair: _actionSets)
+    for (auto& actionSetPair : _actionSets)
         actionSetPair.second->fireBindings();
     // Handle subactions (and current interaction modes)
-    for (auto &subactionPair: _subactions)
+    for (auto& subactionPair : _subactions)
         subactionPair.second->update(dt);
 }
 
-FGVRInput::Mode *FGVRInput::getTranslatedMode(FGVRInput::Subaction *subaction,
-                                              const std::string &modePath)
+FGVRInput::Mode* FGVRInput::getTranslatedMode(FGVRInput::Subaction* subaction,
+                                              const std::string& modePath)
 {
     if (modePath.empty())
         return nullptr;
@@ -1108,16 +1100,17 @@ FGVRInput::Mode *FGVRInput::getTranslatedMode(FGVRInput::Subaction *subaction,
 
     // Find the mode object
     auto it = _modes.find(translatedModePath.empty()
-                          ? modePath : translatedModePath);
+                              ? modePath
+                              : translatedModePath);
     if (it != _modes.end())
         return (*it).second;
 
     return nullptr;
 }
 
-void FGVRInput::findModeSubaction(const SGPropertyNode *node,
-                                  FGVRInput::Mode **outMode,
-                                  FGVRInput::Subaction **outSubaction)
+void FGVRInput::findModeSubaction(const SGPropertyNode* node,
+                                  FGVRInput::Mode** outMode,
+                                  FGVRInput::Subaction** outSubaction)
 {
     std::string modePath;
     std::string subactionPath;
@@ -1126,7 +1119,7 @@ void FGVRInput::findModeSubaction(const SGPropertyNode *node,
 
     if (outMode || (outSubaction && subactionPath.empty())) {
         // Search upward for a parent with mode-path
-        const SGPropertyNode *parent;
+        const SGPropertyNode* parent;
         for (parent = node->getParent(); parent; parent = parent->getParent()) {
             modePath = parent->getStringValue("mode-path");
             if (!modePath.empty())
@@ -1151,12 +1144,12 @@ void FGVRInput::findModeSubaction(const SGPropertyNode *node,
     }
 }
 
-bool FGVRInput::handleModePushCommand(const SGPropertyNode *arg,
-                                      SGPropertyNode *root)
+bool FGVRInput::handleModePushCommand(const SGPropertyNode* arg,
+                                      SGPropertyNode* root)
 {
     // Find the subaction and optionally current mode
-    Mode *curMode = nullptr;
-    Subaction *subaction = nullptr;
+    Mode* curMode = nullptr;
+    Subaction* subaction = nullptr;
     findModeSubaction(arg, &curMode, &subaction);
     if (!subaction) {
         SG_LOG(SG_GENERAL, SG_ALERT,
@@ -1165,7 +1158,7 @@ bool FGVRInput::handleModePushCommand(const SGPropertyNode *arg,
     }
 
     // Find the destination mode
-    Mode *mode = getTranslatedMode(subaction, arg->getStringValue("mode"));
+    Mode* mode = getTranslatedMode(subaction, arg->getStringValue("mode"));
     if (!mode) {
         SG_LOG(SG_GENERAL, SG_ALERT,
                "do_vr_mode_push command: Mode not found");
@@ -1180,12 +1173,12 @@ bool FGVRInput::handleModePushCommand(const SGPropertyNode *arg,
     return true;
 }
 
-bool FGVRInput::handleModeToggleCommand(const SGPropertyNode *arg,
-                                        SGPropertyNode *root)
+bool FGVRInput::handleModeToggleCommand(const SGPropertyNode* arg,
+                                        SGPropertyNode* root)
 {
     // Find the subaction and optionally current mode
-    Mode *curMode = nullptr;
-    Subaction *subaction = nullptr;
+    Mode* curMode = nullptr;
+    Subaction* subaction = nullptr;
     findModeSubaction(arg, &curMode, &subaction);
     if (!subaction) {
         SG_LOG(SG_GENERAL, SG_ALERT,
@@ -1194,7 +1187,7 @@ bool FGVRInput::handleModeToggleCommand(const SGPropertyNode *arg,
     }
 
     // Find the destination mode
-    Mode *mode = getTranslatedMode(subaction,
+    Mode* mode = getTranslatedMode(subaction,
                                    arg->getStringValue("mode", nullptr));
     if (!mode) {
         SG_LOG(SG_GENERAL, SG_ALERT,
@@ -1212,14 +1205,14 @@ bool FGVRInput::handleModeToggleCommand(const SGPropertyNode *arg,
     return true;
 }
 
-FGVRInput::Subaction *FGVRInput::getSubaction(osgXR::Manager *manager,
-                                              const std::string &path)
+FGVRInput::Subaction* FGVRInput::getSubaction(osgXR::Manager* manager,
+                                              const std::string& path)
 {
     auto it = _subactions.find(path);
     if (it != _subactions.end())
         return (*it).second.get();
 
-    Subaction *subaction = new Subaction(manager, path);
+    Subaction* subaction = new Subaction(manager, path);
     _subactions[path] = subaction;
     return subaction;
 }

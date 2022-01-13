@@ -29,41 +29,38 @@
  */
 class FGVRPick : public FGVRInput::ModeProcess
 {
-    public:
+public:
+    /**
+     * Construct from a property node.
+     * @param input      VR input subsystem object.
+     * @param mode       Interaction mode object.
+     * @param subaction  Subaction the mode is tied to.
+     * @param node       Property node describing the process object.
+     * @param statusNode Property node for describing the process object status.
+     */
+    FGVRPick(FGVRInput* input, FGVRInput::Mode* mode,
+             FGVRInput::Subaction* subaction, SGPropertyNode* node,
+             SGPropertyNode* statusNode);
+    ~FGVRPick();
 
-        /**
-         * Construct from a property node.
-         * @param input      VR input subsystem object.
-         * @param mode       Interaction mode object.
-         * @param subaction  Subaction the mode is tied to.
-         * @param node       Property node describing the process object.
-         * @param statusNode Property node for describing the process object
-         *                   status.
-         */
-        FGVRPick(FGVRInput *input, FGVRInput::Mode *mode,
-                 FGVRInput::Subaction *subaction, SGPropertyNode *node,
-                 SGPropertyNode *statusNode);
-        ~FGVRPick();
+    // Implement ModeProcess virtual functions
+    void postinit(SGPropertyNode* node,
+                  const std::string& module) override;
+    void update(double dt) override;
+    void deactivate() override;
 
-        // Implement ModeProcess virtual functions
-        void postinit(SGPropertyNode *node,
-                      const std::string &module) override;
-        void update(double dt) override;
-        void deactivate() override;
+protected:
+    /// The pose input to aim the pick.
+    FGVRInput::ModeProcessInput _pose;
+    /// Boolean input to emulate mouse left click
+    FGVRInput::ModeProcessInput _mouseLeft;
+    /// Boolean input to emulate mouse middle click
+    FGVRInput::ModeProcessInput _mouseMiddle;
+    /// The reach of the pick
+    double _reach;
 
-    protected:
-
-        /// The pose input to aim the pick.
-        FGVRInput::ModeProcessInput _pose;
-        /// Boolean input to emulate mouse left click
-        FGVRInput::ModeProcessInput _mouseLeft;
-        /// Boolean input to emulate mouse middle click
-        FGVRInput::ModeProcessInput _mouseMiddle;
-        /// The reach of the pick
-        double _reach;
-
-        class Private;
-        std::unique_ptr<Private> _private;
+    class Private;
+    std::unique_ptr<Private> _private;
 };
 
 #endif

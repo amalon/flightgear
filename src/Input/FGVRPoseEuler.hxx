@@ -31,35 +31,33 @@
  */
 class FGVRPoseEuler : public FGVRInput::ModeProcess
 {
-    public:
+public:
+    /**
+     * Construct from a property node.
+     * @param mode       Interaction mode object.
+     * @param subaction  Subaction the mode is tied to.
+     * @param node       Property node describing the process object.
+     * @param statusNode Property node for describing the process object status.
+     */
+    FGVRPoseEuler(FGVRInput::Mode* mode, FGVRInput::Subaction* subaction,
+                  SGPropertyNode* node, SGPropertyNode* statusNode);
 
-        /**
-         * Construct from a property node.
-         * @param mode       Interaction mode object.
-         * @param subaction  Subaction the mode is tied to.
-         * @param node       Property node describing the process object.
-         * @param statusNode Property node for describing the process object status.
-         */
-        FGVRPoseEuler(FGVRInput::Mode *mode, FGVRInput::Subaction *subaction,
-                      SGPropertyNode *node, SGPropertyNode *statusNode);
+    // Implement ModeProcess virtual functions
+    void postinit(SGPropertyNode* node,
+                  const std::string& module) override;
+    void update(double dt) override;
 
-        // Implement ModeProcess virtual functions
-        void postinit(SGPropertyNode *node,
-                      const std::string &module) override;
-        void update(double dt) override;
-
-    protected:
-
-        /// The pose input.
-        FGVRInput::ModeProcessInput _pose;
-        /// The quaternion transformation to apply first.
-        SGQuatd _transform;
-        /// The property object for describing the pose euler angles.
-        SGPropObjDouble _statusPropEuler[3];
-        /// Bindings.
-        binding_list_t _bindings[KEYMOD_MAX];
-        /// The previous euler angle values.
-        double _lastValue[3];
+protected:
+    /// The pose input.
+    FGVRInput::ModeProcessInput _pose;
+    /// The quaternion transformation to apply first.
+    SGQuatd _transform;
+    /// The property object for describing the pose euler angles.
+    SGPropObjDouble _statusPropEuler[3];
+    /// Bindings.
+    binding_list_t _bindings[KEYMOD_MAX];
+    /// The previous euler angle values.
+    double _lastValue[3];
 };
 
 #endif

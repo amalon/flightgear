@@ -919,10 +919,10 @@ const CameraGroup::CameraList& CameraGroup::getCameras()
 }
 
 static bool
-computeSceneIntersection(const CameraGroup *cgroup,
+computeSceneIntersection(const CameraGroup* cgroup,
                          const osg::Vec3d& start,
                          const osg::Vec3d& end,
-                         osgUtil::LineSegmentIntersector::Intersections &intersections)
+                         osgUtil::LineSegmentIntersector::Intersections& intersections)
 {
     osg::ref_ptr<osgUtil::LineSegmentIntersector> picker =
         new osgUtil::LineSegmentIntersector(osgUtil::Intersector::MODEL,
@@ -930,7 +930,7 @@ computeSceneIntersection(const CameraGroup *cgroup,
     osgUtil::IntersectionVisitor iv(picker);
     iv.setTraversalMask(simgear::PICK_BIT);
 
-    const_cast<CameraGroup *>(cgroup)->getView()->getCamera()->accept(iv);
+    const_cast<CameraGroup*>(cgroup)->getView()->getCamera()->accept(iv);
     if (picker->containsIntersections()) {
         intersections = picker->getIntersections();
         return true;
@@ -940,25 +940,25 @@ computeSceneIntersection(const CameraGroup *cgroup,
 }
 
 static bool
-computeSceneIntersection(const CameraGroup *cgroup,
+computeSceneIntersection(const CameraGroup* cgroup,
                          const std::vector<osg::Vec3d>& lineStrip,
-                         osgUtil::LineSegmentIntersector::Intersections &intersections)
+                         osgUtil::LineSegmentIntersector::Intersections& intersections)
 {
     osg::ref_ptr<osgUtil::IntersectorGroup> group = new osgUtil::IntersectorGroup();
     for (unsigned int i = 1; i < lineStrip.size(); ++i)
         group->addIntersector(new osgUtil::LineSegmentIntersector(
-                                                osgUtil::Intersector::MODEL,
-                                                lineStrip[i-1], lineStrip[i]));
+            osgUtil::Intersector::MODEL,
+            lineStrip[i - 1], lineStrip[i]));
     osgUtil::IntersectionVisitor iv(group);
     iv.setTraversalMask(simgear::PICK_BIT);
 
-    const_cast<CameraGroup *>(cgroup)->getView()->getCamera()->accept(iv);
+    const_cast<CameraGroup*>(cgroup)->getView()->getCamera()->accept(iv);
     if (group->containsIntersections()) {
         // Append each segment's intersections to the list
         intersections.clear();
-        for (auto& intersector: group->getIntersectors())
+        for (auto& intersector : group->getIntersectors())
             if (intersector->containsIntersections()) {
-                auto *lineIntersector = static_cast<osgUtil::LineSegmentIntersector *>(intersector.get());;
+                auto* lineIntersector = static_cast<osgUtil::LineSegmentIntersector*>(intersector.get());
                 auto& someIntersections = lineIntersector->getIntersections();
                 intersections.insert(std::begin(someIntersections),
                                      std::end(someIntersections));
