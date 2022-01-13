@@ -1,0 +1,49 @@
+// -*-c++-*-
+// SPDX-License-Identifier: LGPL-2.1-only
+// Copyright (C) 2021 James Hogan <james@albanarts.com>
+
+#ifndef OSGXR_OpenXRDisplay
+#define OSGXR_OpenXRDisplay 1
+
+#include <osgXR/Export>
+#include <osgXR/Settings>
+
+#include <osg/Referenced>
+#include <osg/ref_ptr>
+#include <osgViewer/View>
+
+#include <cinttypes>
+#include <string>
+
+namespace osgXR {
+
+class XRState;
+
+/** a camera for each OpenXR view.*/
+class OSGXR_EXPORT OpenXRDisplay : public osgViewer::ViewConfig
+{
+    public:
+
+        OpenXRDisplay();
+        OpenXRDisplay(Settings *settings);
+
+        OpenXRDisplay(const OpenXRDisplay& rhs,
+                      const osg::CopyOp& copyop=osg::CopyOp::SHALLOW_COPY);
+        virtual ~OpenXRDisplay();
+
+        META_Object(osgXR, OpenXRDisplay);
+
+        void configure(osgViewer::View& view) const override;
+
+    protected:
+
+        osg::ref_ptr<Settings> _settings;
+
+        // Internal OpenXR state object
+        // FIXME this should probably belong elsewhere
+        mutable osg::ref_ptr<XRState> _state;
+};
+
+}
+
+#endif

@@ -656,7 +656,7 @@ FGAIAircraft * TrafficTests::flyAI(SGSharedPtr<FGAIAircraft> aiAircraft, std::st
     
     char fname [160];
     time_t t = time(0);   // get time now
-    sprintf (fname, "%ld.csv", t);
+    snprintf (fname, sizeof(fname), "%lld.csv", (long long) t);
     SGPath p = SGPath::desktop() / (testname + fname);
     sg_ofstream csvFile;
     csvFile.open(p);
@@ -697,7 +697,7 @@ FGAIAircraft * TrafficTests::flyAI(SGSharedPtr<FGAIAircraft> aiAircraft, std::st
         if (aiAircraft->GetFlightPlan()->getLeg() != lastLeg ) {
         // The current WP is really in our new leg
             if (sglog().get_log_priority() <= SG_DEBUG) {
-                sprintf(buffer, "AI Leg %d Callsign %s Iteration %d", lastLeg, aiAircraft->getCallSign().c_str(), iteration);
+                snprintf(buffer, sizeof(buffer), "AI Leg %d Callsign %s Iteration %d", lastLeg, aiAircraft->getCallSign().c_str(), iteration);
                 FGTestApi::writeGeodsToKML(buffer, geods);
             }
             if (aiAircraft->GetFlightPlan()->getLeg() < lastLeg) {
@@ -733,7 +733,7 @@ FGAIAircraft * TrafficTests::flyAI(SGSharedPtr<FGAIAircraft> aiAircraft, std::st
         FGTestApi::adjustSimulationWorldTime(++this->currentWorldTime);
     }
     lastLeg = aiAircraft->GetFlightPlan()->getLeg();
-    sprintf(buffer, "AI Leg %d Callsign %s Iteration %d", lastLeg, aiAircraft->getCallSign().c_str(), iteration);
+    snprintf(buffer, sizeof(buffer), "AI Leg %d Callsign %s Iteration %d", lastLeg, aiAircraft->getCallSign().c_str(), iteration);
     if (sglog().get_log_priority() <= SG_DEBUG) {
         FGTestApi::writeGeodsToKML(buffer, geods);
     }

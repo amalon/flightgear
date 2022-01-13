@@ -147,7 +147,13 @@ public:
     double _getCartPosY() const;
     double _getCartPosZ() const;
 
-    osg::PagedLOD* getSceneBranch() const;
+    osg::LOD* getSceneBranch() const;
+
+    /**
+     *
+     * @return true if at least one model (either low_res or high_res) is loaded
+     */
+    bool modelLoaded() const;
 
     void setScenarioPath(const std::string& scenarioPath);
 
@@ -271,7 +277,10 @@ private:
     int _refID;
     object_type _otype;
     bool _initialized = false;
-    osg::ref_ptr<osg::PagedLOD> _model;
+    osg::ref_ptr<osg::LOD> _model;
+    osg::ref_ptr<osg::PagedLOD> _low_res;
+    osg::ref_ptr<osg::PagedLOD> _high_res;
+    osg::ref_ptr<osg::Group> _group;
     osg::ref_ptr<osg::PagedLOD> _interior;
 
     osg::ref_ptr<FGAIModelData> _modeldata;

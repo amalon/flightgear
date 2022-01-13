@@ -215,9 +215,9 @@ void fgOSOpenWindow(bool stencil)
     if (0) {}
     else if (composite_viewer) {
         /* We are using CompositeViewer. */
-        SG_LOG(SG_VIEW, SG_ALERT, "Using CompositeViewer");
+        SG_LOG(SG_VIEW, SG_DEBUG, "Using CompositeViewer");
         osgViewer::ViewerBase* viewer = globals->get_renderer()->getViewerBase();
-        SG_LOG(SG_VIEW, SG_ALERT, "Creating osgViewer::View");
+        SG_LOG(SG_VIEW, SG_DEBUG, "Creating osgViewer::View");
         osgViewer::View* view = new osgViewer::View;
         view->setFrameStamp(composite_viewer->getFrameStamp());
         globals->get_renderer()->setView(view);

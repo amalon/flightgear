@@ -1153,7 +1153,7 @@ FGReplayInternal::update( double dt )
     
     if (m_continuous->m_out.is_open())
     {
-        continuousWriteFrame(*m_continuous, r, m_continuous->m_out, m_continuous->m_out_config);
+        continuousWriteFrame(*m_continuous, r, m_continuous->m_out, m_continuous->m_out_config, FGTapeType_CONTINUOUS);
     }
     
     if (replay_state == 0)
@@ -1202,7 +1202,7 @@ FGReplayInternal::update( double dt )
                         FGTapeType_RECOVERY
                         );
                 if (!config) ok = false;
-                if (ok) ok = continuousWriteFrame(*m_continuous, r, out, config);
+                if (ok) ok = continuousWriteFrame(*m_continuous, r, out, config, FGTapeType_RECOVERY);
                 out.close();
                 if (ok)
                 {

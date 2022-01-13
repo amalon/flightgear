@@ -58,7 +58,8 @@
 
 #include <Scenery/scenery.hxx>
 
-#include "GroundController.hxx"
+#include <ATC/ATCController.hxx>
+#include <ATC/GroundController.hxx>
 
 using std::string;
 
@@ -926,8 +927,8 @@ void FGGroundController::update(double dt)
         updateActiveTraffic(i, priority, now);
     }
 
-    eraseDeadTraffic(startupTraffic);
-    eraseDeadTraffic(activeTraffic);
+    FGATCController::eraseDeadTraffic(startupTraffic);
+    FGATCController::eraseDeadTraffic(activeTraffic);
 }
 
 void FGGroundController::updateStartupTraffic(TrafficVectorIterator i,

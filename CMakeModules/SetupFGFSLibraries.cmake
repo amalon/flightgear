@@ -24,7 +24,7 @@ function(setup_fgfs_libraries target)
     endif()
 
     if(ENABLE_OSGXR)
-        target_link_libraries(${target} osgXR::osgXR)
+        target_link_libraries(${target} osgXR)
     endif()
 
     target_link_libraries(${target} fgsqlite3 fgvoicesynth fgembeddedresources)
@@ -117,6 +117,10 @@ function (setup_fgfs_library_includes target)
         _apply_target_includes(${target} JSBSim)
     endif()    
     
+    if(ENABLE_OSGXR)
+        _apply_target_includes(${target} osgXR)
+    endif()
+
     _apply_target_includes(${target} fgsqlite3)
     _apply_target_includes(${target} fgvoicesynth)
     _apply_target_includes(${target} fgembeddedresources)

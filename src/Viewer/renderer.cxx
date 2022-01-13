@@ -1099,7 +1099,7 @@ FGRenderer::setView(osgViewer::View* view)
     assert(composite_viewer_enabled != -1);
     if (composite_viewer) {
         if (composite_viewer->getNumViews() == 0) {
-            SG_LOG(SG_VIEW, SG_ALERT, "adding view to composite_viewer.");
+            SG_LOG(SG_VIEW, SG_DEBUG, "adding view to composite_viewer.");
             composite_viewer->stopThreading();
             composite_viewer->addView(view);
             composite_viewer->startThreading();

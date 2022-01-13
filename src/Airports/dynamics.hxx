@@ -28,7 +28,10 @@
 #include <simgear/timing/timestamp.hxx>
 
 #include <ATC/trafficcontrol.hxx>
+#include <ATC/ApproachController.hxx>
+#include <ATC/TowerController.hxx>
 #include <ATC/GroundController.hxx>
+#include <ATC/StartupController.hxx>
 
 #include "airports_fwd.hxx"
 #include "parking.hxx"

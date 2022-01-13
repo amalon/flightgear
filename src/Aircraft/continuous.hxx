@@ -63,7 +63,8 @@ bool continuousWriteFrame(
         Continuous& continuous,
         FGReplayData* r,
         std::ostream& out,
-        SGPropertyNode_ptr config
+        SGPropertyNode_ptr config,
+        FGTapeType tape_type
         );
 
 /* Opens continuous recording file and writes header.

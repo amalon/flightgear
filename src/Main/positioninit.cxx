@@ -402,7 +402,7 @@ static InitPosResult checkCarrierSceneryLoaded(const SGSharedPtr<FGAICarrier> ca
     }
 
     // and then wait for the load to actually be synced to the main thread
-    if (carrierRef->getSceneBranch()->getNumChildren() < 1) {
+    if (!carrierRef->modelLoaded()) {
       return ContinueWaiting;
     }
 

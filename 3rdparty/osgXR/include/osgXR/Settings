@@ -1,0 +1,345 @@
+// -*-c++-*-
+// SPDX-License-Identifier: LGPL-2.1-only
+// Copyright (C) 2021 James Hogan <james@albanarts.com>
+
+#ifndef OSGXR_Settings
+#define OSGXR_Settings 1
+
+#include <osg/Referenced>
+
+#include <osgXR/Export>
+#include <osgXR/MirrorSettings>
+
+#include <string>
+
+namespace osgXR {
+
+/// Encapsulates osgXR / OpenXR settings data.
+class OSGXR_EXPORT Settings : public osg::Referenced
+{
+    public:
+
+        /*
+         * Instance management.
+         */
+
+        Settings();
+        virtual ~Settings();
+
+        /// Get the default/global instance of Settings.
+        static Settings *instance();
+
+        /*
+         * OpenXR application information.
+         */
+
+        /**
+         * Set the application's name and version to expose to OpenXR.
+         * These will be used to create an OpenXR instance.
+         * @param appName    Name of the application.
+         * @param appVersion 32-bit version number of the application.
+         */
+        void setApp(const std::string &appName, uint32_t appVersion)
+        {
+            _appName = appName;
+            _appVersion = appVersion;
+        }
+
+        /**
+         * Set the application's name to expose to OpenXR.
+         * This will be used to create an OpenXR instance.
+         * @param appName    Name of the application.
+         */
+        void setAppName(const std::string &appName)
+        {
+            _appName = appName;
+        }
+        /// Get the application's name to expose to OpenXR.
+        const std::string &getAppName() const
+        {
+            return _appName;
+        }
+
+        /**
+         * Set the application's version to expose to OpenXR.
+         * This will be used to create an OpenXR instance.
+         * @param appVersion 32-bit version number of the application.
+         */
+        void setAppVersion(uint32_t appVersion)
+        {
+            _appVersion = appVersion;
+        }
+        /// Get the application's 32-bit version number to expose to OpenXR.
+        uint32_t getAppVersion() const
+        {
+            return _appVersion;
+        }
+
+
+        /*
+         * osgXR configuration settings.
+         */
+
+        /**
+         * Set whether to try enabling OpenXR's validation layer.
+         * This controls whether the OpenXR validation API layer (i.e.
+         * XR_APILAYER_LUNARG_core_validation) will be enabled when creating an
+         * OpenXR instance.
+         * By default this is disabled.
+         * @param validationLayer Whether to try enabling the validation layer.
+         */
+        void setValidationLayer(bool validationLayer)
+        {
+            _validationLayer = validationLayer;
+        }
+        /// Get whether to try enabling OpenXR's validation layer.
+        bool getValidationLayer() const
+        {
+            return _validationLayer;
+        }
+
+        /**
+         * Set whether to enable submission of depth information to OpenXR.
+         * This controls whether the OpenXR instance depth information extension
+         * (i.e XR_KHR_composition_layer_depth) will be used to submit depth
+         * information to OpenXR to allow improved reprojection.
+         * This is currently disabled by default.
+         * @param depthInfo Whether to enable submission of depth information.
+         */
+        void setDepthInfo(bool depthInfo)
+        {
+            _depthInfo = depthInfo;
+        }
+        /// Get whether to enable submission of depth information to OpenXR.
+        bool getDepthInfo() const
+        {
+            return _depthInfo;
+        }
+
+        /**
+         * Set whether to create visibility masks.
+         * This controls whether the OpenXR instance visibility mask extension
+         * (i.e. XR_KHR_visibility_mask) will be used to create and update
+         * visibility masks for each VR view in order to mask hidden fragments.
+         * This is enabled by default.
+         * @param visibilityMask Whether to create visibility masks.
+         */
+        void setVisibilityMask(bool visibilityMask)
+        {
+            _visibilityMask = visibilityMask;
+        }
+        /// Get whether to create visibility masks.
+        bool getVisibilityMask() const
+        {
+            return _visibilityMask;
+        }
+
+        /// OpenXR system orm factors.
+        typedef enum FormFactor
+        {
+            /// A display mounted to the user's head.
+            HEAD_MOUNTED_DISPLAY,
+            /// A display held in the user's hands.
+            HANDHELD_DISPLAY,
+        } FormFactor;
+        /**
+         * Set which OpenXR form factor to use.
+         * This controls which OpenXR form factor to try to use. The default is
+         * HEAD_MOUNTED_DISPLAY.
+         * @param formFactor Form factor to use.
+         */
+        void setFormFactor(FormFactor formFactor)
+        {
+            _formFactor = formFactor;
+        }
+        /// Get which OpenXR form factor to use.
+        FormFactor getFormFactor() const
+        {
+            return _formFactor;
+        }
+
+        /// Modes for blending layers onto the user's view of the real world.
+        typedef enum BlendMode
+        {
+            // Matches XrEnvironmentBlendMode
+            /// Display layers with no view of physical world behind.
+            OPAQUE = 1,
+            /// Additively blend layers with view of physical world behind.
+            ADDITIVE = 2,
+            /// Alpha blend layers with view of physical world behind.
+            ALPHA_BLEND = 3,
+        } BlendMode;
+        /**
+         * Specify a preferred environment blend mode.
+         * The chosen environment blend mode is permitted for use, and will be
+         * chosen in preference to any other supported environment blend modes
+         * specified by allowEnvBlendMode() if supported by OpenXR.
+         * @param mode Environment blend mode to prefer.
+         */
+        void preferEnvBlendMode(BlendMode mode)
+        {
+            uint32_t mask = (1u << (unsigned int)mode);
+            _preferredEnvBlendModeMask |= mask;
+            _allowedEnvBlendModeMask |= mask;
+        }
+        /**
+         * Specify a permitted environment blend mode.
+         * The chosen environment blend mode is permitted for use, and may be
+         * chosen if supported by OpenXR when none of the preferred environment
+         * blend modes specified by preferEnvBlenMode() are supported by OpenXR.
+         * @param mode Environment blend mode to prefer.
+         */
+        void allowEnvBlendMode(BlendMode mode)
+        {
+            uint32_t mask = (1u << (unsigned int)mode);
+            _allowedEnvBlendModeMask |= mask;
+        }
+        /// Get the bitmask of preferred environment blend modes.
+        uint32_t getPreferredEnvBlendModeMask() const
+        {
+            return _preferredEnvBlendModeMask;
+        }
+        /// Set the bitmask of preferred environment blend modes.
+        void setPreferredEnvBlendModeMask(uint32_t preferredEnvBlendModeMask)
+        {
+            _preferredEnvBlendModeMask = preferredEnvBlendModeMask;
+        }
+        /// Get the bitmask of permitted environment blend modes.
+        uint32_t getAllowedEnvBlendModeMask() const
+        {
+            return _allowedEnvBlendModeMask;
+        }
+        /// Set the bitmask of allowed environment blend modes.
+        void setAllowedEnvBlendModeMask(uint32_t allowedEnvBlendModeMask)
+        {
+            _allowedEnvBlendModeMask = allowedEnvBlendModeMask;
+        }
+
+        /// Techniques for rendering multiple views.
+        typedef enum VRMode
+        {
+            /// Choose automatically.
+            VRMODE_AUTOMATIC,
+            /** Create a slave camera for each view.
+             * Either separate swapchains, or single with multiple viewports.
+             */
+            VRMODE_SLAVE_CAMERAS,
+            /** Use the OSG SceneView stereo functionality.
+             * No extra slave cameras.
+             * Only supports SWAPCHAIN_SINGLE with stereo.
+             */
+            VRMODE_SCENE_VIEW,
+        } VRMode;
+        /// Set the rendering technique to use.
+        void setVRMode(VRMode mode)
+        {
+            _vrMode = mode;
+        }
+        /// Get the rendering technique to use.
+        VRMode getVRMode() const
+        {
+            return _vrMode;
+        }
+
+        /// Techniques for managing swapchains.
+        typedef enum SwapchainMode
+        {
+            /// Choose automatically.
+            SWAPCHAIN_AUTOMATIC,
+            /// Create a 2D swapchain per view.
+            SWAPCHAIN_MULTIPLE,
+            /** Create a single 2D swapchain with a viewport per view.
+             * Stack them horizontally.
+             */
+            SWAPCHAIN_SINGLE,
+        } SwapchainMode;
+        /// Set the swapchain management technique to use.
+        void setSwapchainMode(SwapchainMode mode)
+        {
+            _swapchainMode = mode;
+        }
+        /// Get the swapchain management technique to use.
+        SwapchainMode getSwapchainMode() const
+        {
+            return _swapchainMode;
+        }
+
+        /// Get mirror settings.
+        MirrorSettings &getMirrorSettings()
+        {
+            return _mirrorSettings;
+        }
+        /// Get mirror settings.
+        const MirrorSettings &getMirrorSettings() const
+        {
+            return _mirrorSettings;
+        }
+
+        /**
+         * Set the number of virtual world units to fit per real world meter.
+         * This controls the size of the user relative to the virtual world, by
+         * scaling down the size of the world.
+         * @param unitsPerMeter The number of units per real world meter.
+         */
+        void setUnitsPerMeter(float unitsPerMeter)
+        {
+            _unitsPerMeter = unitsPerMeter;
+        }
+        /// Get the number of virtual world units to fit per real world meter.
+        float getUnitsPerMeter() const
+        {
+            return _unitsPerMeter;
+        }
+
+        // Internal APIs
+
+        typedef enum {
+            DIFF_NONE             = 0,
+            DIFF_APP_INFO         = (1u << 0),
+            DIFF_VALIDATION_LAYER = (1u << 1),
+            DIFF_DEPTH_INFO       = (1u << 2),
+            DIFF_VISIBILITY_MASK  = (1u << 3),
+            DIFF_FORM_FACTOR      = (1u << 4),
+            DIFF_BLEND_MODE       = (1u << 5),
+            DIFF_VR_MODE          = (1u << 6),
+            DIFF_SWAPCHAIN_MODE   = (1u << 7),
+            DIFF_MIRROR           = (1u << 8),
+            DIFF_SCALE            = (1u << 9),
+        } _ChangeMask;
+
+        unsigned int _diff(const Settings &other) const;
+
+    private:
+
+        /*
+         * Internal data.
+         */
+
+        // For XrInstance creation
+        std::string _appName;
+        uint32_t _appVersion;
+        bool _validationLayer;
+        bool _depthInfo;
+        bool _visibilityMask;
+
+        // To get XrSystem
+        FormFactor _formFactor;
+
+        // For choosing environment blend mode
+        uint32_t _preferredEnvBlendModeMask;
+        uint32_t _allowedEnvBlendModeMask;
+
+        // VR/swapchain modes to use
+        VRMode _vrMode;
+        SwapchainMode _swapchainMode;
+
+        // Mirror settings
+        MirrorSettings _mirrorSettings;
+
+        // How big the world
+        float _unitsPerMeter;
+};
+
+}
+
+#endif

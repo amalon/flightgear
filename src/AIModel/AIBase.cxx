@@ -237,6 +237,9 @@ FGAIBase::removeModel()
         aip.clear();
         _modeldata = nullptr;
         _model = nullptr;
+        _interior = nullptr;
+        _high_res = nullptr;
+        _low_res = nullptr;
 
         // pass it on to the pager, to be be deleted in the pager thread
         pSceneryManager->getPager()->queueDeleteRequest(temp);
@@ -378,6 +381,7 @@ void FGAIBase::updateInterior()
 
     if (!_modeldata->getInteriorLoaded()) { // interior is not yet load
         _interior = SGModelLib::loadPagedModel(_modeldata->getInteriorPath(), props, _modeldata);
+        _group->addChild(_interior);
         if (_interior.valid()) {
             bool pixel_mode = !fgGetBool("/sim/rendering/static-lod/aimp-range-mode-distance", false);
             if (pixel_mode) {
@@ -388,7 +392,6 @@ void FGAIBase::updateInterior()
                 _interior->setRangeMode(osg::LOD::DISTANCE_FROM_EYE_POINT);
                 _interior->setRange(0, 0.0, _maxRangeInterior);
             }
-            aip.add(_interior.get());
             _modeldata->setInteriorLoaded(true);
             SG_LOG(SG_AI, SG_INFO, "AIBase: Loaded interior model " << _interior->getName());
         }
@@ -416,23 +419,27 @@ void FGAIBase::updateLOD()
         {
             // High detail model (only)
             // - disables the low detail detail model by setting its visibility from 0 to 0
-            if (_model->getNumFileNames() == 2) {
+            if (_high_res.valid()) {
                 _model->setRange(modelHighDetailIndex, 0.0, FLT_MAX); // all ranges.
                 _model->setRange(modelLowDetailIndex, 0.0, 0.0); // turn it off
             }
             else {
-                _model->setRange(0, 0.0, FLT_MAX); // only one model.
+                // only having low-res model
+                _model->setRange(modelLowDetailIndex, 0.0, FLT_MAX); // only having low-res model.
+                _model->setRange(modelHighDetailIndex, 0.0, 0.0); // only having low-res model.
             }
         }
         else if ((int)maxRangeBare == (int)maxRangeDetail)
         {
             // low detail model  (only)
-            if (_model->getNumFileNames() == 2) {
+            if (_low_res.valid()) {
                 _model->setRange(modelHighDetailIndex, 0, 0); // turn it off
                 _model->setRange(modelLowDetailIndex, 0, FLT_MAX);
             }
             else {
-                _model->setRange(0, 0, FLT_MAX);
+                // Only having high_res model
+                _model->setRange(modelHighDetailIndex, 0, FLT_MAX);
+                _model->setRange(modelLowDetailIndex, 0, 0.0);
             }
         }
         else
@@ -459,7 +466,7 @@ void FGAIBase::updateLOD()
                   );
                 }
 
-                if (_model->getNumFileNames() == 2) {
+                if (_low_res.valid() && _high_res.valid()) {
                     /*if (_model->getRadius() < 0)
                     {
                         osg::BoundingSphere bs = _model->computeBound();
@@ -470,9 +477,14 @@ void FGAIBase::updateLOD()
                     }*/
                   _model->setRange(modelHighDetailIndex , maxRangeDetail, FLT_MAX); // most detailed
                   _model->setRange(modelLowDetailIndex , maxRangeBare, maxRangeDetail); // least detailed
-                } else {
-                  // we have only one model it obviously will have to be displayed from the smallest value
-                  _model->setRange(0, min(maxRangeBare, maxRangeDetail), FLT_MAX );
+                } else if (_low_res.valid() && !_high_res.valid()) {
+                  // we have only low_res_model model it obviously will have to be displayed from the smallest value
+                  _model->setRange(modelLowDetailIndex, min(maxRangeBare, maxRangeDetail), FLT_MAX );
+                  _model->setRange(modelHighDetailIndex, 0,0);
+                } else if (!_low_res.valid() && _high_res.valid()) {
+                    // we have only high_res model it obviously will have to be displayed from the smallest value
+                    _model->setRange(modelHighDetailIndex, min(maxRangeBare, maxRangeDetail), FLT_MAX );
+                    _model->setRange(modelLowDetailIndex, 0,0);
                 }
             } else {
                 /* In non-pixel range mode we're dealing with straight distance.
@@ -491,11 +503,15 @@ void FGAIBase::updateLOD()
                 }
 
 
-                if (_model->getNumFileNames() == 2) {
+                if (_low_res.valid() && _high_res.valid()) {
                   _model->setRange(modelHighDetailIndex , 0, maxRangeDetail); // most detailed
                   _model->setRange(modelLowDetailIndex , maxRangeDetail, maxRangeDetail+maxRangeBare); // least detailed
-                } else {
-                  _model->setRange(0, 0, maxRangeBare + maxRangeDetail); // only one model, so display from 0 to the highest value in meters
+                } else if (_low_res.valid() && !_high_res.valid()) {
+                  _model->setRange(modelLowDetailIndex, 0, maxRangeBare + maxRangeDetail); // only low_res, so display from 0 to the highest value in meters
+                  _model->setRange(modelHighDetailIndex, 0, 0);
+                } else if (!_low_res.valid() && _high_res.valid()) {
+                    _model->setRange(modelHighDetailIndex, 0, maxRangeBare + maxRangeDetail); // only high_res, so display from 0 to the highest value in meters
+                    _model->setRange(modelLowDetailIndex, 0, 0);
                 }
             }
         }
@@ -645,8 +661,44 @@ bool FGAIBase::init(ModelSearchOrder searchOrder)
         _modeldata->addErrorContext("multiplayer", getCallSign());
     }
 
+    // Load models
+    _model = new osg::LOD();
     vector<string> model_list = resolveModelPath(searchOrder);
-    _model= SGModelLib::loadPagedModel(model_list, props, _modeldata);
+    if(model_list.size() == 1 && _modeldata && _modeldata->hasInteriorPath()) {
+        // Only one model and interior available (expecting this to be a high_res model)
+        _low_res = new osg::PagedLOD(); // Dummy node to keep LOD node happy
+        _model->addChild(_low_res);
+        _high_res = SGModelLib::loadPagedModel(model_list[0], props, _modeldata);
+        _group = osg::ref_ptr<osg::Group>(new osg::Group());
+        _group->addChild(_high_res);
+        _model->addChild(_group);
+    } else if (model_list.size() == 1) {
+        // low_res model only (as we do not have any interior)
+        _low_res = SGModelLib::loadPagedModel(model_list[0], props, _modeldata);
+        _model->addChild(_low_res);
+        _group = osg::ref_ptr<osg::Group>(new osg::Group()); // Dummy node to keep LOD node happy
+        _model->addChild(_group);
+    } else {
+        // high and low-res model
+        assert(model_list.size() == 2);
+        _low_res = SGModelLib::loadPagedModel(model_list[0], props, _modeldata);
+        _model->addChild(_low_res);
+        _high_res = SGModelLib::loadPagedModel(model_list[1], props, _modeldata);
+        _group = osg::ref_ptr<osg::Group>(new osg::Group());
+        _group->addChild(_high_res);
+        _model->addChild(_group);
+    }
+
+    // Set PagedLODs to MAX Range. The visibility is controlled with the top-level LOD node
+    if(_high_res.valid()) {
+        _high_res->setRangeMode(osg::LOD::DISTANCE_FROM_EYE_POINT);
+        _high_res->setRange(0, 0, FLT_MAX);
+    }
+    if(_low_res.valid()) {
+        _low_res->setRangeMode(osg::LOD::DISTANCE_FROM_EYE_POINT);
+        _low_res->setRange(0, 0, FLT_MAX);
+    }
+
     _model->setName("AI-model range animation node");
     _model->setRadius(getDefaultModelRadius());
 
@@ -1198,9 +1250,18 @@ bool FGAIBase::isValid() const
 	return !fp || fp->isValidPlan();
 }
 
-osg::PagedLOD* FGAIBase::getSceneBranch() const
+osg::LOD* FGAIBase::getSceneBranch() const
 {
     return _model;
+}
+
+bool FGAIBase::modelLoaded() const
+{
+    if(_low_res.valid())
+        return _low_res->getNumChildren() >= 1;
+    else if (_high_res.valid())
+        return _high_res->getNumChildren() >= 1;
+    return false;
 }
 
 SGGeod FGAIBase::getGeodPos() const

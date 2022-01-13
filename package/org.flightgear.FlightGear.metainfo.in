@@ -42,7 +42,7 @@ SentUpstream: 2014-09-17
 	<url type="homepage">https://www.flightgear.org/</url>
 	<url type="bugtracker">https://sourceforge.net/p/flightgear/codetickets/</url>
 	<url type="donation">https://store.flightgear.org/</url>
-	<url type="help">http://flightgear.sourceforge.net/getstart-en/getstart-en.html</url>
+	<url type="help">http://flightgear.sourceforge.net/manual/next/en/getstart-en.html</url>
 	<url type="translate">http://wiki.flightgear.org/Howto:Translate_FlightGear</url>
 	<releases>
 		<release version="@FLIGHTGEAR_VERSION@" date="@FG_CMAKE_TIMESTAMP@" />

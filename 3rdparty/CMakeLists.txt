@@ -29,3 +29,7 @@ endif()
 if (NOT SYSTEM_CPPUNIT)
     add_subdirectory(cppunit)
 endif()
+
+if (ENABLE_OSGXR AND NOT ENABLE_SYSTEM_OSGXR)
+    add_subdirectory(osgXR)
+endif()

@@ -480,7 +480,13 @@ static void writeFrame2(FGReplayData* r, std::ostream& out, SGPropertyNode_ptr c
     
 }
 
-bool continuousWriteFrame(Continuous& continuous, FGReplayData* r, std::ostream& out, SGPropertyNode_ptr config)
+bool continuousWriteFrame(
+        Continuous& continuous,
+        FGReplayData* r,
+        std::ostream& out,
+        SGPropertyNode_ptr config,
+        FGTapeType tape_type
+        )
 {
     SG_LOG(SG_SYSTEMS, SG_BULK, "writing frame."
             << " out.tellp()=" << out.tellp()
@@ -526,7 +532,7 @@ bool continuousWriteFrame(Continuous& continuous, FGReplayData* r, std::ostream&
     
     writeRaw(out, r->sim_time);
     
-    if (continuous.m_out_compression)
+    if (tape_type == FGTapeType_CONTINUOUS && continuous.m_out_compression)
     {
         uint8_t flags = 0;
         if (has_signals)            flags |= 1;
@@ -844,6 +850,7 @@ bool replayContinuous(FGReplayInternal& self, double time)
             {
                 if (!self.m_replay_error->getBoolValue())
                 {
+                    SG_LOG(SG_SYSTEMS, SG_ALERT, "Replay failed: cannot read fgtape data");
                     popupTip("Replay failed: cannot read fgtape data", 10);
                     self.m_replay_error->setBoolValue(true);
                 }
@@ -872,6 +879,7 @@ bool replayContinuous(FGReplayInternal& self, double time)
     {
         if (!self.m_replay_error->getBoolValue())
         {
+            SG_LOG(SG_SYSTEMS, SG_ALERT, "Replay failed: cannot read fgtape data");
             popupTip("Replay failed: cannot read fgtape data", 10);
             self.m_replay_error->setBoolValue(true);
         }
