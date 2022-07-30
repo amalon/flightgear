@@ -34,6 +34,7 @@
 #include <cmath>
 
 #include "FGVRButton.hxx"
+#include "FGVRControllerModel.hxx"
 #include "FGVRPick.hxx"
 #include "FGVRPoseEuler.hxx"
 
@@ -736,6 +737,9 @@ void FGVRInput::Mode::SubactionInfo::readProcesses(FGVRInput* input,
         if (processType == "button") {
             process = new FGVRButton(mode, _subaction, processNode,
                                      processStatusNode);
+        } else if (processType == "controller_model") {
+            process = new FGVRControllerModel(input, mode, _subaction, processNode,
+                                              processStatusNode);
         } else if (processType == "pick") {
             process = new FGVRPick(input, mode, _subaction, processNode,
                                    processStatusNode);

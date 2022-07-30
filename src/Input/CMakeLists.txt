@@ -84,6 +84,7 @@ endif()
 if (ENABLE_OSGXR)
 	list(APPEND SOURCES
 		FGVRButton.cxx
+		FGVRControllerModel.cxx
 		FGVRInput.cxx
 		FGVRPick.cxx
 		FGVRPoseEuler.cxx
