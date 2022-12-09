@@ -990,6 +990,20 @@ void FGVRInput::init()
 
     VRManager* manager = VRManager::instance();
 
+    _handTrackingLeft = std::make_shared<osgXR::HandPoseTracked>(manager, osgXR::HandPose::HAND_LEFT);
+    _handTrackingRight = std::make_shared<osgXR::HandPoseTracked>(manager, osgXR::HandPose::HAND_RIGHT);
+    _handLeft = new osgXR::Hand(_handTrackingLeft);
+    _handRight = new osgXR::Hand(_handTrackingRight);
+    _localSpace->addChild(_handLeft);
+    _localSpace->addChild(_handRight);
+    /*
+     * Hand collision detection needs
+     * - Do the hand joint motions cause intersection with any objects?
+     *   - Back track the whole motion to that point?
+     *   - Lock parent joints and allow other joints to continue
+     * - How far can
+     */
+
     // Set up local space updating
     osg::Group* sceneGroup = globals->get_scenery()->get_scene_graph();
     sceneGroup->addChild(_localSpaceUpdater);
@@ -1091,6 +1105,9 @@ void FGVRInput::update(double dt)
     // Handle subactions (and current interaction modes)
     for (auto& subactionPair : _subactions)
         subactionPair.second->update(dt);
+
+    _handTrackingLeft->advance(dt);
+    _handTrackingRight->advance(dt);
 }
 
 FGVRInput::Mode* FGVRInput::getTranslatedMode(FGVRInput::Subaction* subaction,

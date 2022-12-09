@@ -28,6 +28,8 @@
 
 #include <osgXR/Action>
 #include <osgXR/ActionSet>
+#include <osgXR/Hand>
+#include <osgXR/HandPoseTracked>
 #include <osgXR/InteractionProfile>
 #include <osgXR/Subaction>
 
@@ -985,6 +987,12 @@ private:
     osg::ref_ptr<osg::Group> _localSpaceUpdater;
     /// Local space scene graph node.
     osg::ref_ptr<osg::MatrixTransform> _localSpace;
+
+    // Experimental
+    std::shared_ptr<osgXR::HandPoseTracked> _handTrackingLeft;
+    std::shared_ptr<osgXR::HandPoseTracked> _handTrackingRight;
+    osg::ref_ptr<osgXR::Hand> _handLeft;
+    osg::ref_ptr<osgXR::Hand> _handRight;
 };
 
 #endif
