@@ -32,6 +32,7 @@
 #include "CameraGroup.hxx"
 
 #include <map>
+#include <memory>
 
 namespace flightgear
 {

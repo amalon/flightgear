@@ -45,6 +45,7 @@
 #include <Viewer/FGEventHandler.hxx>
 #include <GUI/MouseCursor.hxx>
 #include <GUI/MouseCursor3d.hxx>
+#include <Scenery/scenery.hxx>
 
 using std::ios_base;
 
