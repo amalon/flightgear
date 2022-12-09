@@ -85,7 +85,9 @@ const Swapchain::ImageTextures &Swapchain::getImageTextures() const
     return _imageTextures;
 }
 
-osg::ref_ptr<osg::Texture2D> Swapchain::getImageOsgTexture(unsigned int index) const
+#include <iostream>
+osg::ref_ptr<osg::Texture2D> Swapchain::getImageOsgTexture(unsigned int index,
+                                                           const osg::State *state) const
 {
     if (_imageOsgTextures.empty())
     {
@@ -103,11 +105,17 @@ osg::ref_ptr<osg::Texture2D> Swapchain::getImageOsgTexture(unsigned int index) c
         texture->setInternalFormat(getFormat());
         unsigned int contextID = _session->getWindow()->getState()->getContextID();
         texture->setTextureObject(contextID, new osg::Texture::TextureObject(texture, _imageTextures[index], GL_TEXTURE_2D));
+        std::cout << this << " index " << index << " tex " << contextID << " first" << std::endl;
 
         _imageOsgTextures[index] = texture;
     }
-
-    return _imageOsgTextures[index];
+    osg::Texture2D *texture = _imageOsgTextures[index];
+    unsigned int contextID = state->getContextID();
+    if (!texture->getTextureObject(contextID)) {
+        std::cout << this << " index " << index << " tex " << contextID << " set" << std::endl;
+        texture->setTextureObject(contextID, new osg::Texture::TextureObject(texture, _imageTextures[index], GL_TEXTURE_2D));
+    }
+    return texture;
 }
 
 int Swapchain::acquireImage() const

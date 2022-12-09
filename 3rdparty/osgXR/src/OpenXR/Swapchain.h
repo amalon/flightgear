@@ -82,7 +82,8 @@ class Swapchain : public osg::Referenced
         // GL context must not be bound in another thread
         const ImageTextures &getImageTextures() const;
 
-        osg::ref_ptr<osg::Texture2D> getImageOsgTexture(unsigned int index) const;
+        osg::ref_ptr<osg::Texture2D> getImageOsgTexture(unsigned int index,
+                                                        const osg::State *state) const;
 
         // Operations
 

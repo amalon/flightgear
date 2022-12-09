@@ -153,6 +153,14 @@ void XRState::XRSwapchain::preDrawCallback(osg::RenderInfo &renderInfo)
     if (!opt_fbo.has_value())
         return;
 
+    if (_drawPassesDone >= _numDrawPasses)
+    {
+        // We can't draw into an image we've already released
+        OSG_WARN << "XRSwapchain::preDrawCallback(): Attempt to draw to swapchain image more than " << _numDrawPasses << " time(s)" << std::endl;
+        abort();
+        return;
+    }
+
     const auto &fbo = opt_fbo.value();
 
     // Bind the framebuffer
@@ -222,12 +230,14 @@ void XRState::XRSwapchain::endFrame()
     }
 }
 
-osg::ref_ptr<osg::Texture2D> XRState::XRSwapchain::getOsgTexture(const osg::FrameStamp *stamp)
+//osg::ref_ptr<osg::Texture2D> XRState::XRSwapchain::getOsgTexture(const osg::FrameStamp *stamp)
+osg::ref_ptr<osg::Texture2D> XRState::XRSwapchain::getOsgTexture(const osg::State *state)
 {
+    const osg::FrameStamp *stamp = state->getFrameStamp();
     int index = _imageFramebuffers.findStamp(stamp);
     if (index < 0)
         return nullptr;
-    return getSwapchain()->getImageOsgTexture(index);
+    return getSwapchain()->getImageOsgTexture(index, state);
 }
 
 XRState::XRView::XRView(XRState *state,

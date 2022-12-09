@@ -72,9 +72,10 @@ class MirrorPreDrawCallback : public osg::Camera::DrawCallback
 
         void operator()(osg::RenderInfo& renderInfo) const override
         {
-            const osg::FrameStamp *stamp = renderInfo.getState()->getFrameStamp();
+            //const osg::FrameStamp *stamp = renderInfo.getState()->getFrameStamp();
             _stateSet->setTextureAttributeAndModes(0,
-                                _xrState->getViewTexture(_viewIndex, stamp));
+                                //_xrState->getViewTexture(_viewIndex, stamp));
+                                _xrState->getViewTexture(_viewIndex, renderInfo.getState()));
         }
 
     protected:

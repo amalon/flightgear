@@ -96,7 +96,8 @@ class XRState : public OpenXR::EventHandler
                 void postDrawCallback(osg::RenderInfo &renderInfo);
                 void endFrame();
 
-                osg::ref_ptr<osg::Texture2D> getOsgTexture(const osg::FrameStamp *stamp);
+                //osg::ref_ptr<osg::Texture2D> getOsgTexture(const osg::FrameStamp *stamp);
+                osg::ref_ptr<osg::Texture2D> getOsgTexture(const osg::State *state);
 
             protected:
 
@@ -481,9 +482,10 @@ class XRState : public OpenXR::EventHandler
 
         // Caller must validate viewIndex using getViewCount()
         osg::ref_ptr<osg::Texture2D> getViewTexture(unsigned int viewIndex,
-                                                    const osg::FrameStamp *stamp) const
+                                                    const osg::State *state) const
+                                                    //const osg::FrameStamp *stamp) const
         {
-            return _xrViews[viewIndex]->getSwapchain()->getOsgTexture(stamp);
+            return _xrViews[viewIndex]->getSwapchain()->getOsgTexture(state);
         }
 
         /**
