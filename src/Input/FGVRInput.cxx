@@ -619,7 +619,7 @@ bool FGVRInput::ModeProcessInput::getFloatValue(float& outValue,
 {
     // Use largest absolute valid value from sources (like OpenXR)
     bool ret = false;
-    float maxVal;
+    float maxVal = 0.0f;
     for (auto& source : _sources) {
         float val;
         if (source->getFloatValue(val)) {
