@@ -47,6 +47,8 @@ void jsInit () {}
 
 void jsJoystick::open ()
 {
+  // silence valgrind not understanding JSIOCGNAME
+  memset(name, 0, sizeof(name));
   name [0] = '\0' ;
 
   for ( int i = 0 ; i < _JS_MAX_AXES ; i++ )
