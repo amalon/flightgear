@@ -21,6 +21,7 @@ set(SOURCES
     FileDialog.cxx
     PUIFileDialog.cxx
     MouseCursor.cxx
+    MouseCursor3d.cxx
     MessageBox.cxx
     Highlight.cxx
   )
@@ -43,6 +44,7 @@ set(HEADERS
     FileDialog.hxx
     PUIFileDialog.hxx
     MouseCursor.hxx
+    MouseCursor3d.hxx
     MessageBox.hxx
     Highlight.hxx
   )

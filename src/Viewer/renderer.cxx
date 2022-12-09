@@ -1017,7 +1017,18 @@ PickList handlePickIntersections(Intersections& intersections)
     // succeeds and returns +ve, or highlighting is disabled and it returns -1.
     auto highlight = globals->get_subsystem<Highlight>();
     int higlight_num_props = 0;
+    if (!intersections.empty()) {
+        auto hit = intersections.begin();
+
+        SGSceneryPick sceneryPick;
+        sceneryPick.info.local = toSG(hit->getLocalIntersectPoint());
+        sceneryPick.info.wgs84 = toSG(hit->getWorldIntersectPoint());
+        sceneryPick.callback = nullptr;
+        result.push_back(sceneryPick);
+    }
     
+    bool do_log = true;
+    std::cout << "pick:" << std::endl;
     for (Intersections::iterator hit = intersections.begin(),
              e = intersections.end();
          hit != e;
@@ -1025,18 +1036,27 @@ PickList handlePickIntersections(Intersections& intersections)
         const osg::NodePath& np = hit->nodePath;
         osg::NodePath::const_reverse_iterator npi;
 
+        if (do_log)
+            std::cout << " hit:";
         for (npi = np.rbegin(); npi != np.rend(); ++npi) {
             if (!higlight_num_props && highlight) {
                 higlight_num_props = highlight->highlightNodes(*npi);
             }
+            if (do_log)
+                std::cout << " " << (*npi)->getName();
             SGSceneUserData* ud = SGSceneUserData::getSceneUserData(*npi);
-            if (!ud || (ud->getNumPickCallbacks() == 0))
+            if (!ud || (ud->getNumPickCallbacks() == 0)) {
+                //if (do_log)
+                //    std::cout << std::endl;
                 continue;
+            }
 
             for (unsigned i = 0; i < ud->getNumPickCallbacks(); ++i) {
                 SGPickCallback* pickCallback = ud->getPickCallback(i);
                 if (!pickCallback)
                     continue;
+                if (do_log)
+                    std::cout << ":" << i << "(" << pickCallback->getPriority() << ")";
                 SGSceneryPick sceneryPick;
                 sceneryPick.info.local = toSG(hit->getLocalIntersectPoint());
                 sceneryPick.info.wgs84 = toSG(hit->getWorldIntersectPoint());
@@ -1048,6 +1068,8 @@ PickList handlePickIntersections(Intersections& intersections)
                 result.push_back(sceneryPick);
             } // of installed pick callbacks iteration
         } // of reverse node path walk
+        if (do_log)
+            std::cout << std::endl;
     }
 
     return result;

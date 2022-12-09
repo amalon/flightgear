@@ -44,6 +44,7 @@
 #include <Cockpit/panel.hxx>
 #include <Viewer/FGEventHandler.hxx>
 #include <GUI/MouseCursor.hxx>
+#include <GUI/MouseCursor3d.hxx>
 
 using std::ios_base;
 
@@ -85,9 +86,11 @@ void ActivePickCallbacks::init( int button, const osgGA::GUIEventAdapter* ea )
 
   SGSceneryPicks::const_iterator i;
   for (i = pickList.begin(); i != pickList.end(); ++i) {
-    if (i->callback->buttonPressed(button, *ea, i->info)) {
-        (*this)[button].push_back(i->callback);
-        return;
+    if (i->callback) {
+      if (i->callback->buttonPressed(button, *ea, i->info)) {
+          (*this)[button].push_back(i->callback);
+          return;
+      }
     }
   }
 }
@@ -135,6 +138,8 @@ struct mouse {
 
     SGTimeStamp timeSinceLastMove;
     std::unique_ptr<mouse_mode[]> modes;
+
+    osg::ref_ptr<FGMouseCursor3d> cursor3d;
 };
 
 static
@@ -230,20 +235,33 @@ public:
         SGPickCallback::Priority priority = SGPickCallback::PriorityScenery;
         SGSceneryPicks pickList = globals->get_renderer()->pick(windowPos);
 
+        const auto& m = mice[0];
+
         SGSceneryPicks::const_iterator i;
         for( i = pickList.begin(); i != pickList.end(); ++i )
         {
-            bool done = i->callback->hover(windowPos, i->info);
-            std::string curName(i->callback->getCursor());
-            if (!curName.empty()) {
-                explicitCursor = true;
-                cur = FGMouseCursor::cursorFromString(curName.c_str());
+            if (m.cursor3d && i == pickList.begin()) {
+                osg::Matrix mat;
+                // FIXME needs to be local so it moves with aircraft
+                // FIXME needs to update is scene changes even if mouse doesn't
+                // move
+                mat.setTrans(toOsg(i->info.wgs84));
+                m.cursor3d->setMatrix(mat);
             }
+            bool done = false;
+            if (i->callback) {
+                done = i->callback->hover(windowPos, i->info);
+                std::string curName(i->callback->getCursor());
+                if (!curName.empty()) {
+                    explicitCursor = true;
+                    cur = FGMouseCursor::cursorFromString(curName.c_str());
+                }
 
-            // if the callback is of higher prioirty (lower enum index),
-            // record that.
-            if (i->callback->getPriority() < priority) {
-                priority = i->callback->getPriority();
+                // if the callback is of higher prioirty (lower enum index),
+                // record that.
+                if (i->callback->getPriority() < priority) {
+                    priority = i->callback->getPriority();
+                }
             }
 
             if (done) {
@@ -256,7 +274,7 @@ public:
         // notify the callback that the mouse has left its element.
         for( i = _previous_picks.begin(); i != _previous_picks.end(); ++i )
         {
-          if( !getPick(pickList, i->callback) )
+          if (i->callback && !getPick(pickList, i->callback))
             i->callback->mouseLeave(windowPos);
         }
         _previous_picks = pickList;
@@ -458,6 +476,10 @@ void FGMouseInput::init()
         read_bindings(mode_node->getChild("y-axis-ctrl-shift"), m.modes[j].y_bindings, KEYMOD_CTRL|KEYMOD_SHIFT, module );
       }
     } // of modes iteration
+
+    m.cursor3d = new FGMouseCursor3d;
+    osg::Group* sceneGroup = globals->get_scenery()->get_scene_graph();
+    sceneGroup->addChild(m.cursor3d);
   }
 
   fgRegisterMouseClickHandler(mouseClickHandler);
