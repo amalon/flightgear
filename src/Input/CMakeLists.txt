@@ -86,6 +86,7 @@ if (ENABLE_OSGXR)
 		FGVRButton.cxx
 		FGVRCollision.cxx
 		FGVRControllerModel.cxx
+		FGVRHand.cxx
 		FGVRInput.cxx
 		FGVRPick.cxx
 		FGVRPoseEuler.cxx
@@ -94,6 +95,7 @@ if (ENABLE_OSGXR)
 		FGVRButton.hxx
 		FGVRCollisionBase.hxx
 		FGVRCollision.hxx
+		FGVRHand.hxx
 		FGVRInput.hxx
 		FGVRPick.hxx
 		FGVRPoseEuler.hxx
