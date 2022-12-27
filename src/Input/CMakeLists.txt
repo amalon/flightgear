@@ -84,6 +84,7 @@ endif()
 if (ENABLE_OSGXR)
 	list(APPEND SOURCES
 		FGVRButton.cxx
+		FGVRCollision.cxx
 		FGVRControllerModel.cxx
 		FGVRInput.cxx
 		FGVRPick.cxx
@@ -91,6 +92,8 @@ if (ENABLE_OSGXR)
 	)
 	list(APPEND HEADERS
 		FGVRButton.hxx
+		FGVRCollisionBase.hxx
+		FGVRCollision.hxx
 		FGVRInput.hxx
 		FGVRPick.hxx
 		FGVRPoseEuler.hxx
