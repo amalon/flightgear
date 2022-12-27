@@ -35,6 +35,7 @@
 
 #include "FGVRButton.hxx"
 #include "FGVRControllerModel.hxx"
+#include "FGVRHand.hxx"
 #include "FGVRPick.hxx"
 #include "FGVRPoseEuler.hxx"
 
@@ -992,8 +993,12 @@ void FGVRInput::init()
 
     _handTrackingLeft = std::make_shared<osgXR::HandPoseTracked>(manager, osgXR::HandPose::HAND_LEFT);
     _handTrackingRight = std::make_shared<osgXR::HandPoseTracked>(manager, osgXR::HandPose::HAND_RIGHT);
-    _handLeft = new osgXR::Hand(_handTrackingLeft);
-    _handRight = new osgXR::Hand(_handTrackingRight);
+    _handPoseLeft = std::make_shared<FGVRHand>(getLocalSpaceGroup(), _handTrackingLeft);
+    _handPoseRight = std::make_shared<FGVRHand>(getLocalSpaceGroup(), _handTrackingRight);
+    _handLeft = new osgXR::Hand(_handPoseLeft);
+    _handRight = new osgXR::Hand(_handPoseRight);
+    _handLeft->setNodeMask(~simgear::PICK_BIT);
+    _handRight->setNodeMask(~simgear::PICK_BIT);
     _localSpace->addChild(_handLeft);
     _localSpace->addChild(_handRight);
     /*
@@ -1106,8 +1111,8 @@ void FGVRInput::update(double dt)
     for (auto& subactionPair : _subactions)
         subactionPair.second->update(dt);
 
-    _handTrackingLeft->advance(dt);
-    _handTrackingRight->advance(dt);
+    _handPoseLeft->advance(dt);
+    _handPoseRight->advance(dt);
 }
 
 FGVRInput::Mode* FGVRInput::getTranslatedMode(FGVRInput::Subaction* subaction,
