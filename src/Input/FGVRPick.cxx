@@ -64,7 +64,7 @@ void FGVRPick::Private::hover(PickList& pickList)
         if (pick.callback == _hoverPick.callback)
             return;
         // New hover, leave previously hovered pick
-        if (pick.callback->hover(dummyPos, pick.info)) {
+        if (pick.callback.valid() && pick.callback->hover(dummyPos, pick.info)) {
             if (_hoverPick.callback.valid())
                 _hoverPick.callback->mouseLeave(dummyPos);
             _hoverPick = pick;
@@ -83,7 +83,7 @@ void FGVRPick::Private::buttonDown(unsigned int button, PickList& pickList)
     // simgear/scene/model/SGPickAnimation.cxx eventToWindowCoords()
     osgGA::GUIEventAdapter* ea = osgGA::GUIEventAdapter::getAccumulatedEventState().get();
     for (auto& pick : pickList) {
-        if (pick.callback->buttonPressed(button, *ea, pick.info)) {
+        if (pick.callback.valid() && pick.callback->buttonPressed(button, *ea, pick.info)) {
             _buttonPicks[button] = pick;
             return;
         }
