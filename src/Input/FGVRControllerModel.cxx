@@ -23,6 +23,8 @@
 #include <Main/fg_props.hxx>
 #include <Viewer/renderer.hxx>
 
+#include <simgear/scene/util/RenderConstants.hxx>
+
 #include <osg/Geode>
 #include <osg/Material>
 #include <osg/MatrixTransform>
@@ -116,6 +118,7 @@ FGVRControllerModel::FGVRControllerModel(FGVRInput* input,
     // Switch on and off
     osg::Switch* sw = _private->_transformSwitch = new osg::Switch();
     sw->setName(namePrefix + "Switch");
+    sw->setNodeMask(~simgear::PICK_BIT);
     sw->addChild(transform);
 
     // Add it to the local space group

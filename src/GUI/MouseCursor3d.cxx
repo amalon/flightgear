@@ -1,5 +1,7 @@
 #include "MouseCursor3d.hxx"
 
+#include <simgear/scene/util/RenderConstants.hxx>
+
 #include <osg/Geometry>
 #include <osg/Geode>
 
@@ -58,4 +60,5 @@ FGMouseCursor3d::FGMouseCursor3d()
     geode->addDrawable(geom);
 
     addChild(geode);
+    setNodeMask(~simgear::PICK_BIT);
 }
