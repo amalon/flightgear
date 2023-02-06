@@ -988,23 +988,6 @@ private:
     osg::ref_ptr<osg::Group> _localSpaceUpdater;
     /// Local space scene graph node.
     osg::ref_ptr<osg::MatrixTransform> _localSpace;
-
-    // Hand tracking
-
-    /// Tracked hand pose (left).
-    std::shared_ptr<osgXR::HandPoseTracked> _handTrackingLeft;
-    /// Tracked hand pose (right).
-    std::shared_ptr<osgXR::HandPoseTracked> _handTrackingRight;
-
-    /// FG interacting hand pose (left).
-    std::shared_ptr<FGVRHand> _handPoseLeft;
-    /// FG interacting hand pose (right).
-    std::shared_ptr<FGVRHand> _handPoseRight;
-
-    /// Visible hand node (left).
-    osg::ref_ptr<osgXR::Hand> _handLeft;
-    /// Visible hand node (right).
-    osg::ref_ptr<osgXR::Hand> _handRight;
 };
 
 #endif

@@ -71,6 +71,8 @@ public:
     {
         return pick({start, end});
     }
+    PickList pick(const osg::Polytope& polytope);
+    PickList pick(const osg::Plane& plane, const osg::Polytope& polytope);
     
     /* Returns either composite_viewer or viewer. */
     osgViewer::ViewerBase* getViewerBase();

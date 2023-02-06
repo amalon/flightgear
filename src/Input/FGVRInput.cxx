@@ -35,7 +35,7 @@
 
 #include "FGVRButton.hxx"
 #include "FGVRControllerModel.hxx"
-#include "FGVRHand.hxx"
+#include "FGVRHandInteraction.hxx"
 #include "FGVRPick.hxx"
 #include "FGVRPoseEuler.hxx"
 
@@ -741,6 +741,9 @@ void FGVRInput::Mode::SubactionInfo::readProcesses(FGVRInput* input,
         } else if (processType == "controller_model") {
             process = new FGVRControllerModel(input, mode, _subaction, processNode,
                                               processStatusNode);
+        } else if (processType == "hand_interaction") {
+            process = new FGVRHandInteraction(input, mode, _subaction,
+                                              processNode, processStatusNode);
         } else if (processType == "pick") {
             process = new FGVRPick(input, mode, _subaction, processNode,
                                    processStatusNode);
@@ -991,24 +994,6 @@ void FGVRInput::init()
 
     VRManager* manager = VRManager::instance();
 
-    _handTrackingLeft = std::make_shared<osgXR::HandPoseTracked>(manager, osgXR::HandPose::HAND_LEFT);
-    _handTrackingRight = std::make_shared<osgXR::HandPoseTracked>(manager, osgXR::HandPose::HAND_RIGHT);
-    _handPoseLeft = std::make_shared<FGVRHand>(getLocalSpaceGroup(), _handTrackingLeft);
-    _handPoseRight = std::make_shared<FGVRHand>(getLocalSpaceGroup(), _handTrackingRight);
-    _handLeft = new osgXR::Hand(_handPoseLeft);
-    _handRight = new osgXR::Hand(_handPoseRight);
-    _handLeft->setNodeMask(~simgear::PICK_BIT);
-    _handRight->setNodeMask(~simgear::PICK_BIT);
-    _localSpace->addChild(_handLeft);
-    _localSpace->addChild(_handRight);
-    /*
-     * Hand collision detection needs
-     * - Do the hand joint motions cause intersection with any objects?
-     *   - Back track the whole motion to that point?
-     *   - Lock parent joints and allow other joints to continue
-     * - How far can
-     */
-
     // Set up local space updating
     osg::Group* sceneGroup = globals->get_scenery()->get_scene_graph();
     sceneGroup->addChild(_localSpaceUpdater);
@@ -1110,9 +1095,6 @@ void FGVRInput::update(double dt)
     // Handle subactions (and current interaction modes)
     for (auto& subactionPair : _subactions)
         subactionPair.second->update(dt);
-
-    _handPoseLeft->advance(dt);
-    _handPoseRight->advance(dt);
 }
 
 FGVRInput::Mode* FGVRInput::getTranslatedMode(FGVRInput::Subaction* subaction,

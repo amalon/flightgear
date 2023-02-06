@@ -30,6 +30,7 @@
 #include <osg/Texture2D>
 #include <osg/TexGen>
 #include <osgUtil/RenderBin>
+#include <osgUtil/PlaneIntersector>
 #include <osgViewer/View>
 
 #include <simgear/scene/viewer/Compositor.hxx>
@@ -273,6 +274,18 @@ bool computeIntersections(const CameraGroup* cgroup,
                           const osg::Vec2d& windowPos,
                           osgUtil::LineSegmentIntersector::Intersections&
                           intersections);
+class LineStripIntersection : public osgUtil::LineSegmentIntersector::Intersection
+{
+    public:
+        LineStripIntersection(const osgUtil::LineSegmentIntersector::Intersection& hit,
+                              unsigned int newSegment) :
+            osgUtil::LineSegmentIntersector::Intersection(hit),
+            segment(newSegment)
+        {
+        }
+        unsigned int segment;
+};
+typedef std::multiset<LineStripIntersection> LineStripIntersections;
 /** Do ray intersection testing in scene space.
  * @param cgroup the CameraGroup
  * @param lineStrip the line strip coordinate array
@@ -282,7 +295,28 @@ bool computeIntersections(const CameraGroup* cgroup,
  */
 bool computeSceneIntersections(const CameraGroup* cgroup,
                                const std::vector<osg::Vec3d>& lineStrip,
-                               osgUtil::LineSegmentIntersector::Intersections& intersections);
+                               LineStripIntersections& intersections);
+/** Do bounding box intersection testing in scene space.
+ * @param cgroup the CameraGroup
+ * @param polytope polytope to intersect with
+ * @param intersections container for the result of intersection
+ * testing.
+ * @return true if any intersections are found
+ */
+bool computeSceneIntersections(const CameraGroup* cgroup,
+                               const osg::Polytope& polytop,
+                               osgUtil::PolytopeIntersector::Intersections& intersections);
+/** Do bounding box intersection testing in scene space.
+ * @param cgroup the CameraGroup
+ * @param polytope polytope to intersect with
+ * @param intersections container for the result of intersection
+ * testing.
+ * @return true if any intersections are found
+ */
+bool computeSceneIntersections(const CameraGroup* cgroup,
+                               const osg::Plane& plane,
+                               const osg::Polytope& polytop,
+                               osgUtil::PlaneIntersector::Intersections& intersections);
 /** Warp the pointer to coordinates in the GUI camera of a camera group.
  * @param cgroup the camera group
  * @param x x window coordinate of pointer

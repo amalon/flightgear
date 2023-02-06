@@ -19,7 +19,11 @@
 #ifndef _FGVRCOLLISIONBASE_HXX
 #define _FGVRCOLLISIONBASE_HXX
 
+#include <osg/BoundingBox>
+
 #include <cassert>
+#include <list>
+#include <memory>
 #include <ostream>
 #include <set>
 #include <vector>
@@ -35,6 +39,15 @@ class Shape
 
 typedef struct {} EmptyData;
 
+struct ShapeInfo
+{
+    typedef EmptyData FixedData;
+    typedef EmptyData SweepData;
+    enum {
+        shouldCheckBounds = 0,
+    };
+};
+
 template <typename INFO>
 class TShape : public Shape
 {
@@ -42,14 +55,28 @@ class TShape : public Shape
         typedef INFO Info;
         typedef typename INFO::FixedData FixedData;
         typedef typename INFO::SweepData SweepData;
+        enum {
+            shouldCheckBounds = INFO::shouldCheckBounds,
+        };
 
         FixedData fixed;
         SweepData sweep;
 
-        TShape(const FixedData& fixed, const SweepData& sweep) :
+        TShape(const FixedData& fixed,
+               const SweepData& sweep) :
             fixed(fixed),
             sweep(sweep)
         {
+        }
+
+        static auto getBounds(const FixedData& fixed, const SweepData& sweep)
+        {
+            return INFO::getBounds(fixed, sweep);
+        }
+
+        auto getBounds() const
+        {
+            return getBounds(fixed, sweep);
         }
 };
 
@@ -78,6 +105,7 @@ class TIntersection
 {
     public:
         typedef INSTANT Instant;
+        typedef typename Instant::Range Range;
 
         // ratioEntry <= ratioExit
         Instant entry;
@@ -87,6 +115,12 @@ class TIntersection
             entry(newEntry),
             exit(newExit)
         {
+        }
+
+        void toRange(const Range& range)
+        {
+            entry.toRange(range);
+            exit.toRange(range);
         }
 
         void combine(const TIntersection& other)
@@ -122,9 +156,46 @@ class Sweep : public Shape
             public:
                 float ratio;
 
+                bool hasPosition;
+                /// Intersection position.
+                osg::Vec3f position;
+                /// Intersection normal of shape at intersection with sweep.
+                osg::Vec3f normal;
+
+                const char* source = nullptr;
+
+                typedef struct Range {
+                    float minRatio = 0.0f;
+                    float rangeRatio = 1.0f;
+
+                    void toRange(const struct Range& range)
+                    {
+                        minRatio = range.minRatio + minRatio * range.rangeRatio;
+                        rangeRatio *= range.rangeRatio;
+                    }
+                } Range;
+
                 Instant(float newRatio) :
-                    ratio(newRatio)
+                    ratio(newRatio),
+                    hasPosition(false)
                 {
+                }
+
+                Instant(float newRatio,
+                        const osg::Vec3f& position,
+                        const osg::Vec3f& normal,
+                        const char* source) :
+                    ratio(newRatio),
+                    hasPosition(true),
+                    position(position),
+                    normal(normal),
+                    source(source)
+                {
+                }
+
+                void toRange(const Range& range)
+                {
+                    ratio = range.minRatio + ratio * range.rangeRatio;
                 }
 
                 bool atMin() const
@@ -216,28 +287,37 @@ class TIntersections : public std::multiset<INTERSECTION>
     public:
         typedef INTERSECTION Intersection;
         typedef typename Intersection::Instant Instant;
+        typedef typename Intersection::Range Range;
 
-        TIntersections(bool stopASAP = false) :
-            _stopASAP(stopASAP)
+        TIntersections(bool wantsNormals = true,
+                       bool wantsPositions = true,
+                       bool stopASAP = false) :
+            _stopASAP(stopASAP),
+            _wantsPositions(wantsPositions),
+            _wantsNormals(wantsNormals)
         {
         }
 
         template <typename OTHER>
         explicit TIntersections(const TIntersections<OTHER>& other) :
-            _stopASAP(other.shouldStopASAP())
+            _stopASAP(other.shouldStopASAP()),
+            _wantsPositions(other.wantsPositions()),
+            _wantsNormals(other.wantsNormals())
         {
         }
 
-        void insertIntersection(const Intersection& intersection)
+        void insertIntersection(Intersection hit)
         {
+            // Apply the current range
+            hit.toRange(_range);
+
             // Find overlaps
-            auto [a, b] = this->equal_range(intersection);
+            auto [a, b] = this->equal_range(hit);
             if (a == b) {
-                this->insert(intersection);
+                this->insert(hit);
                 return;
             }
             // Combine new and existing overlapping intersections
-            Intersection hit(intersection);
             for (auto it = a; it != b; ++it)
                 hit.combine(*it);
             // Remove redundant overlaps
@@ -256,8 +336,35 @@ class TIntersections : public std::multiset<INTERSECTION>
             return _stopASAP;
         }
 
+        bool wantsPositions() const
+        {
+            return _wantsPositions;
+        }
+
+        // implies wantsPositions()
+        bool wantsNormals() const
+        {
+            return _wantsNormals;
+        }
+
+        Range pushRange(const Range& range)
+        {
+            Range old = _range;
+            _range = range;
+            _range.toRange(old);
+            return old;
+        }
+
+        void popRange(const Range& range)
+        {
+            _range = range;
+        }
+
     protected:
         bool _stopASAP;
+        bool _wantsPositions;
+        bool _wantsNormals;
+        Range _range;
 };
 
 template <typename SHAPE>
@@ -266,13 +373,23 @@ class TSweep : public Sweep
     public:
         typedef typename SHAPE::SweepData SingleSweepData;
         typedef typename SHAPE::FixedData FixedData;
-        typedef struct {
+        typedef struct SweepData {
             SingleSweepData start;
             SingleSweepData end;
         } SweepData;
+        enum {
+            shouldCheckBounds = SHAPE::shouldCheckBounds,
+        };
 
         FixedData fixed;
         SweepData sweep;
+
+        TSweep(const FixedData& fixed,
+               const SweepData& sweep) :
+            fixed(fixed),
+            sweep(sweep)
+        {
+        }
 
         TSweep(const FixedData& fixed,
                const SingleSweepData& start, const SingleSweepData& end) :
@@ -285,7 +402,7 @@ class TSweep : public Sweep
             fixed(start.fixed),
             sweep{start.sweep, end.sweep}
         {
-            assert(start.fixed == end.fixed);
+            //assert(start.fixed == end.fixed);
         }
 
         SHAPE getStart() const
@@ -305,6 +422,18 @@ class TSweep : public Sweep
                                                                  this->sweep.start,
                                                                  this->sweep.end);
         }
+
+        static auto getBounds(const FixedData& fixed, const SweepData& sweep)
+        {
+            auto bb = SHAPE::getBounds(fixed, sweep.start);
+            bb.expandBy(SHAPE::getBounds(fixed, sweep.end));
+            return bb;
+        }
+
+        auto getBounds() const
+        {
+            return getBounds(fixed, sweep);
+        }
 };
 
 template <typename SHAPE>
@@ -314,26 +443,47 @@ class TStrip : public Strip
         typedef typename SHAPE::SweepData SingleSweepData;
         typedef typename SHAPE::FixedData FixedData;
         typedef struct {
+            std::vector<float> ratios;
             std::vector<SingleSweepData> strip;
-        } SweepData;
+            mutable bool boundingBoxSet = false;
+            mutable osg::BoundingBox boundingBox;
+        } SharedSweepData;
+        typedef std::shared_ptr<SharedSweepData> SweepData;
+        enum {
+            shouldCheckBounds = SHAPE::shouldCheckBounds,
+        };
 
         FixedData fixed;
         SweepData sweep;
 
-        void addNode(const SHAPE& node)
+        TStrip() :
+            sweep(std::make_shared<SharedSweepData>())
         {
-            if (sweep.strip.empty())
-                fixed = node.fixed;
-            sweep.strip.push_back(node.sweep);
         }
 
+        void addNode(float ratio, const SHAPE& node)
+        {
+            if (sweep->strip.empty())
+                fixed = node.fixed;
+            sweep->ratios.push_back(ratio);
+            sweep->strip.push_back(node.sweep);
+        }
+
+        bool empty() const
+        {
+            return sweep->strip.empty();
+        }
         unsigned int numNodes() const
         {
-            return sweep.strip.size();
+            return sweep->strip.size();
         }
         SHAPE getNode(unsigned int index) const
         {
-            return SHAPE(fixed, sweep.strip[index]);
+            return SHAPE(fixed, sweep->strip[index]);
+        }
+        float getNodeRatio(unsigned int index) const
+        {
+            return sweep->ratios[index];
         }
         unsigned int numSegments() const
         {
@@ -344,17 +494,48 @@ class TStrip : public Strip
         TSweep<SHAPE> getSegment(unsigned int index) const
         {
             return TSweep<SHAPE>(fixed,
-                                 sweep.strip[index], sweep.strip[index+1]);
+                                 sweep->strip[index], sweep->strip[index+1]);
         }
 
-        float getOverallRatio(const Strip::Instant& instant) const
+        float getMinRatio() const
         {
-            return (instant.ratio + instant.segment) / numSegments();
+            assert(!empty());
+            return sweep->ratios.front();
+        }
+
+        float getMaxRatio() const
+        {
+            assert(!empty());
+            return sweep->ratios.back();
+        }
+
+        float getRatio(const Strip::Instant& instant) const
+        {
+            //return (instant.ratio + instant.segment) / numSegments();
+            float ratio0 = sweep->ratios[instant.segment];
+            float ratio1 = sweep->ratios[instant.segment+1];
+            float ratioRange = ratio1 - ratio0;
+            return ratio0 + instant.ratio * ratioRange;
+        }
+
+        static const osg::BoundingBox& getBounds(const FixedData& fixed, const SweepData& sweep)
+        {
+            if (!sweep->boundingBoxSet) {
+                for (unsigned int i = 0; i < sweep->strip.size(); ++i)
+                    sweep->boundingBox.expandBy(SHAPE::getBounds(fixed, sweep->strip[i]));
+                sweep->boundingBoxSet = true;
+            }
+            return sweep->boundingBox;
+        }
+
+        auto getBounds() const
+        {
+            return getBounds(fixed, sweep);
         }
 };
 
 template <typename SHAPE>
-struct TGroupInfo
+struct TGroupInfo : public ShapeInfo
 {
     typedef typename SHAPE::FixedData SingleFixedData;
     typedef typename SHAPE::SweepData SingleSweepData;
@@ -363,20 +544,35 @@ struct TGroupInfo
     } FixedData;
     typedef struct {
         std::vector<SingleSweepData> items;
+        osg::BoundingBox bb;
     } SweepData;
+    enum {
+        shouldCheckBounds = SHAPE::shouldCheckBounds,
+    };
 
     template <typename FUNCTOR>
-    static void perPart(FUNCTOR& functor, const FixedData& fixed, const SweepData& sweep)
+    static void perPart(FUNCTOR& functor,
+                        const FixedData& fixed,
+                        const SweepData& sweep)
     {
         for (unsigned int i = 0; i < fixed.items.size(); ++i)
             functor(SHAPE(fixed.items[i], sweep.items[i]));
     }
 
     template <typename FUNCTOR>
-    static void perSweepPart(FUNCTOR& functor, const FixedData& fixed, const SweepData& start, const SweepData& end)
+    static void perSweepPart(FUNCTOR& functor,
+                             const FixedData& fixed,
+                             const SweepData& start,
+                             const SweepData& end)
     {
         for (unsigned int i = 0; i < fixed.items.size(); ++i)
             functor(TSweep<SHAPE>(fixed.items[i], start.items[i], end.items[i]));
+    }
+
+    static const osg::BoundingBox& getBounds(const FixedData& fixed,
+                                             const SweepData& sweep)
+    {
+        return sweep.bb;
     }
 };
 template <typename SHAPE>
@@ -390,10 +586,17 @@ class TGroup : public TCompound<TGroupInfo<SHAPE>>
         {
         }
 
+        void reserve(unsigned int items)
+        {
+            this->fixed.items.reserve(items);
+            this->sweep.items.reserve(items);
+        }
+
         void addItem(const SHAPE& item)
         {
             this->fixed.items.push_back(item.fixed);
             this->sweep.items.push_back(item.sweep);
+            this->sweep.bb.expandBy(item.getBounds());
         }
 
         unsigned int numItems() const
@@ -408,8 +611,8 @@ class TGroup : public TCompound<TGroupInfo<SHAPE>>
 
 // Anything x Strip -> [Anything x Sweep]
 template <typename SHAPE, typename STRIP>
-unsigned int intersect(const SHAPE& shape, const TStrip<STRIP>& strip,
-                       TIntersections<typename TStrip<STRIP>::Intersection>& intersections)
+unsigned int rawIntersect(const SHAPE& shape, const TStrip<STRIP>& strip,
+                          TIntersections<typename TStrip<STRIP>::Intersection>& intersections)
 {
     unsigned int total = 0;
     for (unsigned int i = 0; i < strip.numSegments(); ++i) {
@@ -427,7 +630,7 @@ unsigned int intersect(const SHAPE& shape, const TStrip<STRIP>& strip,
 
 // Anything x Sweep<Compound> -> [Anything x Sweep<Shape>]
 template <typename SHAPE, typename SWEEP>
-struct TCompoundFunctor {
+struct TCompoundSweepFunctor {
     const SHAPE& shape;
     TIntersections<typename TSweep<SWEEP>::Intersection>& intersections;
     unsigned int total;
@@ -439,10 +642,10 @@ struct TCompoundFunctor {
     }
 };
 template <typename SHAPE, typename SWEEP>
-unsigned int intersect(const SHAPE& shape, const TSweep<TCompound<SWEEP>>& sweep,
-                       TIntersections<typename TSweep<SWEEP>::Intersection>& intersections)
+unsigned int rawIntersect(const SHAPE& shape, const TSweep<TCompound<SWEEP>>& sweep,
+                          TIntersections<typename TSweep<SWEEP>::Intersection>& intersections)
 {
-    TCompoundFunctor<SHAPE, SWEEP> functor{shape, intersections, 0};
+    TCompoundSweepFunctor<SHAPE, SWEEP> functor{shape, intersections, 0};
     sweep.template perPart(functor);
     return functor.total;
 }
@@ -450,30 +653,52 @@ unsigned int intersect(const SHAPE& shape, const TSweep<TCompound<SWEEP>>& sweep
 // A group is a fancy compound
 // Anything x Sweep<Group<Shape>> -> [Anything x Sweep<Shape>]
 template <typename SHAPE, typename SWEEP>
-unsigned int intersect(const SHAPE& shape, const TSweep<TGroup<SWEEP>>& sweep,
-                       TIntersections<typename TSweep<SWEEP>::Intersection>& intersections)
+unsigned int rawIntersect(const SHAPE& shape, const TSweep<TGroup<SWEEP>>& sweep,
+                          TIntersections<typename TSweep<SWEEP>::Intersection>& intersections)
 {
-    TCompoundFunctor<SHAPE, SWEEP> functor{shape, intersections, 0};
+    TCompoundSweepFunctor<SHAPE, SWEEP> functor{shape, intersections, 0};
     sweep.template perPart(functor);
     return functor.total;
-    /*
-    unsigned int total = 0;
-    for (unsigned int i = 0; i < sweep.fixed.items.size(); ++i) {
-        TSweep<SWEEP> itemSweep(sweep.fixed.items[i],
-                                sweep.sweep.start.items[i],
-                                sweep.sweep.end.items[i]);
-        total += intersect(shape, itemSweep, intersections);
-    }
-    return total;
-    */
 }
+
+// Group<Shape> x Anything -> [Shape x Anything]
+template <typename SWEEP>
+struct TCompoundShapeFunctor {
+    const SWEEP& sweep;
+    TIntersections<typename SWEEP::Intersection>& intersections;
+    unsigned int total;
+
+    template <typename T>
+    void operator () (const T& part)
+    {
+        total += intersect(part, sweep, intersections);
+    }
+};
+template <typename SHAPE, typename SWEEP>
+unsigned int rawIntersect(const TCompound<SHAPE>& compound, const SWEEP& sweep,
+                       TIntersections<typename SWEEP::Intersection>& intersections)
+{
+    TCompoundShapeFunctor<SWEEP> functor{sweep, intersections, 0};
+    compound.template perPart(functor);
+    return functor.total;
+}
+/*
+template <typename SHAPE, typename SWEEP>
+unsigned int rawIntersect(const TGroup<SHAPE>& group, const SWEEP& sweep,
+                       TIntersections<typename SWEEP::Intersection>& intersections)
+{
+    TCompoundShapeFunctor<SWEEP> functor{sweep, intersections, 0};
+    group.template perPart(functor);
+    return functor.total;
+}
+*/
 
 // Strip<Shape1> x Sweep<Shape2> -> [Shape1 x Sweep<Shape2>]
 // Sweeps of groups should be broken up first, above, hence TShape here to avoid
 // ambiguity.
 template <typename STRIP, typename SWEEPINFO>
-unsigned int intersect(const TStrip<STRIP>& shape, const TSweep<TShape<SWEEPINFO>>& sweep,
-                       TIntersections<typename TSweep<TShape<SWEEPINFO>>::Intersection>& intersections)
+unsigned int rawIntersect(const TStrip<STRIP>& shape, const TSweep<TShape<SWEEPINFO>>& sweep,
+                          TIntersections<typename TSweep<TShape<SWEEPINFO>>::Intersection>& intersections)
 {
     unsigned int total = 0;
     unsigned int i;
@@ -486,10 +711,50 @@ unsigned int intersect(const TStrip<STRIP>& shape, const TSweep<TShape<SWEEPINFO
     return total;
 }
 
+template <int shouldCheckBounds>
+struct boundsCheck;
+
+template <>
+struct boundsCheck<0>
+{
+    template <typename SHAPE, typename SWEEP>
+    static bool check(const SHAPE& shape, const SWEEP& sweep)
+    {
+        return true;
+    }
+};
+
+template <>
+struct boundsCheck<1>
+{
+    template <typename SHAPE, typename SWEEP>
+    static bool check(const SHAPE& shape, const SWEEP& sweep)
+    {
+        auto shapeBounds = shape.getBounds();
+        auto sweepBounds = sweep.getBounds();
+        bool ret = shapeBounds.intersects(sweepBounds);
+        ++stats[ret?1:0];
+        return ret;
+    }
+
+    static unsigned int stats[2];
+};
+
+template <typename SHAPE, typename SWEEP>
+unsigned int intersect(const SHAPE& shape,
+                       const SWEEP& sweep,
+                       TIntersections<typename SWEEP::Intersection>& intersections)
+{
+    // Do a bounds check if possible
+    if (!boundsCheck<SHAPE::shouldCheckBounds && SWEEP::shouldCheckBounds>::check(shape, sweep))
+        return 0;
+    return rawIntersect(shape, sweep, intersections);
+}
+
 // Wrapper to return list of intersections
 template <typename SHAPE, typename SWEEP>
 TIntersections<typename SWEEP::Intersection> intersect(const SHAPE& shape,
-                                                    const SWEEP& sweep)
+                                                       const SWEEP& sweep)
 {
     TIntersections<typename SWEEP::Intersection> intersections;
     intersect(shape, sweep, intersections);

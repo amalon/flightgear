@@ -33,23 +33,72 @@ class FGVRHand : public osgXR::HandPose
 
         /// Constructor.
         FGVRHand(osg::MatrixTransform* localSpaceGroup,
-                 const std::shared_ptr<osgXR::HandPose>& parent);
+                 const std::shared_ptr<HandPose>& parent);
         /// Destructor.
         virtual ~FGVRHand();
 
         // Reimplemented from osgXR::HandPose
         void advance(float dt) override;
 
+        void setFingerHoverDistance(unsigned int finger, float hoverDistance)
+        {
+            _fingersRange[finger].hoverDistance = hoverDistance;
+        }
+
+        bool isPalmTouching() const
+        {
+            return !_wristRange.touchingNodes.empty();
+        }
+
+        bool isFingerTouching(unsigned int finger) const
+        {
+            return !_fingersRange[finger].touchingNodes.empty();
+        }
+
+        const osg::NodePath* getPalmTouchingNodePath() const
+        {
+            if (!isPalmTouching())
+                return nullptr;
+            return &_wristRange.touchingNodes;
+        }
+
+        const osg::NodePath* getFingerTouchingNodePath(unsigned int finger) const
+        {
+            if (!isFingerTouching(finger))
+                return nullptr;
+            return &_fingersRange[finger].touchingNodes;
+        }
+
+        typedef struct {
+            /// Hover distance when autosqueezing
+            float hoverDistance = 0.0f;
+
+            /// Whether currently overriding the parent pose.
+            bool overriding = false;
+            /// Whether pushed to which limit.
+            int atLimit = 0;
+            /// Clearance ratio each way.
+            float clearance[2] = {0.0f, 1.0f};
+
+            float curValue = 0;
+
+            osg::NodePath touchingNodes;
+        } RangeState;
+
     protected:
+
+        osg::Geometry* initDebugGeom();
 
         /// Parent hand pose to base this one on.
         std::shared_ptr<osgXR::HandPose> _parent;
         /// Parent joint motion ranges.
-        osgXR::HandPose::JointMotionRanges _ranges;
+        JointMotionRanges _ranges;
         /// Current squeeze values.
-        osgXR::HandPose::SqueezeValues _squeeze;
-        /// Whether each finger is currently overriding the parent.
-        bool _fingersOverriding[5];
+        SqueezeValues _squeeze;
+        /// Range state for each finger.
+        RangeState _fingersRange[5];
+        /// Range state for wrist.
+        RangeState _wristRange;
 
         // Debugging
 
