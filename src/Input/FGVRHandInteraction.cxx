@@ -50,7 +50,7 @@ public:
 
     struct Contact {
         struct SGSceneryPick pick;
-        //std::shared_ptr<SGSpringPickContact> contact;
+        std::shared_ptr<SGSpringPickContact> contact;
     };
 
     /// Contact points (5 fingers + palm).
@@ -156,7 +156,7 @@ void FGVRHandInteraction::update(double dt)
                 if (!pickCallback)
                     continue;
 
-#if 0
+#if 1
                 auto* contactConfig = pickCallback->getContactConfig();
                 if (!contactConfig)
                     continue;
