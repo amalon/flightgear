@@ -45,33 +45,68 @@ class FGVRHand : public osgXR::HandPose
             _fingersRange[finger].hoverDistance = hoverDistance;
         }
 
+        void setFingerFreeze(unsigned int finger, bool freeze)
+        {
+            _fingersRange[finger].freeze = freeze;
+        }
+
         bool isPalmTouching() const
         {
-            return !_wristRange.touchingNodes.empty();
+            return !_wristRange.touchNodes.empty();
         }
 
         bool isFingerTouching(unsigned int finger) const
         {
-            return !_fingersRange[finger].touchingNodes.empty();
+            return !_fingersRange[finger].touchNodes.empty();
         }
 
-        const osg::NodePath* getPalmTouchingNodePath() const
+        const osg::NodePath* getPalmTouchNodePath() const
         {
             if (!isPalmTouching())
                 return nullptr;
-            return &_wristRange.touchingNodes;
+            return &_wristRange.touchNodes;
         }
 
-        const osg::NodePath* getFingerTouchingNodePath(unsigned int finger) const
+        const osg::NodePath* getFingerTouchNodePath(unsigned int finger) const
         {
             if (!isFingerTouching(finger))
                 return nullptr;
-            return &_fingersRange[finger].touchingNodes;
+            return &_fingersRange[finger].touchNodes;
+        }
+
+        const osg::Vec3f* getPalmTouchPosition() const
+        {
+            if (!isPalmTouching() || !_wristRange.hasPosition)
+                return nullptr;
+            return &_wristRange.touchPosition;
+        }
+
+        const osg::Vec3f* getFingerTouchPosition(unsigned int finger) const
+        {
+            if (!isFingerTouching(finger) || !_fingersRange[finger].hasPosition)
+                return nullptr;
+            return &_fingersRange[finger].touchPosition;
+        }
+
+        const osg::Vec3f* getPalmTouchNormal() const
+        {
+            if (!isPalmTouching() || !_wristRange.hasPosition)
+                return nullptr;
+            return &_wristRange.touchNormal;
+        }
+
+        const osg::Vec3f* getFingerTouchNormal(unsigned int finger) const
+        {
+            if (!isFingerTouching(finger) || !_fingersRange[finger].hasPosition)
+                return nullptr;
+            return &_fingersRange[finger].touchNormal;
         }
 
         typedef struct {
-            /// Hover distance when autosqueezing
+            /// Hover distance when autosqueezing.
             float hoverDistance = 0.0f;
+            /// Freeze these joints.
+            bool freeze = false;
 
             /// Whether currently overriding the parent pose.
             bool overriding = false;
@@ -82,7 +117,10 @@ class FGVRHand : public osgXR::HandPose
 
             float curValue = 0;
 
-            osg::NodePath touchingNodes;
+            osg::NodePath touchNodes;
+            bool hasPosition;
+            osg::Vec3f touchPosition;
+            osg::Vec3f touchNormal;
         } RangeState;
 
     protected:

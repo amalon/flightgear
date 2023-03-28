@@ -298,7 +298,7 @@ unsigned int intersect(const CollisionMeshes& meshes,
 {
     unsigned int ret = 0;
     for (auto& pair: meshes) {
-        FGVRCollision::StripIntersections tempIntersections(false, false);
+        FGVRCollision::StripIntersections tempIntersections(intersections);
         ret += FGVRCollision::intersect(pair.second, sweep, tempIntersections);
         for (auto hit: tempIntersections) {
             FGVRMeshInstant entry(hit.entry, pair.first);
@@ -453,7 +453,11 @@ float JointRangeState::advance(const BonesStrip& bonesStrip,
     const float maxRatio = bonesStrip.getMaxRatio();
     bool shouldOverride = false;
     bool limitedDownwards = false;
-    _state->touchingNodes.clear();
+    _state->touchNodes.clear();
+    if (_state->freeze) {
+        return _state->curValue;
+    }
+
     if (_state->clearance[0] > _state->clearance[1]) {
         // If stuck, target current squeeze (don't change it)
         _targetValue = _state->curValue;
@@ -503,8 +507,25 @@ float JointRangeState::advance(const BonesStrip& bonesStrip,
         touching = limitedDownwards;
     }
 
-    if (touching)
-        _state->touchingNodes = _clearanceHits[1].nodePath;
+    if (touching) {
+        _state->touchNodes = _clearanceHits[1].nodePath;
+        _state->hasPosition = _clearanceHits[1].hasPosition;
+        if (_state->hasPosition) {
+            _state->touchPosition = _clearanceHits[1].position;
+            if (_state->touchPosition.length2() < 0.001) {
+                std::cout << "ZERO TOUCH POS " << _state->touchPosition.x() << "," << _state->touchPosition.y() << "," << _state->touchPosition.z() << " from " << _clearanceHits[1].source << std::endl;
+            }
+            _state->touchNormal = _clearanceHits[1].normal;
+        } else {
+#if 0
+            std::cout << "NO TOUCH POS from ";
+            if (_clearanceHits[1].source)
+                std::cout << _clearanceHits[1].source << std::endl;
+            else
+                std::cout << "null" << std::endl;
+#endif
+        }
+    }
 
     return _state->curValue;
 }
@@ -890,6 +911,15 @@ void FGVRHand::advance(float dt)
         ::expandBoundingBox(bbHand, tempPose, 1.0f, 1.0f,  _ranges, &dim, invMatrix);
         // Grow a bit
         growBoundingBox(bbHand, 0.03f);
+        // FIXME ugly, why are bounds sometimes huge if controller not
+        // detected!?
+        if (!bbHand.valid() ||
+            bbHand.xMax() - bbHand.xMin() > 1.0f ||
+            bbHand.yMax() - bbHand.yMin() > 1.0f ||
+            bbHand.zMax() - bbHand.zMin() > 1.0f) {
+            return;
+        }
+
         // Create polytope from bounding box
         osg::Polytope polytope;
         boundingBoxToPolytope(bbHand, polytope);

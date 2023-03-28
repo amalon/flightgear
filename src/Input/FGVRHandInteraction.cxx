@@ -25,6 +25,7 @@
 #include <Main/fg_props.hxx>
 #include <Viewer/VRManager.hxx>
 
+#include <simgear/scene/model/SGAnimationIK.hxx>
 #include <simgear/scene/util/RenderConstants.hxx>
 #include <simgear/scene/util/SGSceneUserData.hxx>
 
@@ -49,8 +50,13 @@ public:
     osg::ref_ptr<osgXR::Hand> _hand;
 
     struct Contact {
-        struct SGSceneryPick pick;
+        //struct SGSceneryPick pick;
+        osg::observer_ptr<osg::Node> rootNode;
+        // FIXME save pointing...
+        SGAnimationIKLink* ikLink;
         std::shared_ptr<SGSpringPickContact> contact;
+        // Contact point relative to palm
+        osg::Vec3f palmContactPos;
     };
 
     /// Contact points (5 fingers + palm).
@@ -118,6 +124,54 @@ void FGVRHandInteraction::postinit(SGPropertyNode* node,
 {
 }
 
+// rootMatrix & tipMatrix set if ikLinks is non-empty
+static void nodePathToIKLinks(const osg::NodePath& nodePath,
+                              SGAnimationIKLink::LinkPath& ikLinks,
+                              int& rootIndex,
+                              osg::Matrix& rootMatrix,
+                              osg::Matrix& tipMatrix)
+{
+    int firstIK = -1;
+    int lastIK = -1;
+    for (unsigned int i = 0; i < nodePath.size(); ++i) {
+        osg::Node* node = nodePath[i];
+        auto* ik = SGAnimationIKLink::getFromNode(node);
+        if (ik) {
+            ik->assignNode(node);
+            ikLinks.push_back(ik);
+            lastIK = i;
+            if (firstIK < 0)
+                firstIK = i;
+        }
+        /*
+        auto* ud = SGSceneUserData::getSceneUserData(*it);
+        if (ud) {
+            for (unsigned int i = 0; i < ud->getNumPickCallbacks(); ++i) {
+                auto* pickCallback = ud->getPickCallback(i);
+                if (pickCallback) {
+                    auto* ik = pickCallback->getIKLink();
+                    if (ik)
+                        ikLinks.push_back(ik);
+                }
+            }
+        }
+        */
+    }
+
+    if (firstIK >= 0) {
+        // Calculate matrix to outer space of first IK link
+        osg::NodePath subPath;
+        subPath.reserve(lastIK+1);
+        for (int i = 0; i < firstIK; ++i)
+            subPath.push_back(nodePath[i]);
+        rootMatrix = computeWorldToLocal(subPath);
+        for (int i = firstIK; i <= lastIK; ++i)
+            subPath.push_back(nodePath[i]);
+        tipMatrix = computeWorldToLocal(subPath);
+    }
+    rootIndex = firstIK;
+}
+
 void FGVRHandInteraction::update(double dt)
 {
     bool grabs[6] = {};
@@ -125,66 +179,131 @@ void FGVRHandInteraction::update(double dt)
 
     for (unsigned int i = 0; i < 5; ++i) {
         _grabFingers[i].getBoolValue(grabs[i], &grabsChanged[i]);
-        _private->_handPose->setFingerHoverDistance(i, grabs[i] ? 0.0f : 0.1f);
+        //_private->_handPose->setFingerHoverDistance(i, grabs[i] ? 0.0f : 0.01f);
     }
     _grabPalm.getBoolValue(grabs[5], &grabsChanged[5]);
 
     _private->_handPose->advance(dt);
 
-    const osg::NodePath* grabNodes[6];
-    for (unsigned int i = 0; i < 5; ++i)
-        grabNodes[i] = _private->_handPose->getFingerTouchingNodePath(i);
-    grabNodes[5] = _private->_handPose->getPalmTouchingNodePath();
+#if 0
+    // FIXME freezing doesn't work so well
+    for (unsigned int i = 0; i < 5; ++i) {
+        if (grabsChanged[i])
+            _private->_handPose->setFingerFreeze(i, grabs[i]);
+    }
+#endif
 
-    auto highlight = globals->get_subsystem<Highlight>();
-    int higlight_num_props = 0;
+    const osg::NodePath* grabNodes[6];
+    const osg::Vec3f* grabPositions[6];
+    const osg::Vec3f* grabNormals[6];
+    for (unsigned int i = 0; i < 5; ++i) {
+        grabNodes[i] = _private->_handPose->getFingerTouchNodePath(i);
+        grabPositions[i] = _private->_handPose->getFingerTouchPosition(i);
+        grabNormals[i] = _private->_handPose->getFingerTouchNormal(i);
+    }
+    grabNodes[5] = _private->_handPose->getPalmTouchNodePath();
+    grabPositions[5] = _private->_handPose->getPalmTouchPosition();
+    grabNormals[5] = _private->_handPose->getPalmTouchNormal();
+
+    //auto highlight = globals->get_subsystem<Highlight>();
+    //int higlight_num_props = 0;
+
+    auto& localMatrix = _private->_input->getLocalSpaceGroup()->getMatrix();
+
+    // FIXME This'll do for now, but better to use exact joint that
+    // collided!
+    // FIXME check valid
+    auto palmLoc = _private->_handTracking->getJointLocation(osgXR::HandPose::JOINT_PALM);
+    osg::Matrix palmMat(palmLoc.getOrientation());
+    palmMat.setTrans(palmLoc.getPosition());
+    osg::Matrix invPalmMat(palmLoc.getOrientation().inverse());
+    invPalmMat.preMultTranslate(-palmLoc.getPosition());
 
     for (unsigned int grab = 0; grab < 6; ++grab) {
-        if (!grabs[grab] || !grabNodes[grab])
+        SGAnimationIKLink::LinkPath ikLinks;
+        int rootIndex = -1;
+        osg::Matrix rootMatrix, tipMatrix;
+        //std::cout << "Grab " << grab << " = " << grabs[grab] << " (changed: " << grabsChanged[grab] << ")" << std::endl;
+        if (grabs[grab] && !grabsChanged[grab]) {
+            // Grab in progress, so we should just update contact point
+            if (_private->_contacts[grab].contact && _private->_contacts[grab].rootNode.valid()) {
+                std::cout << "Updating contact " << grab << " " << _private->_contacts[grab].contact << std::endl;
+
+                auto nodePaths = _private->_contacts[grab].rootNode->getParentalNodePaths();
+                if (nodePaths.empty())
+                    continue;
+                nodePaths.front().pop_back();
+                rootMatrix = computeWorldToLocal(nodePaths.front());
+
+                // Update spring destination relative to IK root, using new hand
+                // position
+                auto springPosPalm = (osg::Vec3d)_private->_contacts[grab].palmContactPos;
+                auto springPosLocal = springPosPalm * palmMat;
+                auto springPosGlobal = springPosLocal * localMatrix;
+                auto springPosRoot = springPosGlobal * rootMatrix;
+                std::cout << "  springPosPalm " << springPosPalm.x() << "," << springPosPalm.y() << "," << springPosPalm.z() << std::endl;
+                std::cout << "  springPosLocal " << springPosLocal.x() << "," << springPosLocal.y() << "," << springPosLocal.z() << std::endl;
+                std::cout << "  springPosRoot " << springPosRoot.x() << "," << springPosRoot.y() << "," << springPosRoot.z() << std::endl;
+                _private->_contacts[grab].contact->setSpringPositionRootLink(springPosRoot);
+            }
             continue;
-
-        // Construct a chain of pick callbacks, tip to root
-        bool pickFound = false;
-        for (auto it = grabNodes[grab]->begin(); it != grabNodes[grab]->end(); ++it) {
-            SGSceneUserData* ud = SGSceneUserData::getSceneUserData(*it);
-            if (!ud || (ud->getNumPickCallbacks() == 0)) {
-                continue;
+        }
+        if (grabNodes[grab])
+            nodePathToIKLinks(*grabNodes[grab], ikLinks, rootIndex, rootMatrix, tipMatrix);
+        if (ikLinks.empty() || !grabPositions[grab]) {
+            // No contact, make existing contact stale
+            if (_private->_contacts[grab].contact) {
+                std::cout << "Dropping contact " << grab << " " << _private->_contacts[grab].contact << std::endl;
+                _private->_contacts[grab].contact->setStale();
+                _private->_contacts[grab].contact = nullptr;
+                _private->_contacts[grab].ikLink = nullptr;
+            }
+        } else {
+            auto* ik = ikLinks.back();
+            // If top pick callback is different to last time, clear contact and
+            // update
+            if (ik != _private->_contacts[grab].ikLink) {
+                if (_private->_contacts[grab].contact)
+                    _private->_contacts[grab].contact->setStale();
+                _private->_contacts[grab].contact = nullptr;
+                _private->_contacts[grab].ikLink = ik;
+            }
+            // Create a new spring contact
+            if (!_private->_contacts[grab].contact) {
+                _private->_contacts[grab].contact = std::make_shared<SGSpringPickContact>();
+                std::cout << "Creating contact " << grab << " " << _private->_contacts[grab].contact << std::endl;
+                ik->addContact(_private->_contacts[grab].contact, ikLinks);
+            } else {
+                std::cout << "Updating contact " << grab << " " << _private->_contacts[grab].contact << std::endl;
             }
 
-            for (unsigned i = 0; i < ud->getNumPickCallbacks(); ++i) {
-                SGPickCallback* pickCallback = ud->getPickCallback(i);
-                if (!pickCallback)
-                    continue;
+            auto contactPosLocal  = (osg::Vec3d)*grabPositions[grab];
+            auto contactPosPalm   = contactPosLocal * invPalmMat;
+            auto contactPosGlobal = contactPosLocal * localMatrix;
+            auto contactPosTip    = contactPosGlobal * tipMatrix;
+            auto contactPosRoot   = contactPosGlobal * rootMatrix;
+            std::cout << "  contactPosLocal " << contactPosLocal.x() << "," << contactPosLocal.y() << "," << contactPosLocal.z() << std::endl;
+            std::cout << "  contactPosPalm " << contactPosPalm.x() << "," << contactPosPalm.y() << "," << contactPosPalm.z() << std::endl;
+            std::cout << "  contactPosRoot " << contactPosRoot.x() << "," << contactPosRoot.y() << "," << contactPosRoot.z() << std::endl;
+            std::cout << "  contactPosTip " << contactPosTip.x() << "," << contactPosTip.y() << "," << contactPosTip.z() << std::endl;
 
-#if 1
-                auto* contactConfig = pickCallback->getContactConfig();
-                if (!contactConfig)
-                    continue;
-                if (!contactConfig->isEnabled())
-                    continue;
+            // Update contact position relative to hand (for when hand moves)
+            _private->_contacts[grab].palmContactPos = contactPosPalm;
 
-                // If top pick callback is different to last time, clear contact and
-                // update
-                if (pickCallback != _private->_contacts[grab].pick.callback) {
-                    if (_private->_contacts[grab].contact)
-                        _private->_contacts[grab].contact->setStale();
-                    _private->_contacts[grab].contact = nullptr;
-                    _private->_contacts[grab].pick.callback = pickCallback;
-                }
-                // Create a new spring contact
-                if (!_private->_contacts[grab].contact) {
-                    _private->_contacts[grab].contact = std::make_shared<SGSpringPickContact>();
-                    pickCallback->addContact(_private->_contacts[grab].contact, *grabNodes[grab]);
-                    pickFound = true;
-                    break;
-                }
-#endif
-            }
-            if (pickFound)
-                break;
+            // Update contact position relative to IK tip (for IK calculations)
+            _private->_contacts[grab].contact->setContactPositionTipLink(contactPosTip);
+
+            // Update spring destination to match
+            _private->_contacts[grab].contact->setSpringPositionRootLink(contactPosRoot);
+            _private->_contacts[grab].contact->setForce(10.0f, grabs[grab] ? 1.0f : 0.0f);
+
+            // Update root node pointer
+            if (rootIndex >= 0)
+                _private->_contacts[grab].rootNode = (*grabNodes[grab])[rootIndex];
+            else
+                _private->_contacts[grab].rootNode = nullptr;
         }
     }
-
 
     // Events to pick objects
     // - interract
