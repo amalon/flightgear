@@ -156,13 +156,14 @@ class Sweep : public Shape
             public:
                 float ratio;
 
-                bool hasPosition;
+                bool hasPosition = false;
                 /// Intersection position.
                 osg::Vec3f position;
                 /// Intersection normal of shape at intersection with sweep.
                 osg::Vec3f normal;
 
                 const char* source = nullptr;
+                //std::vector<osg::Vec3f> linestrip;
 
                 typedef struct Range {
                     float minRatio = 0.0f;
@@ -176,8 +177,14 @@ class Sweep : public Shape
                 } Range;
 
                 Instant(float newRatio) :
+                    ratio(newRatio)
+                {
+                }
+
+                Instant(float newRatio,
+                        const char* source) :
                     ratio(newRatio),
-                    hasPosition(false)
+                    source(source)
                 {
                 }
 
@@ -295,6 +302,13 @@ class TIntersections : public std::multiset<INTERSECTION>
             _stopASAP(stopASAP),
             _wantsPositions(wantsPositions),
             _wantsNormals(wantsNormals)
+        {
+        }
+
+        explicit TIntersections(const TIntersections& other) :
+            _stopASAP(other.shouldStopASAP()),
+            _wantsPositions(other.wantsPositions()),
+            _wantsNormals(other.wantsNormals())
         {
         }
 

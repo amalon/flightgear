@@ -559,9 +559,12 @@ unsigned int FGVRCollision::rawIntersect(const OpenCapsule& capsule,
                                 norms[i] = pos[i] - (capsuleStart + capsuleVec*capsuleRatio[swapped?(1-i):i]);
                         }
                     }
+                    intersections.insertIntersection(Sweep::Instant(ratio[0], pos[0], norms[0], __PRETTY_FUNCTION__),
+                                                     Sweep::Instant(ratio[1], pos[1], norms[1], __PRETTY_FUNCTION__));
+                } else {
+                    intersections.insertIntersection(Sweep::Instant(ratio[0], __PRETTY_FUNCTION__),
+                                                     Sweep::Instant(ratio[1], __PRETTY_FUNCTION__));
                 }
-                intersections.insertIntersection(Sweep::Instant(ratio[0], pos[0], norms[0], __PRETTY_FUNCTION__),
-                                                 Sweep::Instant(ratio[1], pos[1], norms[1], __PRETTY_FUNCTION__));
                 return 1;
             }
         }
@@ -636,7 +639,7 @@ unsigned int FGVRCollision::rawIntersect(const OpenCapsule& capsule,
                                          const LineSweep& lineSweep,
                                          SweepIntersections& intersections)
 {
-    // Find the line across the sweep that is closest to the capsule centerline
+    // Find the line along the sweep that is closest to the capsule centerline
     //   Line(t, ratio) = (AT0+t*(AT1-AT0)) + ratio*((BT0+t*(BT1-BT0))-(AT0+t*(AT1-AT0)))
     //   Capsule(ratio) = C0 + ratio*(C1-C0)
     //   CapsuleClosest(t) = Capsule(0) + ((Line(t,ratio) - Capsule(0)) / CapsuleVec) * CapsuleVec
@@ -738,7 +741,6 @@ unsigned int FGVRCollision::rawIntersect(const OpenCapsule& capsule,
         if (timeRatio[i] == timeRatio[i + 1])
             continue;
         auto range = intersections.pushRange({timeRatio[i], timeRatio[i + 1]});
-        // FIXME
         ret += rawIntersect(capsule,
                             Line(Point(bilinear(lineSweep, lineRatio[i], timeRatio[i])),
                                  Point(bilinear(lineSweep, lineRatio[i + 1], timeRatio[i + 1]))),
@@ -774,25 +776,44 @@ unsigned int FGVRCollision::rawIntersect(const Line& line,
 
     // Now we need to intersect the line sweep [aT0,bT0]..[aT1,bT1] with the
     // start capsule. Note, this assumes the capsule length is constant
-    SweepIntersections tempIntersections(false, false);
+    SweepIntersections tempIntersections(intersections);
     unsigned int ret = rawIntersect(capsuleSweep.getStart(),
-                                           LineSweep(line, Line(Point(aT1), Point(bT1))),
-                                           tempIntersections);
-    if (intersections.wantsPositions()) {
+                                    LineSweep(line, Line(Point(aT1), Point(bT1))),
+                                    tempIntersections);
+    if (intersections.wantsPositions() && !tempIntersections.empty()) {
         // Recalculate intersection positions and normals
-        for (auto hit: tempIntersections) {
-            hit.entry.hasPosition = false;
-            hit.exit.hasPosition = false;
-#if 0 // FIXME
-            hit.position = p;
-            if (intersections.wantsNormals()) {
-                osg::Vec3f capStart = capAT0 + hit.ratio*(capAT1-capAT0);
-                osg::Vec3f capEnd = capBT0 + hit.ratio*(capBT1-capBT0);
-                osg::Vec3f capNorm = capEnd - capStart;
-                osg::Vec3f capRatio = ((p - capStart) * capNorm) / capNorm.length2();
-                hit.normal = capStart + capNorm*capRatio - p;
-            }
+#if 0
+        osg::Quat rotCap0to1 = rotCap1to0.inverse();
 #endif
+        osg::Quat rotCap0toN;
+        for (auto hit: tempIntersections) {
+            for (auto* subhit: { &hit.entry, &hit.exit }) {
+                if (subhit->hasPosition) {
+                    float ratio = subhit->ratio;
+                    float invRatio = 1.0f - ratio;
+                    osg::Vec3f capATn = capAT0 * invRatio + capAT1 * ratio;
+                    // Construct a rotation of capsule from time 0 to time ratio
+#if 0
+                    rotCap0toN.slerp(ratio, osg::Quat(), rotCap0to1);
+#else
+                    osg::Vec3f capBTn = capBT0 * invRatio + capBT1 * ratio;
+                    osg::Vec3f capVecTN = capBTn - capATn;
+                    rotCap0toN.makeRotate(capVecT0, capVecTN);
+#endif
+                    // vT0 = capATn + rotCap0toN * (vTn - capAT0)
+                    subhit->position = capATn + rotCap0toN * (subhit->position - capAT0);
+#if 0
+                    subhit->linestrip.clear();
+                    subhit->linestrip.push_back(capATn);
+                    subhit->linestrip.push_back(capBTn);
+#endif
+                    if (intersections.wantsNormals()) {
+                        // FIXME still sometimes sideways normals
+                        // Normal needs to be relative to the line, so invert
+                        subhit->normal = rotCap0toN * -subhit->normal;
+                    }
+                }
+            }
             intersections.insertIntersection(hit);
         }
     }

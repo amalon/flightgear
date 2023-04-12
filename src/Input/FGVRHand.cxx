@@ -440,6 +440,17 @@ float JointRangeState::handleIntersections(const CollisionMeshes& meshes,
                 debugVertices->push_back(_clearanceHits[i].position);
                 debugVertices->push_back(_clearanceHits[i].position + norm*0.02f);
                 debugGeom->addPrimitiveSet(primNormal);
+
+#if 0
+                if (!_clearanceHits[i].linestrip.empty()) {
+                    auto* primStrip = new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP,
+                                                          debugVertices->size(),
+                                                          _clearanceHits[i].linestrip.size());
+                    for (auto& vert: _clearanceHits[i].linestrip)
+                        debugVertices->push_back(vert);
+                    debugGeom->addPrimitiveSet(primStrip);
+                }
+#endif
             }
         }
     }
