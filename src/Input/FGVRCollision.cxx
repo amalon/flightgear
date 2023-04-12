@@ -740,7 +740,7 @@ unsigned int FGVRCollision::rawIntersect(const OpenCapsule& capsule,
     for (unsigned int i = 0; i < 3; ++i) {
         if (timeRatio[i] == timeRatio[i + 1])
             continue;
-        auto range = intersections.pushRange({timeRatio[i], timeRatio[i + 1]});
+        auto range = intersections.pushRange({timeRatio[i], timeRatio[i + 1] - timeRatio[i]});
         ret += rawIntersect(capsule,
                             Line(Point(bilinear(lineSweep, lineRatio[i], timeRatio[i])),
                                  Point(bilinear(lineSweep, lineRatio[i + 1], timeRatio[i + 1]))),
