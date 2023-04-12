@@ -551,7 +551,10 @@ unsigned int FGVRCollision::rawIntersect(const OpenCapsule& capsule,
                     for (unsigned int i = 0; i < 2; ++i) {
                         pos[i] = line.sweep.start.position + lineVec*ratio[i];
                         if (intersections.wantsNormals()) {
-                            if (normDir[i])
+                            // Don't adjust normals for ends, as numerical error
+                            // results in glitchiness of normals on boundary
+                            // between open capsule and end cap spheres
+                            if (false && normDir[i])
                                 // flat end of capsule
                                 norms[i] = capsuleVec*normDir[i];
                             else
