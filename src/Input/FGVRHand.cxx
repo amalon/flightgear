@@ -345,12 +345,12 @@ float JointRangeState::handleIntersections(const CollisionMeshes& meshes,
             const osg::Vec3f& exitSegmentPos2 = bonesStrip.sweep->strip[hit.exit.segment+1].items[debugBone].position[1];
             unsigned int stripStart = debugVertices->size();
             debugVertices->push_back(entrySegmentPos1 * (1.0f - hit.entry.ratio) +
-                                entrySegmentPos2 * hit.entry.ratio);
+                                     entrySegmentPos2 * hit.entry.ratio);
             for (unsigned int i = hit.entry.segment+1; i <= hit.exit.segment; ++i) {
                 debugVertices->push_back(bonesStrip.sweep->strip[i].items[debugBone].position[1]);
             }
             debugVertices->push_back(exitSegmentPos1 * (1.0f - hit.exit.ratio) +
-                                exitSegmentPos2 * hit.exit.ratio);
+                                     exitSegmentPos2 * hit.exit.ratio);
             osg::DrawArrays* prim = new osg::DrawArrays(osg::PrimitiveSet::LINE_STRIP,
                                                         stripStart,
                                                         debugVertices->size() - stripStart);
