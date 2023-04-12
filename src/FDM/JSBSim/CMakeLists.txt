@@ -192,7 +192,8 @@ add_library(JSBSim STATIC ${SOURCES} ${HEADERS})
 set(VERSION_MESSAGE "compiled from FlightGear ${FLIGHTGEAR_VERSION}")
 add_definitions("-DJSBSIM_VERSION=\"${VERSION_MESSAGE}\"")
 
-target_link_libraries(JSBSim SimGearCore)
+# FIXME SimGearScene - Hack and a half!
+target_link_libraries(JSBSim SimGearCore SimGearScene)
 target_include_directories(JSBSim PRIVATE ${CMAKE_SOURCE_DIR}/src/FDM/JSBSim)
 
 add_executable(JSBsim_bin JSBSim.cpp )

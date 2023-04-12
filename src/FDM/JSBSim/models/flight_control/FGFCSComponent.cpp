@@ -192,6 +192,8 @@ FGFCSComponent::FGFCSComponent(FGFCS* _fcs, Element* element) : fcs(_fcs)
   }
 
   Debug(0);
+
+  //_componentsByProperty[OutputNodes[0].get()] = this;
 }
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -209,6 +211,20 @@ void FGFCSComponent::ResetPastStates(void)
   for (auto &elm: output_array)
     elm = 0.0;
 }
+
+#if 0
+FGFCSComponent* FGFCSComponent::findComponentByProperty(FGPropertyNode* node)
+{
+    auto it = _componentsByProperty.find(node);
+    if (it == _componentsByProperty.end())
+        return nullptr;
+    return (*it).second;
+}
+
+void FGFCSComponent::ReverseSet(double value)
+{
+}
+#endif
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

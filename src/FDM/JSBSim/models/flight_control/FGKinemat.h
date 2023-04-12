@@ -132,6 +132,9 @@ public:
   bool Run (void) override;
 
 private:
+  class ReverseModifier;
+  std::unique_ptr<ReverseModifier> _reverseModifier;
+
   std::vector<double> Detents;
   std::vector<double> TransitionTimes;
   bool  DoScale;

@@ -43,7 +43,7 @@
 //#define DRAW_WRIST_INTERSECTIONS
 
 // Shows finger vs scene mesh intersection ranges
-//#define DRAW_SQUEEZE_INTERSECTIONS (finger == 1)
+#define DRAW_SQUEEZE_INTERSECTIONS (finger == 1)
 //#define DRAW_SQUEEZE_INTERSECTIONS true
 
 // Log finger movement decisions

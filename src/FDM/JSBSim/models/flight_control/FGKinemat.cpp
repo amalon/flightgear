@@ -41,6 +41,8 @@ INCLUDES
 #include "input_output/FGXMLElement.h"
 #include "models/FGFCS.h"
 
+#include <simgear/scene/model/SGAnimationIK.hxx>
+
 using namespace std;
 
 namespace JSBSim {
@@ -48,6 +50,29 @@ namespace JSBSim {
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 CLASS IMPLEMENTATION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
+
+class FGKinemat::ReverseModifier : public SGAnimationIKVariable::ModifyHandler
+{
+public:
+    ReverseModifier(FGKinemat* kinemat, SGPropertyNode* propertyNode) :
+        SGAnimationIKVariable::ModifyHandler(propertyNode),
+        _kinemat(kinemat)
+    {
+    }
+
+    void modify(double value) override
+    {
+        _kinemat->Output = value;
+        _kinemat->Clip();
+        _kinemat->SetOutput();
+
+        _kinemat->Input = Constrain(_kinemat->Detents.front(), _kinemat->Output, _kinemat->Detents.back());
+        _kinemat->InputNodes[0]->SetValue(_kinemat->Input);
+    }
+
+private:
+    FGKinemat* _kinemat;
+};
 
 FGKinemat::FGKinemat(FGFCS* fcs, Element* element)
   : FGFCSComponent(fcs, element)
@@ -75,6 +100,10 @@ FGKinemat::FGKinemat(FGFCS* fcs, Element* element)
       << " must have more than 1 setting element";
     cerr << element->ReadFrom() << endl << s.str() << endl;
     throw BaseException(s.str());
+  }
+
+  if (!OutputNodes.empty() && OutputNodes[0].valid() && element->FindElement("reversible")) {
+      _reverseModifier.reset(new ReverseModifier(this, OutputNodes[0]));
   }
 
   bind(element);

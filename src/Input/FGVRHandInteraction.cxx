@@ -227,7 +227,7 @@ void FGVRHandInteraction::update(double dt)
         if (grabs[grab] && !grabsChanged[grab]) {
             // Grab in progress, so we should just update contact point
             if (_private->_contacts[grab].contact && _private->_contacts[grab].rootNode.valid()) {
-                std::cout << "Updating contact " << grab << " " << _private->_contacts[grab].contact << std::endl;
+                //std::cout << "Updating contact " << grab << " " << _private->_contacts[grab].contact << std::endl;
 
                 auto nodePaths = _private->_contacts[grab].rootNode->getParentalNodePaths();
                 if (nodePaths.empty())
@@ -241,9 +241,11 @@ void FGVRHandInteraction::update(double dt)
                 auto springPosLocal = springPosPalm * palmMat;
                 auto springPosGlobal = springPosLocal * localMatrix;
                 auto springPosRoot = springPosGlobal * rootMatrix;
+                /*
                 std::cout << "  springPosPalm " << springPosPalm.x() << "," << springPosPalm.y() << "," << springPosPalm.z() << std::endl;
                 std::cout << "  springPosLocal " << springPosLocal.x() << "," << springPosLocal.y() << "," << springPosLocal.z() << std::endl;
                 std::cout << "  springPosRoot " << springPosRoot.x() << "," << springPosRoot.y() << "," << springPosRoot.z() << std::endl;
+                */
                 _private->_contacts[grab].contact->setSpringPositionRootLink(springPosRoot);
             }
             continue;
@@ -253,7 +255,7 @@ void FGVRHandInteraction::update(double dt)
         if (ikLinks.empty() || !grabPositions[grab]) {
             // No contact, make existing contact stale
             if (_private->_contacts[grab].contact) {
-                std::cout << "Dropping contact " << grab << " " << _private->_contacts[grab].contact << std::endl;
+                //std::cout << "Dropping contact " << grab << " " << _private->_contacts[grab].contact << std::endl;
                 _private->_contacts[grab].contact->setStale();
                 _private->_contacts[grab].contact = nullptr;
                 _private->_contacts[grab].ikLink = nullptr;
@@ -271,10 +273,10 @@ void FGVRHandInteraction::update(double dt)
             // Create a new spring contact
             if (!_private->_contacts[grab].contact) {
                 _private->_contacts[grab].contact = std::make_shared<SGSpringPickContact>();
-                std::cout << "Creating contact " << grab << " " << _private->_contacts[grab].contact << std::endl;
+                //std::cout << "Creating contact " << grab << " " << _private->_contacts[grab].contact << std::endl;
                 ik->addContact(_private->_contacts[grab].contact, ikLinks);
             } else {
-                std::cout << "Updating contact " << grab << " " << _private->_contacts[grab].contact << std::endl;
+                //std::cout << "Updating contact " << grab << " " << _private->_contacts[grab].contact << std::endl;
             }
 
             auto contactPosLocal  = (osg::Vec3d)*grabPositions[grab];
@@ -282,10 +284,12 @@ void FGVRHandInteraction::update(double dt)
             auto contactPosGlobal = contactPosLocal * localMatrix;
             auto contactPosTip    = contactPosGlobal * tipMatrix;
             auto contactPosRoot   = contactPosGlobal * rootMatrix;
+#if 0
             std::cout << "  contactPosLocal " << contactPosLocal.x() << "," << contactPosLocal.y() << "," << contactPosLocal.z() << std::endl;
             std::cout << "  contactPosPalm " << contactPosPalm.x() << "," << contactPosPalm.y() << "," << contactPosPalm.z() << std::endl;
             std::cout << "  contactPosRoot " << contactPosRoot.x() << "," << contactPosRoot.y() << "," << contactPosRoot.z() << std::endl;
             std::cout << "  contactPosTip " << contactPosTip.x() << "," << contactPosTip.y() << "," << contactPosTip.z() << std::endl;
+#endif
 
             // Update contact position relative to hand (for when hand moves)
             _private->_contacts[grab].palmContactPos = contactPosPalm;

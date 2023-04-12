@@ -97,7 +97,16 @@ public:
   virtual double GetOutputPct(void) const { return 0; }
   virtual void ResetPastStates(void);
 
+#if 0
+  static FGFCSComponent* findComponentByProperty(FGPropertyNode* node);
+  virtual void ReverseSet(double value);
+#endif
+
 protected:
+#if 0
+  static std::map<FGPropertyNode, FGFCSComponent*> _componentsByProperty;
+#endif
+
   FGFCS* fcs;
   FGPropertyManager* PropertyManager;
   std::vector <FGPropertyNode_ptr> OutputNodes;
