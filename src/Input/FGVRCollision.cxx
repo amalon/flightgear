@@ -543,7 +543,7 @@ unsigned int FGVRCollision::rawIntersect(const OpenCapsule& capsule,
                 }
                 if (capsuleRatio[1] > capsuleEnds[1]) {
                     ratio[swapped?0:1] = (capsuleEnds[1] - capsuleToLineRatioCapsule) / lineRatioCapsule;
-                    normDir[swapped?1:0] = 1.0f;
+                    normDir[swapped?0:1] = 1.0f;
                 }
                 osg::Vec3f pos[2];
                 osg::Vec3f norms[2];
