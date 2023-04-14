@@ -25,7 +25,7 @@
 #include <Main/fg_props.hxx>
 #include <Viewer/VRManager.hxx>
 
-#include <simgear/scene/model/SGAnimationIK.hxx>
+#include <simgear/scene/model/SGIKLink.hxx>
 #include <simgear/scene/util/RenderConstants.hxx>
 #include <simgear/scene/util/SGSceneUserData.hxx>
 
@@ -53,7 +53,7 @@ public:
         //struct SGSceneryPick pick;
         osg::observer_ptr<osg::Node> rootNode;
         // FIXME save pointing...
-        SGAnimationIKLink* ikLink;
+        SGIKLink* ikLink;
         std::shared_ptr<SGSpringPickContact> contact;
         // Contact point relative to palm
         osg::Vec3f palmContactPos;
@@ -126,7 +126,7 @@ void FGVRHandInteraction::postinit(SGPropertyNode* node,
 
 // rootMatrix & tipMatrix set if ikLinks is non-empty
 static void nodePathToIKLinks(const osg::NodePath& nodePath,
-                              SGAnimationIKLink::LinkPath& ikLinks,
+                              SGIKLink::LinkPath& ikLinks,
                               int& rootIndex,
                               osg::Matrix& rootMatrix,
                               osg::Matrix& tipMatrix)
@@ -135,7 +135,7 @@ static void nodePathToIKLinks(const osg::NodePath& nodePath,
     int lastIK = -1;
     for (unsigned int i = 0; i < nodePath.size(); ++i) {
         osg::Node* node = nodePath[i];
-        auto* ik = SGAnimationIKLink::getFromNode(node);
+        auto* ik = SGIKLink::getFromNode(node);
         if (ik) {
             ik->assignNode(node);
             ikLinks.push_back(ik);
@@ -220,7 +220,7 @@ void FGVRHandInteraction::update(double dt)
     invPalmMat.preMultTranslate(-palmLoc.getPosition());
 
     for (unsigned int grab = 0; grab < 6; ++grab) {
-        SGAnimationIKLink::LinkPath ikLinks;
+        SGIKLink::LinkPath ikLinks;
         int rootIndex = -1;
         osg::Matrix rootMatrix, tipMatrix;
         //std::cout << "Grab " << grab << " = " << grabs[grab] << " (changed: " << grabsChanged[grab] << ")" << std::endl;

@@ -41,7 +41,7 @@ INCLUDES
 #include "input_output/FGXMLElement.h"
 #include "models/FGFCS.h"
 
-#include <simgear/scene/model/SGAnimationIK.hxx>
+#include <simgear/scene/model/SGIKVariable.hxx>
 
 using namespace std;
 
@@ -51,11 +51,11 @@ namespace JSBSim {
 CLASS IMPLEMENTATION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
-class FGKinemat::ReverseModifier : public SGAnimationIKVariable::ModifyHandler
+class FGKinemat::ReverseModifier : public SGIKVariable::ModifyHandler
 {
 public:
     ReverseModifier(FGKinemat* kinemat, SGPropertyNode* propertyNode) :
-        SGAnimationIKVariable::ModifyHandler(propertyNode),
+        SGIKVariable::ModifyHandler(propertyNode),
         _kinemat(kinemat)
     {
     }
