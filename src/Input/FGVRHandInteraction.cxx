@@ -124,54 +124,6 @@ void FGVRHandInteraction::postinit(SGPropertyNode* node,
 {
 }
 
-// rootMatrix & tipMatrix set if ikLinks is non-empty
-static void nodePathToIKLinks(const osg::NodePath& nodePath,
-                              SGIKLink::LinkPath& ikLinks,
-                              int& rootIndex,
-                              osg::Matrix& rootMatrix,
-                              osg::Matrix& tipMatrix)
-{
-    int firstIK = -1;
-    int lastIK = -1;
-    for (unsigned int i = 0; i < nodePath.size(); ++i) {
-        osg::Node* node = nodePath[i];
-        auto* ik = SGIKLink::getFromNode(node);
-        if (ik) {
-            ik->assignNode(node);
-            ikLinks.push_back(ik);
-            lastIK = i;
-            if (firstIK < 0)
-                firstIK = i;
-        }
-        /*
-        auto* ud = SGSceneUserData::getSceneUserData(*it);
-        if (ud) {
-            for (unsigned int i = 0; i < ud->getNumPickCallbacks(); ++i) {
-                auto* pickCallback = ud->getPickCallback(i);
-                if (pickCallback) {
-                    auto* ik = pickCallback->getIKLink();
-                    if (ik)
-                        ikLinks.push_back(ik);
-                }
-            }
-        }
-        */
-    }
-
-    if (firstIK >= 0) {
-        // Calculate matrix to outer space of first IK link
-        osg::NodePath subPath;
-        subPath.reserve(lastIK+1);
-        for (int i = 0; i < firstIK; ++i)
-            subPath.push_back(nodePath[i]);
-        rootMatrix = computeWorldToLocal(subPath);
-        for (int i = firstIK; i <= lastIK; ++i)
-            subPath.push_back(nodePath[i]);
-        tipMatrix = computeWorldToLocal(subPath);
-    }
-    rootIndex = firstIK;
-}
-
 void FGVRHandInteraction::update(double dt)
 {
     bool grabs[6] = {};
@@ -251,7 +203,7 @@ void FGVRHandInteraction::update(double dt)
             continue;
         }
         if (grabNodes[grab])
-            nodePathToIKLinks(*grabNodes[grab], ikLinks, rootIndex, rootMatrix, tipMatrix);
+            SGIKLink::nodePathToLinks(*grabNodes[grab], ikLinks, rootIndex, rootMatrix, tipMatrix);
         if (ikLinks.empty() || !grabPositions[grab]) {
             // No contact, make existing contact stale
             if (_private->_contacts[grab].contact) {
@@ -262,7 +214,7 @@ void FGVRHandInteraction::update(double dt)
             }
         } else {
             auto* ik = ikLinks.back();
-            // If top pick callback is different to last time, clear contact and
+            // If top link is different to last time, clear contact and
             // update
             if (ik != _private->_contacts[grab].ikLink) {
                 if (_private->_contacts[grab].contact)
