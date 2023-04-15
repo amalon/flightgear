@@ -69,6 +69,7 @@
 #include <simgear/scene/material/EffectBuilder.hxx>
 #include <simgear/scene/model/animation.hxx>
 #include <simgear/scene/model/placement.hxx>
+#include <simgear/scene/model/SGIKLink.hxx>
 #include <simgear/scene/sky/sky.hxx>
 #include <simgear/scene/util/DeletionManager.hxx>
 #include <simgear/scene/util/SGUpdateVisitor.hxx>
@@ -1322,6 +1323,51 @@ PickList FGRenderer::pick(const osg::Plane& plane,
         return PickList();
 
     return handlePickIntersections(intersections);
+}
+
+LinksPick handlePickLinkIntersections(Intersections& intersections,
+                                      const IntersectionCameraInfo& hitCamInfo)
+{
+    LinksPick result{};
+
+    if (!intersections.empty()) {
+        auto hit = intersections.begin();
+        const osg::NodePath& np = hit->nodePath;
+        int rootIndex = -1;
+
+        result.wgs84 = hit->getWorldIntersectPoint();
+        result.cameraInfo = hitCamInfo.cameraInfo;
+        result.distance = (result.wgs84 - hitCamInfo.lineSegment[0]).length();
+
+        SGIKLink::nodePathToLinks(np, result.linkPath, rootIndex,
+                                  result.rootMatrix, result.tipMatrix);
+        if (rootIndex >= 0)
+            result.rootNode = np[rootIndex];
+    }
+
+    return result;
+}
+
+LinksPick FGRenderer::pickLinks(const osg::Vec2& windowPos)
+{
+    Intersections intersections;
+    IntersectionCameraInfo hitCamInfo;
+
+    if (!computeIntersections(CameraGroup::getDefault(), windowPos,
+                              intersections, &hitCamInfo))
+        return LinksPick{};
+
+    LinksPick ret = handlePickLinkIntersections(intersections, hitCamInfo);
+
+    return ret;
+}
+
+bool FGRenderer::windowToGlobal(const osg::Vec2& windowPos,
+                                const CameraInfo* camInfo, double distance,
+                                osg::Vec3d& outGlobal)
+{
+    return computeWindowToGlobal(CameraGroup::getDefault(), windowPos, camInfo,
+                                 distance, outGlobal);
 }
 
 osgViewer::ViewerBase* FGRenderer::getViewerBase()

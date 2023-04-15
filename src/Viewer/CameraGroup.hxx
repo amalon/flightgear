@@ -134,6 +134,12 @@ struct CameraInfo : public osg::Referenced
 
 };
 
+struct IntersectionCameraInfo {
+    const CameraInfo* cameraInfo;
+    // Line segment ends in global scene space
+    osg::Vec3d lineSegment[2];
+};
+
 class CameraGroup : public osg::Referenced
 {
 public:
@@ -226,7 +232,13 @@ protected:
     friend bool computeIntersections(const CameraGroup* cgroup,
                                      const osg::Vec2d& windowPos,
                                      osgUtil::LineSegmentIntersector::Intersections&
-                                     intersections);
+                                     intersections,
+                                     IntersectionCameraInfo* hitCamInfo);
+    friend bool computeWindowToGlobal(const CameraGroup* cgroup,
+                                      const osg::Vec2& windowPos,
+                                      const CameraInfo* camInfo,
+                                      double distance,
+                                      osg::Vec3d& outGlobal);
     friend void reloadCompositors(CameraGroup *cgroup);
 
     CameraList _cameras;
@@ -268,12 +280,14 @@ osg::Camera* getGUICamera(CameraGroup* cgroup);
  * @param ea the event containing a window and mouse coordinates
  * @param intersections container for the result of intersection
  * testing.
+ * @param hitCamInfo information about camera and line segment
  * @return true if any intersections are found
  */
 bool computeIntersections(const CameraGroup* cgroup,
                           const osg::Vec2d& windowPos,
                           osgUtil::LineSegmentIntersector::Intersections&
-                          intersections);
+                          intersections,
+                          IntersectionCameraInfo* hitCamInfo = nullptr);
 class LineStripIntersection : public osgUtil::LineSegmentIntersector::Intersection
 {
     public:
@@ -323,6 +337,13 @@ bool computeSceneIntersections(const CameraGroup* cgroup,
  * @param y y window coordinate of pointer, in "y down" coordinates.
  */
 void warpGUIPointer(CameraGroup* cgroup, int x, int y);
+
+
+bool computeWindowToGlobal(const CameraGroup* cgroup,
+                           const osg::Vec2& windowPos,
+                           const CameraInfo* camInfo,
+                           double distance,
+                           osg::Vec3d& outGlobal);
 
 /** Force a reload of all Compositor instances in the CameraGroup,
  * except the one used by the GUI camera.

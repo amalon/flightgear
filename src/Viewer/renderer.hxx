@@ -1,6 +1,7 @@
 #ifndef __FG_RENDERER_HXX
 #define __FG_RENDERER_HXX 1
 
+#include <simgear/scene/model/SGIKLink.hxx>
 #include <simgear/scene/util/SGPickCallback.hxx>
 #include <simgear/props/props.hxx>
 #include <simgear/timing/timestamp.hxx>
@@ -34,6 +35,7 @@ class Viewer;
 namespace flightgear
 {
 class FGEventHandler;
+struct CameraInfo;
 class CameraGroup;
 class PUICamera;
 }
@@ -44,6 +46,18 @@ class SplashScreen;
 class QQuickDrawable;
 
 typedef std::vector<SGSceneryPick> PickList;
+
+struct LinksPick {
+  SGIKLink::LinkPath linkPath;
+  osg::Node* rootNode;
+  osg::Matrix rootMatrix;
+  osg::Matrix tipMatrix;
+  osg::Vec3d wgs84;
+  /// Pointer to camera info this hit was found in.
+  const flightgear::CameraInfo *cameraInfo;
+  /// Ratio into camera frustum.
+  double distance;
+};
 
 class FGRenderer {
 
@@ -73,6 +87,11 @@ public:
     }
     PickList pick(const osg::Polytope& polytope);
     PickList pick(const osg::Plane& plane, const osg::Polytope& polytope);
+
+    LinksPick pickLinks(const osg::Vec2& windowPos);
+    bool windowToGlobal(const osg::Vec2& windowPos,
+                        const flightgear::CameraInfo* camInfo, double distance,
+                        osg::Vec3d& outGlobal);
     
     /* Returns either composite_viewer or viewer. */
     osgViewer::ViewerBase* getViewerBase();

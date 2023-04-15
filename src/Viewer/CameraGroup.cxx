@@ -1053,7 +1053,8 @@ static bool
 computeCameraIntersection(const CameraGroup *cgroup,
                           const CameraInfo *cinfo,
                           const osg::Vec2d &windowPos,
-                          osgUtil::LineSegmentIntersector::Intersections &intersections)
+                          osgUtil::LineSegmentIntersector::Intersections &intersections,
+                          IntersectionCameraInfo* hitCamInfo)
 {
     if (!(cinfo->flags & CameraInfo::DO_INTERSECTION_TEST))
         return false;
@@ -1078,19 +1079,26 @@ computeCameraIntersection(const CameraGroup *cgroup,
     start = start * invViewMat;
     end = end * invViewMat;
 
-    return computeSceneIntersection(cgroup,
-                                    osg::Vec3d(start.x(), start.y(), start.z()),
-                                    osg::Vec3d(end.x(), end.y(), end.z()),
-                                    intersections);
+    osg::Vec3d start3(start.x(), start.y(), start.z());
+    osg::Vec3d end3(end.x(), end.y(), end.z());
+    if (hitCamInfo) {
+        hitCamInfo->cameraInfo = cinfo;
+        hitCamInfo->lineSegment[0] = start3;
+        hitCamInfo->lineSegment[1] = end3;
+    }
+
+    return computeSceneIntersection(cgroup, start3, end3, intersections);
 }
 
 bool computeIntersections(const CameraGroup* cgroup,
                           const osg::Vec2d& windowPos,
-                          osgUtil::LineSegmentIntersector::Intersections& intersections)
+                          osgUtil::LineSegmentIntersector::Intersections& intersections,
+                          IntersectionCameraInfo* hitCamInfo)
 {
     // test the GUI first
     CameraInfo* guiCamera = cgroup->getGUICamera();
-    if (guiCamera && computeCameraIntersection(cgroup, guiCamera, windowPos, intersections))
+    if (guiCamera && computeCameraIntersection(cgroup, guiCamera, windowPos,
+                                               intersections, hitCamInfo))
         return true;
 
     // Find camera that contains event
@@ -1098,7 +1106,8 @@ bool computeIntersections(const CameraGroup* cgroup,
         if (cinfo == guiCamera)
             continue;
 
-        if (computeCameraIntersection(cgroup, cinfo, windowPos, intersections))
+        if (computeCameraIntersection(cgroup, cinfo, windowPos, intersections,
+                                      hitCamInfo))
             return true;
     }
 
@@ -1194,6 +1203,44 @@ void warpGUIPointer(CameraGroup* cgroup, int x, int y)
            + ((wyUp / double(traits->height))
               * (eventState->getYmax() - eventState->getYmin())));
     cgroup->getView()->getEventQueue()->mouseWarped(viewerX, viewerY);
+}
+
+bool computeWindowToGlobal(const CameraGroup* cgroup,
+                           const osg::Vec2& windowPos,
+                           const CameraInfo* camInfo,
+                           double distance,
+                           osg::Vec3d& outGlobal)
+{
+    // Find camera that contains event
+    for (const auto &cinfo : cgroup->_cameras) {
+        if (cinfo != camInfo)
+            continue;
+
+        const osg::Viewport *viewport = cinfo->compositor->getViewport();
+        SGRect<double> viewportRect(viewport->x(), viewport->y(),
+                                    viewport->x() + viewport->width() - 1.0,
+                                    viewport->y() + viewport->height()- 1.0);
+        osg::Vec4d start(windowPos.x(), windowPos.y(), 0.0, 1.0);
+        osg::Vec4d end(windowPos.x(), windowPos.y(), 1.0, 1.0);
+        osg::Matrix windowMat = viewport->computeWindowMatrix();
+        osg::Matrix invViewMat = osg::Matrix::inverse(cinfo->viewMatrix);
+        osg::Matrix invProjMat = osg::Matrix::inverse(cinfo->projMatrix * windowMat);
+        start = start * invProjMat;
+        end = end * invProjMat;
+        start /= start.w();
+        end /= end.w();
+        start = start * invViewMat;
+        end = end * invViewMat;
+
+        osg::Vec3d start3(start.x(), start.y(), start.z());
+        osg::Vec3d end3(end.x(), end.y(), end.z());
+        osg::Vec3d norm = end3 - start3;
+        norm.normalize();
+
+        outGlobal = start3 + norm * distance;
+        return true;
+    }
+    return false;
 }
 
 void reloadCompositors(CameraGroup *cgroup)
