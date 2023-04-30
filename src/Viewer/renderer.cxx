@@ -1337,7 +1337,8 @@ LinksPick handlePickLinkIntersections(Intersections& intersections,
 
         result.wgs84 = hit->getWorldIntersectPoint();
         result.cameraInfo = hitCamInfo.cameraInfo;
-        result.distance = (result.wgs84 - hitCamInfo.lineSegment[0]).length();
+        result.lineSegment[0] = hitCamInfo.lineSegment[0];
+        result.lineSegment[1] = hitCamInfo.lineSegment[1];
 
         SGIKLink::nodePathToLinks(np, result.linkPath, rootIndex,
                                   result.rootMatrix, result.tipMatrix);
@@ -1362,12 +1363,13 @@ LinksPick FGRenderer::pickLinks(const osg::Vec2& windowPos)
     return ret;
 }
 
-bool FGRenderer::windowToGlobal(const osg::Vec2& windowPos,
-                                const CameraInfo* camInfo, double distance,
-                                osg::Vec3d& outGlobal)
+bool FGRenderer::windowToLineSegment(const osg::Vec2& windowPos,
+                                     const CameraInfo* camInfo,
+                                     osg::Vec3d& outLine1,
+                                     osg::Vec3d& outLine2)
 {
-    return computeWindowToGlobal(CameraGroup::getDefault(), windowPos, camInfo,
-                                 distance, outGlobal);
+    return computeWindowToLineSegment(CameraGroup::getDefault(), windowPos,
+                                      camInfo, outLine1, outLine2);
 }
 
 osgViewer::ViewerBase* FGRenderer::getViewerBase()

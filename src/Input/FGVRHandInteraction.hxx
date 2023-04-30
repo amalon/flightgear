@@ -53,6 +53,11 @@ protected:
     FGVRInput::ModeProcessInput _grabPalm;
     /// The boolean inputs for finger grabs.
     FGVRInput::ModeProcessInput _grabFingers[5];
+    /// The boolean input for thumb down.
+    FGVRInput::ModeProcessInput _thumbDown;
+    /// The vec2f input for thumb X/Y position.
+    FGVRInput::ModeProcessInput _thumbPosition;
+
 
     class Private;
     std::unique_ptr<Private> _private;

@@ -223,6 +223,9 @@ public:
   void ResetPastStates(void) override;
 
 private:
+  class ReverseModifier;
+  std::unique_ptr<ReverseModifier> _reverseModifier;
+
   bool DynamicFilter;
   /** When true, causes previous values to be set to current values. This
       is particularly useful for first pass. */

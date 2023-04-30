@@ -216,6 +216,9 @@ public:
                       double alt_off, double contact[3], double normal[3],
                       double vel[3], double angularVel[3]);
 
+    void setupReverseMapping(const char *output, const char *input,
+                             double scale = 1.0);
+
 private:
     JSBSim::FGFDMExec *fdmex;
     JSBSim::FGInitialCondition *fgic;

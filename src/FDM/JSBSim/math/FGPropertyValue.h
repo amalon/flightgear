@@ -79,7 +79,6 @@ public:
   virtual std::string GetFullyQualifiedName(void) const;
   virtual std::string GetPrintableName(void) const;
 
-protected:
   FGPropertyNode* GetNode(void) const;
 
 private:

@@ -40,9 +40,48 @@ INCLUDES
 #include "FGFilter.h"
 #include "math/FGParameterValue.h"
 
+#include <simgear/scene/model/SGIKVariable.hxx>
+
 using namespace std;
 
 namespace JSBSim {
+
+class FGFilter::ReverseModifier : public SGIKVariable::PropertyModifyHandler
+{
+public:
+    typedef SGIKVariable::PropertyModifyHandler Super;
+
+    ReverseModifier(FGFilter* filter,
+                    SGPropertyNode* propertyNode,
+                    SGPropertyNode* inputNode) :
+        Super(propertyNode, inputNode),
+        _filter(filter)
+    {
+    }
+
+    double modify(double value) override
+    {
+        _filter->Output = value;
+        _filter->Clip();
+
+        switch (_filter->FilterType) {
+        case eLag:
+            // FIXME
+            _filter->Input = _filter->Output;
+            break;
+        // FIXME others?
+        default:
+            return _filter->Output;
+        }
+        _filter->Output = Super::modify(_filter->Input);
+        _filter->Clip();
+        _filter->SetOutput();
+        return _filter->Output;
+    }
+
+private:
+    FGFilter* _filter;
+};
 
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 CLASS IMPLEMENTATION
@@ -67,6 +106,18 @@ FGFilter::FGFilter(FGFCS* fcs, Element* element)
   CalculateDynamicFilters();
 
   bind(element);
+
+  try {
+      if (!OutputNodes.empty() && OutputNodes[0].valid() &&
+          !InputNodes.empty() && InputNodes[0].valid() &&
+          FilterType == eLag/* &&
+                               element->FindElement("reversible")*/) {
+          _reverseModifier.reset(new ReverseModifier(this, OutputNodes[0],
+                                                     InputNodes[0]->GetNode()));
+      }
+  } catch (const std::string& ex) {
+      // In case input property doesn't exist yet...
+  }
 
   Debug(0);
 }

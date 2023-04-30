@@ -45,9 +45,21 @@ class FGVRHand : public osgXR::HandPose
             _fingersRange[finger].hoverDistance = hoverDistance;
         }
 
-        void setFingerFreeze(unsigned int finger, bool freeze)
+        void setFingerFreeze(unsigned int finger, bool freeze);
+
+        // X and Y in range -1 to 1
+        // X -1 is left, 1 is right
+        // Y -1 is down, 1 is up
+        void setThumbPosition(const osg::Vec2f& pos)
         {
-            _fingersRange[finger].freeze = freeze;
+            _squeeze.setThumbX(pos.x());
+            _squeeze.setThumbY(pos.y());
+        }
+
+        void clearThumbPosition()
+        {
+            _squeeze.setThumbX(std::nullopt);
+            _squeeze.setThumbY(std::nullopt);
         }
 
         bool isPalmTouching() const
@@ -72,6 +84,20 @@ class FGVRHand : public osgXR::HandPose
             if (!isFingerTouching(finger))
                 return nullptr;
             return &_fingersRange[finger].touchNodes;
+        }
+
+        int getPalmTouchJoint() const
+        {
+            if (!isPalmTouching())
+                return -1;
+            return _wristRange.touchJoint;
+        }
+
+        int getFingerTouchJoint(unsigned int finger) const
+        {
+            if (!isFingerTouching(finger))
+                return -1;
+            return _fingersRange[finger].touchJoint;
         }
 
         const osg::Vec3f* getPalmTouchPosition() const
@@ -115,12 +141,15 @@ class FGVRHand : public osgXR::HandPose
             /// Clearance ratio each way.
             float clearance[2] = {0.0f, 1.0f};
 
+            float frozenValue = 0;
             float curValue = 0;
 
             osg::NodePath touchNodes;
             bool hasPosition;
             osg::Vec3f touchPosition;
             osg::Vec3f touchNormal;
+
+            unsigned int touchJoint;
         } RangeState;
 
     protected:

@@ -162,7 +162,7 @@ class FGMouseInput::FGMouseInputPrivate : public SGPropertyChangeListener
 public:
     FGMouseInputPrivate() :
         _directCamInfo(nullptr),
-        _directDistance(0),
+        _directScale(0),
         haveWarped(false),
         xSizeNode(fgGetNode("/sim/startup/xsize", false ) ),
         ySizeNode(fgGetNode("/sim/startup/ysize", false ) ),
@@ -238,90 +238,94 @@ public:
 
         SGPickCallback::Priority priority = SGPickCallback::PriorityScenery;
 
-        if (!_directManipulation) {
-            SGSceneryPicks pickList = globals->get_renderer()->pick(windowPos);
-
-            const auto& m = mice[0];
-
-            SGSceneryPicks::const_iterator i;
-            for( i = pickList.begin(); i != pickList.end(); ++i )
-            {
-                if (m.cursor3d && i == pickList.begin()) {
-                    osg::Matrix mat;
-                    // FIXME needs to be local so it moves with aircraft
-                    // FIXME needs to update is scene changes even if mouse doesn't
-                    // move
-                    mat.setTrans(toOsg(i->info.wgs84));
-                    m.cursor3d->setMatrix(mat);
-                }
-                bool done = false;
-                if (i->callback) {
-                    done = i->callback->hover(windowPos, i->info);
-                    std::string curName(i->callback->getCursor());
-                    if (!curName.empty()) {
-                        explicitCursor = true;
-                        cur = FGMouseCursor::cursorFromString(curName.c_str());
-                    }
-
-                    // if the callback is of higher prioirty (lower enum index),
-                    // record that.
-                    if (i->callback->getPriority() < priority) {
-                        priority = i->callback->getPriority();
-                    }
-                }
-
-                if (done) {
-                    didPick = true;
-                    break;
-                }
-            } // of picks iteration
-
-            // Check if any pick from the previous iteration has disappeared. If so
-            // notify the callback that the mouse has left its element.
-            for( i = _previous_picks.begin(); i != _previous_picks.end(); ++i )
-            {
-                if (i->callback && !getPick(pickList, i->callback))
-                    i->callback->mouseLeave(windowPos);
-            }
-            _previous_picks = pickList;
-
-            if (!explicitCursor && (priority == SGPickCallback::PriorityPanel)) {
-                cur = FGMouseCursor::CURSOR_HAND;
-            }
-
-            FGMouseCursor::instance()->setCursor(cur);
-            if (!didPick && areTooltipsEnabled()) {
-                SGPropertyNode_ptr args(new SGPropertyNode);
-                globals->get_commands()->execute("update-hover", args, nullptr);
-            }
-        } else {
+        if (_directManipulation) {
             if (!_directContact) {
                 LinksPick pickLinks = globals->get_renderer()->pickLinks(windowPos);
                 if (pickLinks.rootNode) {
                     FGMouseCursor::instance()->setCursor(FGMouseCursor::CURSOR_HAND);
+#if 0
                 } else {
                     // FIXME
                     FGMouseCursor::instance()->setCursor(FGMouseCursor::CURSOR_ARROW);
+#endif
                 }
             } else if (_directRootNode.valid()) {
-                // Grab in progress, so we should just update contact point
-                osg::Vec3d springPosGlobal;
-                if (globals->get_renderer()->windowToGlobal(windowPos,
-                                                            _directCamInfo,
-                                                            _directDistance,
-                                                            springPosGlobal)) {
+                FGMouseCursor::instance()->setCursor(FGMouseCursor::CURSOR_CLOSED_HAND);
+                // Grab in progress, so we should just update contact line
+                // segment
+                osg::Vec3d springLine[2];
+                if (globals->get_renderer()->windowToLineSegment(windowPos,
+                                                                 _directCamInfo,
+                                                                 springLine[0],
+                                                                 springLine[1])) {
                     auto nodePaths = _directRootNode->getParentalNodePaths();
                     if (nodePaths.empty())
                         return;
                     nodePaths.front().pop_back();
                     auto rootMatrix = computeWorldToLocal(nodePaths.front());
 
-                    // Update spring destination relative to IK root, using new hand
-                    // position
-                    auto springPosRoot = springPosGlobal * rootMatrix;
-                    _directContact->setSpringPositionRootLink(springPosRoot);
+                    // Update spring line segment relative to IK root
+                    _directContact->setSpringLineRoot(springLine[0] * rootMatrix,
+                                                      springLine[1] * rootMatrix);
+                }
+                return;
+            }
+        }
+
+        SGSceneryPicks pickList = globals->get_renderer()->pick(windowPos);
+
+        const auto& m = mice[0];
+
+        SGSceneryPicks::const_iterator i;
+        for( i = pickList.begin(); i != pickList.end(); ++i )
+        {
+            if (m.cursor3d && i == pickList.begin()) {
+                osg::Matrix mat;
+                // FIXME needs to be local so it moves with aircraft
+                // FIXME needs to update is scene changes even if mouse doesn't
+                // move
+                mat.setTrans(toOsg(i->info.wgs84));
+                m.cursor3d->setMatrix(mat);
+            }
+            bool done = false;
+            if (i->callback) {
+                done = i->callback->hover(windowPos, i->info);
+                std::string curName(i->callback->getCursor());
+                if (!curName.empty()) {
+                    explicitCursor = true;
+                    cur = FGMouseCursor::cursorFromString(curName.c_str());
+                }
+
+                // if the callback is of higher prioirty (lower enum index),
+                // record that.
+                if (i->callback->getPriority() < priority) {
+                    priority = i->callback->getPriority();
                 }
             }
+
+            if (done) {
+                didPick = true;
+                break;
+            }
+        } // of picks iteration
+
+        // Check if any pick from the previous iteration has disappeared. If so
+        // notify the callback that the mouse has left its element.
+        for( i = _previous_picks.begin(); i != _previous_picks.end(); ++i )
+        {
+            if (i->callback && !getPick(pickList, i->callback))
+                i->callback->mouseLeave(windowPos);
+        }
+        _previous_picks = pickList;
+
+        if (!explicitCursor && (priority == SGPickCallback::PriorityPanel)) {
+            cur = FGMouseCursor::CURSOR_HAND;
+        }
+
+        FGMouseCursor::instance()->setCursor(cur);
+        if (!didPick && areTooltipsEnabled()) {
+            SGPropertyNode_ptr args(new SGPropertyNode);
+            globals->get_commands()->execute("update-hover", args, nullptr);
         }
     }
 
@@ -390,8 +394,8 @@ public:
 
     osg::observer_ptr<osg::Node> _directRootNode;
     const flightgear::CameraInfo* _directCamInfo;
-    std::shared_ptr<SGSpringPickContact> _directContact;
-    double _directDistance;
+    std::shared_ptr<SGIKContactSpringLine> _directContact;
+    float _directScale;
 
     mouse mice[MAX_MICE];
 
@@ -647,15 +651,20 @@ void FGMouseInput::doMouseClick (int b, int updown, int x, int y, bool mainWindo
   if (isRightDragLookActive() && (updown == MOUSE_BUTTON_DOWN)) {
       // when spring-loaded mode is active, don't do scene selection for picks
       // https://sourceforge.net/p/flightgear/codetickets/2108/
-  } else if (!d->_directManipulation) {
-      pickList = globals->get_renderer()->pick(windowPos);
   } else {
-      pickLinks = globals->get_renderer()->pickLinks(windowPos);
+      if (d->_directManipulation)
+          pickLinks = globals->get_renderer()->pickLinks(windowPos);
+      pickList = globals->get_renderer()->pick(windowPos);
   }
 
   if( updown == MOUSE_BUTTON_UP )
   {
-      if (!d->_directManipulation) {
+      // Release any existing contact
+      if (d->_directManipulation && b == 0 && d->_directContact) {
+          d->_directContact->setStale();
+          d->_directContact = nullptr;
+          d->_directCamInfo = nullptr;
+      } else {
           // Execute the mouse up event in any case, may be we should
           // stop processing here?
 
@@ -675,68 +684,66 @@ void FGMouseInput::doMouseClick (int b, int updown, int x, int y, bool mainWindo
               // we cleared the active picks, but don't do further processing
               return;
           }
-      } else {
-          // Release any existing contact
-          if (d->_directContact) {
-              d->_directContact->setStale();
-              d->_directContact = nullptr;
-              d->_directCamInfo = nullptr;
-          }
       }
   }
 
   if (mode.pass_through) {
-      if (!d->_directManipulation) {
-          // compute a
-          // scenegraph intersection point corresponding to the mouse click
-          if (updown == MOUSE_BUTTON_DOWN) {
-              d->activePickCallbacks.init( b, ea );
+      // compute a
+      // scenegraph intersection point corresponding to the mouse click
+      if (updown == MOUSE_BUTTON_DOWN) {
+          if (d->_directManipulation && b == 0 && !pickLinks.linkPath.empty()) {
+              // left click
+              auto* ik = pickLinks.linkPath.back();
+              if (d->_directContact)
+                  d->_directContact->setStale();
+              // Create a new spring contact
+              d->_directCamInfo = pickLinks.cameraInfo;
+            
+              d->_directContact = std::make_shared<SGIKContactSpringLine>();
+              ik->addContact(d->_directContact, pickLinks.linkPath);
 
-              if (d->clickTriggersTooltip && d->areTooltipsEnabled()) {
-                  SGPropertyNode_ptr args(new SGPropertyNode);
-                  args->setStringValue("reason", "click");
-                  globals->get_commands()->execute("tooltip-timeout", args, nullptr);
-                  d->tooltipTimeoutDone = true;
-              }
+              // Update contact position relative to IK tip (for IK calculations)
+              auto contactPosTip = pickLinks.wgs84 * pickLinks.tipMatrix;
+              d->_directContact->setContactPositionTip(contactPosTip);
+
+              // Update spring line segment to match
+              d->_directContact->setSpringLineRoot(
+                    pickLinks.lineSegment[0] * pickLinks.rootMatrix,
+                    pickLinks.lineSegment[1] * pickLinks.rootMatrix);
+              d->_directContact->setForce(100.0f, 10.0f);
+
+              auto lineVec = pickLinks.lineSegment[1] - pickLinks.lineSegment[0];
+              d->_directContact->lastRatio = (pickLinks.wgs84 - pickLinks.lineSegment[0]) * lineVec / lineVec.length2();
+              d->_directScale = d->_directContact->lastRatio * 0.01f;
+
+              // Update root node pointer
+              d->_directRootNode = pickLinks.rootNode;
+
+              FGMouseCursor::instance()->setCursor(FGMouseCursor::CURSOR_CLOSED_HAND);
+          } else if (d->_directManipulation && b == 3 && d->_directContact) {
+              // wheel up
+              float newRatio = d->_directContact->lastRatio + d->_directScale;
+              d->_directContact->setRatio(newRatio, newRatio);
+              FGMouseCursor::instance()->setCursor(FGMouseCursor::CURSOR_IN_OUT);
+          } else if (d->_directManipulation && b == 4 && d->_directContact) {
+              // wheel down
+              float newRatio = d->_directContact->lastRatio - d->_directScale;
+              d->_directContact->setRatio(newRatio, newRatio);
+              FGMouseCursor::instance()->setCursor(FGMouseCursor::CURSOR_IN_OUT);
           } else {
-              // do a hover pick now, to fix up cursor
-              d->doHoverPick(windowPos);
-          } // mouse button was released
-      } else {
-          if (mode.pass_through) {
-              if (updown == MOUSE_BUTTON_DOWN) {
-                  if (!pickLinks.linkPath.empty()) {
-                      auto* ik = pickLinks.linkPath.back();
-                      if (d->_directContact)
-                          d->_directContact->setStale();
-                      // Create a new spring contact
-                      d->_directCamInfo = pickLinks.cameraInfo;
-                      d->_directDistance = pickLinks.distance;
-                      d->_directContact = std::make_shared<SGSpringPickContact>();
-                      ik->addContact(d->_directContact, pickLinks.linkPath);
-
-                      auto contactPosGlobal = pickLinks.wgs84;
-                      auto contactPosTip    = contactPosGlobal * pickLinks.tipMatrix;
-                      auto contactPosRoot   = contactPosGlobal * pickLinks.rootMatrix;
-
-                      // Update contact position relative to IK tip (for IK calculations)
-                      d->_directContact->setContactPositionTipLink(contactPosTip);
-
-                      // Update spring destination to match
-                      d->_directContact->setSpringPositionRootLink(contactPosRoot);
-                      d->_directContact->setForce(10.0f, 1.0f);
-
-                      // Update root node pointer
-                      d->_directRootNode = pickLinks.rootNode;
-
-                      FGMouseCursor::instance()->setCursor(FGMouseCursor::CURSOR_CLOSED_HAND);
-                  }
-              } else {
-                  // do a hover pick now, to fix up cursor
-                  d->doHoverPick(windowPos);
-              }
+              d->activePickCallbacks.init( b, ea );
           }
-      }
+
+          if (d->clickTriggersTooltip && d->areTooltipsEnabled()) {
+              SGPropertyNode_ptr args(new SGPropertyNode);
+              args->setStringValue("reason", "click");
+              globals->get_commands()->execute("tooltip-timeout", args, nullptr);
+              d->tooltipTimeoutDone = true;
+          }
+      } else {
+          // do a hover pick now, to fix up cursor
+          d->doHoverPick(windowPos);
+      } // mouse button was released
   } // of pass-through mode
 
   if (b >= MAX_MOUSE_BUTTONS) {

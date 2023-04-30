@@ -37,6 +37,7 @@
 #include <simgear/misc/sg_path.hxx>
 #include <simgear/structure/commands.hxx>
 #include <simgear/bvh/BVHMaterial.hxx>
+#include <simgear/scene/model/SGIKVariable.hxx>
 
 #include <FDM/flight.hxx>
 
@@ -378,6 +379,11 @@ FGJSBsim::FGJSBsim( double dt )
     string directive_file = fgGetString("/sim/jsbsim/output-directive-file");
     if (!directive_file.empty())
       fdmex->SetOutputDirectives(directive_file);
+
+    // copy_to_JSBsim takes controls and gives to FDM
+    setupReverseMapping("/fdm/jsbsim/fcs/aileron-cmd-norm", "/controls/flight/aileron");
+    setupReverseMapping("/fdm/jsbsim/fcs/elevator-cmd-norm", "/controls/flight/elevator");
+    setupReverseMapping("/fdm/jsbsim/fcs/rudder-cmd-norm", "/controls/flight/rudder", -1);
 }
 
 /******************************************************************************/
@@ -1449,6 +1455,13 @@ FGJSBsim::get_agl_ft(double t, const FGColumnVector3& loc, double alt_off,
   terrain->setBoolValue("valid", false);
 #endif
   return dot(hlToEc.rotate(SGVec3d(0, 0, 1)), SGVec3d(contact) - SGVec3d(pt));
+}
+
+void FGJSBsim::setupReverseMapping(const char *output, const char *input,
+                                   double scale)
+{
+    SGIKVariable::reverseMapping(PropertyManager->GetNode(output, true),
+                                 fgGetNode(input, true), scale);
 }
 
 inline static double sqr(double x)

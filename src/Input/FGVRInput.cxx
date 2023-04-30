@@ -635,7 +635,7 @@ bool FGVRInput::ModeProcessInput::getFloatValue(float& outValue,
             *outChanged = (outValue != _lastFloat);
         _lastFloat = outValue;
     }
-    return false;
+    return ret;
 }
 
 bool FGVRInput::ModeProcessInput::getVector2fValue(osg::Vec2f& outValue,
@@ -662,7 +662,7 @@ bool FGVRInput::ModeProcessInput::getVector2fValue(osg::Vec2f& outValue,
             *outChanged = (outValue != _lastVec2f);
         _lastVec2f = outValue;
     }
-    return false;
+    return ret;
 }
 
 bool FGVRInput::ModeProcessInput::getPoseValue(osgXR::ActionPose::Location& outValue,

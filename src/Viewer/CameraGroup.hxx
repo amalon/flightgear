@@ -234,11 +234,12 @@ protected:
                                      osgUtil::LineSegmentIntersector::Intersections&
                                      intersections,
                                      IntersectionCameraInfo* hitCamInfo);
-    friend bool computeWindowToGlobal(const CameraGroup* cgroup,
-                                      const osg::Vec2& windowPos,
-                                      const CameraInfo* camInfo,
-                                      double distance,
-                                      osg::Vec3d& outGlobal);
+    // FIXME just move it into the class?
+    friend bool computeWindowToLineSegment(const CameraGroup* cgroup,
+                                           const osg::Vec2& windowPos,
+                                           const CameraInfo* camInfo,
+                                           osg::Vec3d& outLine1,
+                                           osg::Vec3d& outLine2);
     friend void reloadCompositors(CameraGroup *cgroup);
 
     CameraList _cameras;
@@ -339,11 +340,11 @@ bool computeSceneIntersections(const CameraGroup* cgroup,
 void warpGUIPointer(CameraGroup* cgroup, int x, int y);
 
 
-bool computeWindowToGlobal(const CameraGroup* cgroup,
-                           const osg::Vec2& windowPos,
-                           const CameraInfo* camInfo,
-                           double distance,
-                           osg::Vec3d& outGlobal);
+bool computeWindowToLineSegment(const CameraGroup* cgroup,
+                                const osg::Vec2& windowPos,
+                                const CameraInfo* camInfo,
+                                osg::Vec3d& outLine1,
+                                osg::Vec3d& outLine2);
 
 /** Force a reload of all Compositor instances in the CameraGroup,
  * except the one used by the GUI camera.

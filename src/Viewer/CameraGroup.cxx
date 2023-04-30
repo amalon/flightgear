@@ -1205,11 +1205,11 @@ void warpGUIPointer(CameraGroup* cgroup, int x, int y)
     cgroup->getView()->getEventQueue()->mouseWarped(viewerX, viewerY);
 }
 
-bool computeWindowToGlobal(const CameraGroup* cgroup,
-                           const osg::Vec2& windowPos,
-                           const CameraInfo* camInfo,
-                           double distance,
-                           osg::Vec3d& outGlobal)
+bool computeWindowToLineSegment(const CameraGroup* cgroup,
+                                const osg::Vec2& windowPos,
+                                const CameraInfo* camInfo,
+                                osg::Vec3d& outLine1,
+                                osg::Vec3d& outLine2)
 {
     // Find camera that contains event
     for (const auto &cinfo : cgroup->_cameras) {
@@ -1232,12 +1232,8 @@ bool computeWindowToGlobal(const CameraGroup* cgroup,
         start = start * invViewMat;
         end = end * invViewMat;
 
-        osg::Vec3d start3(start.x(), start.y(), start.z());
-        osg::Vec3d end3(end.x(), end.y(), end.z());
-        osg::Vec3d norm = end3 - start3;
-        norm.normalize();
-
-        outGlobal = start3 + norm * distance;
+        outLine1.set(start.x(), start.y(), start.z());
+        outLine2.set(end.x(), end.y(), end.z());
         return true;
     }
     return false;

@@ -51,23 +51,29 @@ namespace JSBSim {
 CLASS IMPLEMENTATION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
-class FGKinemat::ReverseModifier : public SGIKVariable::ModifyHandler
+class FGKinemat::ReverseModifier : public SGIKVariable::PropertyModifyHandler
 {
 public:
-    ReverseModifier(FGKinemat* kinemat, SGPropertyNode* propertyNode) :
-        SGIKVariable::ModifyHandler(propertyNode),
+    typedef SGIKVariable::PropertyModifyHandler Super;
+
+    ReverseModifier(FGKinemat* kinemat,
+                    SGPropertyNode* propertyNode,
+                    SGPropertyNode* inputNode) :
+        Super(propertyNode, inputNode),
         _kinemat(kinemat)
     {
     }
 
-    void modify(double value) override
+    double modify(double value) override
     {
         _kinemat->Output = value;
         _kinemat->Clip();
         _kinemat->SetOutput();
 
         _kinemat->Input = Constrain(_kinemat->Detents.front(), _kinemat->Output, _kinemat->Detents.back());
-        _kinemat->InputNodes[0]->SetValue(_kinemat->Input);
+        return Super::modify(_kinemat->Input);
+        
+        //_kinemat->InputNodes[0]->SetValue(_kinemat->Input);
     }
 
 private:
@@ -102,11 +108,18 @@ FGKinemat::FGKinemat(FGFCS* fcs, Element* element)
     throw BaseException(s.str());
   }
 
-  if (!OutputNodes.empty() && OutputNodes[0].valid() && element->FindElement("reversible")) {
-      _reverseModifier.reset(new ReverseModifier(this, OutputNodes[0]));
-  }
-
   bind(element);
+
+  try {
+    if (!OutputNodes.empty() && OutputNodes[0].valid() &&
+            !InputNodes.empty() && InputNodes[0].valid()/* &&
+            element->FindElement("reversible")*/) {
+        _reverseModifier.reset(new ReverseModifier(this, OutputNodes[0],
+                                                   InputNodes[0]->GetNode()));
+    }
+  } catch (const std::string& ex) {
+      // In case input property doesn't exist yet...
+  }
 
   Debug(0);
 }

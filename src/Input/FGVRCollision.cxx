@@ -24,23 +24,23 @@ using namespace FGVRCollision;
 
 unsigned int FGVRCollision::boundsCheck<1>::stats[2] = {};
 
-unsigned int Mesh::addVertex(const Position& position)
+unsigned int MeshInfo::SweepData::addVertex(const Position& position)
 {
     ++_statsVerts;
     VertexInfo vinfo{position};
     auto it = _vertIndex.find(vinfo);
     if (it == _vertIndex.end()) {
-        unsigned int ret = sweep.points.size();
+        unsigned int ret = points.size();
         _vertIndex[vinfo] = ret;
-        sweep.points.push_back({position});
-        sweep.boundingBox.expandBy(position);
+        points.push_back({position});
+        boundingBox.expandBy(position);
         return ret;
     } else {
         return (*it).second;
     }
 }
 
-unsigned int Mesh::addEdge(EdgeInfo edge)
+unsigned int MeshInfo::SweepData::addEdge(EdgeInfo edge)
 {
     ++_statsEdges;
     if (edge.vertexIndices[0] > edge.vertexIndices[1])
@@ -48,34 +48,36 @@ unsigned int Mesh::addEdge(EdgeInfo edge)
 
     auto it = _edgeIndex.find(edge);
     if (it == _edgeIndex.end()) {
-        unsigned int ret = sweep.edges.size();
+        unsigned int ret = edges.size();
         _edgeIndex[edge] = ret;
-        sweep.edges.push_back({sweep.points[edge.vertexIndices[0]],
-                               sweep.points[edge.vertexIndices[1]]});
+        edges.push_back({points[edge.vertexIndices[0]],
+                         points[edge.vertexIndices[1]]});
         return ret;
     } else {
         return (*it).second;
     }
 }
 
-void Mesh::addPolygon(const FGVRCollision::Polygon& polygon)
+void MeshInfo::addPolygon(FixedData& fixed,
+                          SweepData& sweep,
+                          const FGVRCollision::Polygon& polygon)
 {
     if (!polygon.fixed.numVertices)
         return;
 
     // add first vertex
-    unsigned int vertIndex = addVertex(polygon.sweep->vertices[0]);
+    unsigned int vertIndex = sweep.addVertex(polygon.sweep->vertices[0]);
     unsigned int firstIndex = vertIndex;
     unsigned int lastIndex = vertIndex;
     for (unsigned int i = 1; i < polygon.fixed.numVertices; ++i) {
         // add next vertex and edge between them
-        vertIndex = addVertex(polygon.sweep->vertices[i]);
-        addEdge({{lastIndex, vertIndex}});
+        vertIndex = sweep.addVertex(polygon.sweep->vertices[i]);
+        sweep.addEdge({{lastIndex, vertIndex}});
         lastIndex = vertIndex;
     }
     if (polygon.fixed.numVertices >= 3) {
         // complete the loop of edges
-        addEdge({{firstIndex, lastIndex}});
+        sweep.addEdge({{firstIndex, lastIndex}});
         // add polygons
         fixed.polygons.push_back(polygon.fixed);
         sweep.polygons.push_back(polygon.sweep);
@@ -85,7 +87,9 @@ void Mesh::addPolygon(const FGVRCollision::Polygon& polygon)
 // Much the same as a line with a sphere
 unsigned int FGVRCollision::rawIntersect(const RawPoint& point,
                                          const RawSphereSweep& sphereSweep,
-                                         SweepIntersections& intersections)
+                                         SweepIntersections& intersections,
+                                         RawPoint::Id* pointId,
+                                         RawSphereSweep::Id* sweepId)
 {
     // The sphere sweep line is defined as:
     //   sweep = start + ratio*(end - start)
@@ -145,7 +149,9 @@ unsigned int FGVRCollision::rawIntersect(const RawPoint& point,
 // Much the same as a line with a cylinder
 unsigned int FGVRCollision::rawIntersect(const Line& line,
                                          const RawSphereSweep& sphereSweep,
-                                         SweepIntersections& intersections)
+                                         SweepIntersections& intersections,
+                                         Line::Id* lineId,
+                                         RawSphereSweep::Id* sweepId)
 {
     // The sphere sweep line is defined as:
     //   sweep_vec = sweep_end - sweep_start
@@ -264,7 +270,9 @@ unsigned int FGVRCollision::rawIntersect(const Line& line,
 
 unsigned int FGVRCollision::rawIntersect(const RawPolygon& polygon,
                                          const RawSphereSweep& sphereSweep,
-                                         SweepIntersections& intersections)
+                                         SweepIntersections& intersections,
+                                         RawPolygon::Id* polygonId,
+                                         RawSphereSweep::Id* sweepId)
 {
     if (polygon.fixed.numVertices < 3)
         return 0;
@@ -398,7 +406,9 @@ unsigned int FGVRCollision::rawIntersect(const RawPolygon& polygon,
 
 unsigned int FGVRCollision::rawIntersect(const OpenCapsule& capsule,
                                          const Line& line,
-                                         SweepIntersections& intersections)
+                                         SweepIntersections& intersections,
+                                         OpenCapsule::Id* capsuleId,
+                                         Line::Id* sweepId)
 {
     // The capsule center line is:
     //   capsule_vec = capsule_end - capsule_start
@@ -577,7 +587,9 @@ unsigned int FGVRCollision::rawIntersect(const OpenCapsule& capsule,
 
 unsigned int FGVRCollision::rawIntersect(const RawPoint& point,
                                          const OpenCapsuleSweep& capsuleSweep,
-                                         SweepIntersections& intersections)
+                                         SweepIntersections& intersections,
+                                         RawPoint::Id* pointId,
+                                         OpenCapsuleSweep::Id* sweepId)
 {
     // perform intersection in frame of capsule
     // i.e. between a point sweep (line) and static capsule
@@ -598,17 +610,23 @@ unsigned int FGVRCollision::rawIntersect(const RawPoint& point,
 
     // Now we need to intersect the point sweep p..pT1 with the start capsule.
     // Note, this assumes the capsule length is constant
-    SweepIntersections tempIntersections(false, false);
+    SweepIntersections tempIntersections(intersections.getSweepId(),
+                                         intersections.getStaticId(),
+                                         false, false);
     unsigned int ret = rawIntersect(capsuleSweep.getStart(),
                                     Line(point, Point(pT1)),
-                                    tempIntersections);
+                                    tempIntersections,
+                                    sweepId,
+                                    pointId);
     if (intersections.wantsPositions()) {
         // Recalculate intersection positions and normals
         for (auto hit: tempIntersections) {
             hit.entry.hasPosition = true;
             hit.entry.position = p;
+            std::swap(hit.entry.staticId, hit.entry.sweepId);
             hit.exit.hasPosition = true;
             hit.exit.position = p;
+            std::swap(hit.exit.staticId, hit.exit.sweepId);
             if (intersections.wantsNormals()) {
                 osg::Vec3f capStart = capAT0 + (capAT1-capAT0)*hit.entry.ratio;
                 osg::Vec3f capEnd   = capBT0 + (capBT1-capBT0)*hit.entry.ratio;
@@ -640,7 +658,9 @@ static osg::Vec3f bilinear(const LineSweep& lineSweep, float lineRatio, float ti
 
 unsigned int FGVRCollision::rawIntersect(const OpenCapsule& capsule,
                                          const LineSweep& lineSweep,
-                                         SweepIntersections& intersections)
+                                         SweepIntersections& intersections,
+                                         OpenCapsule::Id* capsuleId,
+                                         LineSweep::Id* sweepId)
 {
     // Find the line along the sweep that is closest to the capsule centerline
     //   Line(t, ratio) = (AT0+t*(AT1-AT0)) + ratio*((BT0+t*(BT1-BT0))-(AT0+t*(AT1-AT0)))
@@ -747,7 +767,8 @@ unsigned int FGVRCollision::rawIntersect(const OpenCapsule& capsule,
         ret += rawIntersect(capsule,
                             Line(Point(bilinear(lineSweep, lineRatio[i], timeRatio[i])),
                                  Point(bilinear(lineSweep, lineRatio[i + 1], timeRatio[i + 1]))),
-                            intersections);
+                            intersections,
+                            capsuleId, sweepId);
         intersections.popRange(range);
     }
 
@@ -756,7 +777,9 @@ unsigned int FGVRCollision::rawIntersect(const OpenCapsule& capsule,
 
 unsigned int FGVRCollision::rawIntersect(const Line& line,
                                          const OpenCapsuleSweep& capsuleSweep,
-                                         SweepIntersections& intersections)
+                                         SweepIntersections& intersections,
+                                         Line::Id* lineId,
+                                         OpenCapsuleSweep::Id* sweepId)
 {
     // perform intersection in frame of capsule
     // i.e. between a line sweep and static capsule
@@ -780,9 +803,14 @@ unsigned int FGVRCollision::rawIntersect(const Line& line,
     // Now we need to intersect the line sweep [aT0,bT0]..[aT1,bT1] with the
     // start capsule. Note, this assumes the capsule length is constant
     SweepIntersections tempIntersections(intersections);
+#if 0
+    // we'd only swap them back, leave as is
+    tempIntersections.swapIds();
+#endif
     unsigned int ret = rawIntersect(capsuleSweep.getStart(),
                                     LineSweep(line, Line(Point(aT1), Point(bT1))),
-                                    tempIntersections);
+                                    tempIntersections,
+                                    sweepId, lineId);
     if (intersections.wantsPositions() && !tempIntersections.empty()) {
         // Recalculate intersection positions and normals
 #if 0
